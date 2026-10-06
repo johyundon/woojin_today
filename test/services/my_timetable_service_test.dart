@@ -1,5 +1,8 @@
-// 내 시간표 불러오기 응답(EUC-KR 인코딩 HTML) 파싱 로직을 고정된 픽스처로 검증한다.
-// 실제 대진대 서버 호출(네트워크)은 하지 않고 http.testing.MockClient로 대체한다.
+// 내 시간표 불러오기 응답(EUC-KR 또는 UTF-8 인코딩 HTML) 파싱 로직을 고정된
+// 픽스처로 검증한다. 실제 대진대 서버 호출(네트워크)은 하지 않고
+// http.testing.MockClient로 대체한다.
+
+import 'dart:convert';
 
 import 'package:cp949_codec/cp949_codec.dart';
 import 'package:http/http.dart' as http;
@@ -14,16 +17,22 @@ String _row(List<String> cells) {
   return '<tr>$tds</tr>';
 }
 
+String _fixtureHtml(List<String> rowsHtml) =>
+    '<html><body><table id="tTbl">'
+    '<tr><td>과목코드</td><td>과목명</td><td>분반</td></tr>'
+    '${rowsHtml.join()}'
+    '</table></body></html>';
+
 /// [rowsHtml]을 `table#tTbl` 안에 넣고(첫 행은 헤더로 간주) EUC-KR 바이트로
 /// 인코딩한 전체 응답 본문을 만든다.
-List<int> _fixtureBytes(List<String> rowsHtml) {
-  final html =
-      '<html><body><table id="tTbl">'
-      '<tr><td>과목코드</td><td>과목명</td><td>분반</td></tr>'
-      '${rowsHtml.join()}'
-      '</table></body></html>';
-  return cp949.encode(html);
-}
+List<int> _fixtureBytes(List<String> rowsHtml) =>
+    cp949.encode(_fixtureHtml(rowsHtml));
+
+/// 위와 동일하지만 UTF-8 바이트로 인코딩한다 — 실기기에서 이 엔드포인트가
+/// 실제로는 EUC-KR이 아니라 UTF-8로 응답하는 사례가 확인되어, 디코딩
+/// 폴백(EUC-KR 실패 시 UTF-8 재시도) 동작을 검증하기 위한 픽스처.
+List<int> _fixtureBytesUtf8(List<String> rowsHtml) =>
+    utf8.encode(_fixtureHtml(rowsHtml));
 
 void main() {
   group('MyTimetableService.fetchMyTimetable', () {
@@ -41,6 +50,26 @@ void main() {
         semester: 2,
         jsessionId: 'JSESSION123',
         wmonid: 'WMONID123',
+        userId2: 'REAL_USER_UID',
+      );
+
+      expect(result.courseSectionCodes, {'CSE301-01'});
+    });
+
+    test('응답이 EUC-KR이 아니라 UTF-8이어도 자동으로 재시도해 정상 파싱한다', () async {
+      final bytes = _fixtureBytesUtf8([
+        _row(['CSE301', '자료구조', '01']),
+      ]);
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(bytes, 200);
+      });
+      final service = MyTimetableService(client: mockClient);
+
+      final result = await service.fetchMyTimetable(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
         userId2: 'REAL_USER_UID',
       );
 

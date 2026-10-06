@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cp949_codec/cp949_codec.dart';
 import 'package:html/parser.dart' as html_parser;
@@ -118,15 +119,22 @@ class MyTimetableService {
       throw MyTimetableServerException('서버 오류 (${response.statusCode})');
     }
 
-    // 명세 본문에는 이 엔드포인트의 인코딩이 명시돼 있지 않지만, 같은
-    // dreams2.daejin.ac.kr(수강신청 시스템) 소속이고 명세서 공통 섹션에
-    // "수강신청 시스템 응답 인코딩이 EUC-KR인 경우가 많음"이라고 돼 있어
-    // 1단계(개설과목 조회)와 동일하게 EUC-KR/CP949로 디코딩한다.
+    // 명세 본문에는 이 엔드포인트의 인코딩이 명시돼 있지 않아 개설과목
+    // 조회(1단계)와 같은 EUC-KR로 추정했었는데, 실기기 테스트에서 디코딩
+    // 실패가 확인됨 — 이 엔드포인트는 실제로는 UTF-8로 보인다. EUC-KR을
+    // 먼저 시도하고 실패하면 UTF-8로 재시도한다(반대로 양쪽 다 실패하는
+    // 경우만 진짜 파싱 실패로 처리).
     String body;
     try {
       body = cp949.decode(response.bodyBytes);
-    } catch (e) {
-      throw MyTimetableParseException('EUC-KR 디코딩에 실패했습니다: $e');
+    } catch (eucKrError) {
+      try {
+        body = utf8.decode(response.bodyBytes);
+      } catch (utf8Error) {
+        throw MyTimetableParseException(
+          'EUC-KR 디코딩에 실패했습니다: $eucKrError (UTF-8 재시도도 실패: $utf8Error)',
+        );
+      }
     }
 
     try {
