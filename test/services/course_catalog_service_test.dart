@@ -1,5 +1,8 @@
-// 개설과목 조회 응답(EUC-KR 인코딩 HTML) 파싱 로직을 고정된 픽스처로 검증한다.
-// 실제 대진대 서버 호출(네트워크)은 하지 않고 http.testing.MockClient로 대체한다.
+// 개설과목 조회 응답(EUC-KR 또는 UTF-8 인코딩 HTML) 파싱 로직을 고정된
+// 픽스처로 검증한다. 실제 대진대 서버 호출(네트워크)은 하지 않고
+// http.testing.MockClient로 대체한다.
+
+import 'dart:convert';
 
 import 'package:cp949_codec/cp949_codec.dart';
 import 'package:http/http.dart' as http;
@@ -47,19 +50,25 @@ List<String> _validCells({
   note,
 ];
 
+String _fixtureHtml(List<String> rowsHtml) =>
+    '<html><body><table>'
+    '<tr class="tr_chrm_n">'
+    '<td>일련번호</td><td>과목코드</td><td>과목명</td><td>이수구분</td>'
+    '<td>학점</td><td>학년</td><td>교수</td><td>시간표</td><td>강의실</td>'
+    '<td>폐강</td><td>정원</td><td>대기</td><td>신청비율</td><td>비고</td>'
+    '</tr>'
+    '${rowsHtml.join()}'
+    '</table></body></html>';
+
 /// [rowsHtml]을 테이블 안에 넣고 EUC-KR 바이트로 인코딩한 전체 응답 본문을 만든다.
-List<int> _fixtureBytes(List<String> rowsHtml) {
-  final html =
-      '<html><body><table>'
-      '<tr class="tr_chrm_n">'
-      '<td>일련번호</td><td>과목코드</td><td>과목명</td><td>이수구분</td>'
-      '<td>학점</td><td>학년</td><td>교수</td><td>시간표</td><td>강의실</td>'
-      '<td>폐강</td><td>정원</td><td>대기</td><td>신청비율</td><td>비고</td>'
-      '</tr>'
-      '${rowsHtml.join()}'
-      '</table></body></html>';
-  return cp949.encode(html);
-}
+List<int> _fixtureBytes(List<String> rowsHtml) =>
+    cp949.encode(_fixtureHtml(rowsHtml));
+
+/// 위와 동일하지만 UTF-8 바이트로 인코딩한다 — 실기기에서 이 엔드포인트가
+/// 명세(EUC-KR)와 달리 실제로는 UTF-8로 응답하는 사례가 확인되어, 디코딩
+/// 폴백 동작을 검증하기 위한 픽스처.
+List<int> _fixtureBytesUtf8(List<String> rowsHtml) =>
+    utf8.encode(_fixtureHtml(rowsHtml));
 
 void main() {
   group('CourseCatalogService.fetchCourseCatalog', () {
@@ -94,6 +103,46 @@ void main() {
       expect(item.waitlistCount, 0);
       expect(item.enrollmentRatio, '30/40');
       expect(item.note, isNull);
+    });
+
+    test('응답이 명세(EUC-KR)와 달리 UTF-8이어도 자동으로 재시도해 정상 파싱한다', () async {
+      final bytes = _fixtureBytesUtf8([_row('tr_a0_chrm', _validCells())]);
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(bytes, 200);
+      });
+      final service = CourseCatalogService(client: mockClient);
+
+      final result = await service.fetchCourseCatalog(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
+      );
+
+      expect(result, hasLength(1));
+      expect(result.single.courseCode, 'CSE301');
+    });
+
+    test('Content-Type 헤더에 charset=UTF-8이 명시되면 EUC-KR 추정보다 헤더를 우선한다', () async {
+      final bytes = _fixtureBytesUtf8([_row('tr_a0_chrm', _validCells())]);
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(
+          bytes,
+          200,
+          headers: {'content-type': 'text/html; charset=UTF-8'},
+        );
+      });
+      final service = CourseCatalogService(client: mockClient);
+
+      final result = await service.fetchCourseCatalog(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
+      );
+
+      expect(result, hasLength(1));
+      expect(result.single.courseCode, 'CSE301');
     });
 
     test('tr_a 접두사가 붙은 여러 행(tr_a0_chrm, tr_a1_chrm)을 모두 인식한다', () async {
