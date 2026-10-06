@@ -21,6 +21,7 @@ import 'home/widgets/weather_detail_dialog.dart';
 import 'home_placeholder_screen.dart';
 import 'login_screen.dart';
 import 'terms_detail_screen.dart';
+import 'timetable/timetable_screen.dart';
 
 /// 좌상단 아바타를 눌렀을 때 뜨는 드롭다운 메뉴 항목 (Figma node 6:16).
 enum _AvatarMenuAction { myInfo, terms, logout }
@@ -278,6 +279,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openPlaceholder() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()));
+  }
+
+  void _openTimetable() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TimetableScreen(
+          jsessionId: widget.jsessionId,
+          wmonid: widget.wmonid,
+          userId2: widget.userId2,
+        ),
+      ),
+    );
   }
 
   void _openCollection() {
@@ -575,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                   ),
                   const SizedBox(height: 16),
-                  RecommendCard(isDark: _isDark, onTap: _openPlaceholder),
+                  RecommendCard(isDark: _isDark, onTap: _openTimetable),
                   const SizedBox(height: 12),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
