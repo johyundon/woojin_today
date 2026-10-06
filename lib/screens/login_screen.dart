@@ -79,7 +79,13 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const StudentIdLoginCompleteScreen()),
+        MaterialPageRoute(
+          builder: (_) => StudentIdLoginCompleteScreen(
+            jsessionId: result.jsessionId,
+            wmonid: result.wmonid,
+            userId2: result.userId2,
+          ),
+        ),
       );
       return;
     }

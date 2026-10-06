@@ -17,12 +17,14 @@ class Headline extends StatelessWidget {
     required this.weatherLoading,
     required this.weatherHasError,
     required this.weatherData,
+    this.onWeatherTap,
   });
 
   final HomeColors colors;
   final bool weatherLoading;
   final bool weatherHasError;
   final WeatherResponse? weatherData;
+  final VoidCallback? onWeatherTap;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +47,7 @@ class Headline extends StatelessWidget {
           weatherLoading: weatherLoading,
           weatherHasError: weatherHasError,
           weatherData: weatherData,
+          onTap: onWeatherTap,
         ),
       ],
     );

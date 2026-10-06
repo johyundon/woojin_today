@@ -44,8 +44,9 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     var loginSucceeded = false;
+    PortalLoginResult? result;
     try {
-      final result = await PortalLoginService().login(
+      result = await PortalLoginService().login(
         userId: credentials.userId,
         userPwd: credentials.userPwd,
       );
@@ -58,8 +59,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
     await minDisplay;
     if (!mounted) return;
-    if (loginSucceeded) {
-      _goToLoginComplete();
+    if (loginSucceeded && result != null) {
+      _goToLoginComplete(
+        jsessionId: result.jsessionId,
+        wmonid: result.wmonid,
+        userId2: result.userId2,
+      );
     } else {
       _goToTermsAgreement();
     }
@@ -80,10 +85,20 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  void _goToLoginComplete() {
+  void _goToLoginComplete({
+    String? jsessionId,
+    String? wmonid,
+    String? userId2,
+  }) {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const StudentIdLoginCompleteScreen()),
+      MaterialPageRoute(
+        builder: (_) => StudentIdLoginCompleteScreen(
+          jsessionId: jsessionId,
+          wmonid: wmonid,
+          userId2: userId2,
+        ),
+      ),
     );
   }
 
