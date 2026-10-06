@@ -17,6 +17,7 @@ class Header extends StatelessWidget {
     required this.avatarKey,
     required this.onAvatarTap,
     required this.onToggle,
+    required this.greeting,
   });
 
   final bool isDark;
@@ -24,6 +25,10 @@ class Header extends StatelessWidget {
   final GlobalKey avatarKey;
   final VoidCallback onAvatarTap;
   final ValueChanged<bool> onToggle;
+
+  /// 날짜 아래 인사말. 기본값("오늘 하루도 화이팅!")은 지금이 사용자의 실제
+  /// 수업 시간이면 "{과목명} 수업 화이팅!"으로 바뀐다(_HomeScreenState 참고).
+  final String greeting;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +70,7 @@ class Header extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '점심 맛있게 드세요!',
+                greeting,
                 style: TextStyle(
                   color: colors.textPrimary,
                   fontSize: 16,
