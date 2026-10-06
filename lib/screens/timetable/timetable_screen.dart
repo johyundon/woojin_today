@@ -101,7 +101,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
   late int _year;
   late int _semester;
-  final _semesterKey = GlobalKey();
+  final _headerKey = GlobalKey();
 
   List<PlannedCourse> _confirmedCourses = [];
   List<CourseCatalogItem> _catalog = [];
@@ -114,6 +114,64 @@ class _TimetableScreenState extends State<TimetableScreen> {
   final _filters = CourseFilters();
   bool _filterPanelOpen = false;
   PendingSlot? _pendingSlot;
+
+  // 그리드 아래 핸들을 드래그해서 조절하는 그리드 뷰포트 높이.
+  double _gridViewportHeight = 360;
+  static const double _minGridViewportHeight = 240;
+  static const double _maxGridViewportHeight = 640;
+
+  // 그리드를 아무리 늘려도 검색 결과 리스트에 항상 남겨줄 최소 높이.
+  static const double _minResultsReserve = 0;
+
+  // 드래그 가능한 최댓값을 계산하기 위해, 그리드를 제외한 나머지 요소들
+  // (헤더~빠른실행줄, 핸들~검색바)의 실제 렌더 높이를 매 프레임 실측한다.
+  // "스크롤뷰로 감싸서 넘치면 자체 스크롤" 방식은 핸들의 드래그 제스처와
+  // 스크롤뷰의 드래그 제스처가 서로 경합해서(제스처 아레나 충돌) 드래그
+  // 방향에 따라 번갈아 씹히는 문제가 있어 포기했다 — 대신 애초에 넘칠 수
+  // 없는 값으로만 _gridViewportHeight가 움직이게 만든다.
+  final _chromeAboveGridKey = GlobalKey();
+  final _chromeBelowGridKey = GlobalKey();
+  final _gridWrapperKey = GlobalKey();
+  double _chromeAboveHeight = 0;
+  double _chromeBelowHeight = 0;
+  // TimetableGrid 내부의 요일 라벨 행 + 여백처럼 viewportHeight에 포함되지
+  // 않는 고정 높이분. 실측치에서 역산한다(그리드 자체는 고정폭 레이아웃이라
+  // 이 값이 뷰포트 크기와 무관하게 항상 같다).
+  double _gridChromeHeight = 0;
+  double _bodyHeight = 0;
+
+  double get _computedMaxGridViewportHeight {
+    final cap =
+        _bodyHeight -
+        _minResultsReserve -
+        _chromeAboveHeight -
+        _chromeBelowHeight -
+        _gridChromeHeight;
+    return cap.clamp(_minGridViewportHeight, _maxGridViewportHeight);
+  }
+
+  void _scheduleChromeMeasurement(double gridViewportHeightThisBuild) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final above = _chromeAboveGridKey.currentContext?.size?.height;
+      final below = _chromeBelowGridKey.currentContext?.size?.height;
+      final gridWrapper = _gridWrapperKey.currentContext?.size?.height;
+      if (above == null || below == null || gridWrapper == null) return;
+
+      final gridChrome = gridWrapper - gridViewportHeightThisBuild;
+      final changed =
+          (above - _chromeAboveHeight).abs() > 0.5 ||
+          (below - _chromeBelowHeight).abs() > 0.5 ||
+          (gridChrome - _gridChromeHeight).abs() > 0.5;
+      if (!changed) return;
+
+      setState(() {
+        _chromeAboveHeight = above;
+        _chromeBelowHeight = below;
+        _gridChromeHeight = gridChrome;
+      });
+    });
+  }
 
   // TODO: 실제 수업 시간 알림(로컬 알림 스케줄링)은 구현돼 있지 않다. 이
   // 토글은 디자인(상태 1~10 공통 헤더)에 맞춘 UI 상태만 갖고 있다 — 알림
@@ -176,10 +234,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
         userId: widget.userId2,
       );
       if (!mounted) return;
-      debugPrint(
-        '[Timetable] _loadCatalog 완료: year=$_year semester=$_semester '
-        'catalog.length=${catalog.length}',
-      );
       setState(() {
         _catalog = catalog;
         _catalogLoading = false;
@@ -240,23 +294,25 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
   }
 
+  // Figma 시안(node-id=6-38)에서 드롭다운이 "학기" 필이 아니라 헤더 줄
+  // 왼쪽 끝(뒤로가기 화살표 쪽)에 맞춰서 뜬다 — 그 폭을 그대로 흉내낸
+  // 고정값. 헤더 Row 자체는 Spacer 때문에 화면 폭만큼 넓어서, 메뉴 폭을
+  // renderBox.size에서 그대로 따오면 지나치게 넓어진다.
+  static const double _semesterMenuWidth = 180;
+
   Future<void> _openSemesterMenu() async {
     final renderBox =
-        _semesterKey.currentContext?.findRenderObject() as RenderBox?;
+        _headerKey.currentContext?.findRenderObject() as RenderBox?;
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     if (renderBox == null) return;
 
+    final topLeft = renderBox.localToGlobal(
+      Offset(0, renderBox.size.height + 8),
+      ancestor: overlay,
+    );
+
     final position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        renderBox.localToGlobal(
-          Offset(0, renderBox.size.height + 8),
-          ancestor: overlay,
-        ),
-        renderBox.localToGlobal(
-          renderBox.size.bottomRight(const Offset(190, 8)),
-          ancestor: overlay,
-        ),
-      ),
+      Rect.fromLTWH(topLeft.dx, topLeft.dy, _semesterMenuWidth, 0),
       Offset.zero & overlay.size,
     );
 
@@ -504,73 +560,113 @@ class _TimetableScreenState extends State<TimetableScreen> {
     return Scaffold(
       backgroundColor: TimetableColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 20, 0),
-              child: TimetableHeader(
-                semesterLabel: '$_year년 $_semester학기',
-                totalCredits: _totalCredits,
-                savedCount: _savedCount,
-                semesterKey: _semesterKey,
-                onBack: () => Navigator.of(context).pop(),
-                onSemesterTap: _openSemesterMenu,
-                onSave: _openSaveDialog,
-                onOpenSavedList: _openSavedList,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: QuickActionsRow(
-                loading: _myTimetableLoading,
-                onLoadMyTimetable: _loadMyTimetable,
-                notificationsEnabled: _notificationsEnabled,
-                onNotificationsChanged: (v) =>
-                    setState(() => _notificationsEnabled = v),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TimetableGrid(
-                courses: _confirmedCourses,
-                pendingSlot: _pendingSlot,
-                onEmptyCellTap: _onEmptyCellTap,
-                onRemoveCourse: _removeCourse,
-                onAutoFill: _autoFillSchedule,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: TimetableColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SearchFilterBar(
-                controller: _searchController,
-                onQueryChanged: (q) => setState(() => _query = q),
-                filters: _filters,
-                filterPanelOpen: _filterPanelOpen,
-                onToggleFilterPanel: () =>
-                    setState(() => _filterPanelOpen = !_filterPanelOpen),
-                onFiltersChanged: () => setState(() {}),
-                availableGrades: grades,
-                availableCourseTypes: courseTypes,
-                availableCredits: credits,
-                pendingSlot: _pendingSlot,
-                onClearPendingSlot: _clearPendingSlot,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(child: _buildResultsList()),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            _bodyHeight = constraints.maxHeight;
+            // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의 실측
+            // 높이"를 기준으로 상한을 계산해서, 핸들을 아무리 당겨도 화면
+            // (Column)이 넘치지 않는 값으로만 움직이게 한다.
+            final displayedGridHeight = _gridViewportHeight.clamp(
+              _minGridViewportHeight,
+              _computedMaxGridViewportHeight,
+            );
+            _scheduleChromeMeasurement(displayedGridHeight);
+
+            return Column(
+              children: [
+                Column(
+                  key: _chromeAboveGridKey,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 20, 0),
+                      child: TimetableHeader(
+                        semesterLabel: '$_year년 $_semester학기',
+                        totalCredits: _totalCredits,
+                        savedCount: _savedCount,
+                        headerKey: _headerKey,
+                        onBack: () => Navigator.of(context).pop(),
+                        onSemesterTap: _openSemesterMenu,
+                        onSave: _openSaveDialog,
+                        onOpenSavedList: _openSavedList,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: QuickActionsRow(
+                        loading: _myTimetableLoading,
+                        onLoadMyTimetable: _loadMyTimetable,
+                        notificationsEnabled: _notificationsEnabled,
+                        onNotificationsChanged: (v) =>
+                            setState(() => _notificationsEnabled = v),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+                Padding(
+                  key: _gridWrapperKey,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TimetableGrid(
+                    courses: _confirmedCourses,
+                    pendingSlot: _pendingSlot,
+                    onEmptyCellTap: _onEmptyCellTap,
+                    onRemoveCourse: _removeCourse,
+                    onAutoFill: _autoFillSchedule,
+                    viewportHeight: displayedGridHeight,
+                  ),
+                ),
+                Column(
+                  key: _chromeBelowGridKey,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragUpdate: (details) {
+                        setState(() {
+                          _gridViewportHeight =
+                              (_gridViewportHeight + details.delta.dy).clamp(
+                                _minGridViewportHeight,
+                                _computedMaxGridViewportHeight,
+                              );
+                        });
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: TimetableColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: SearchFilterBar(
+                        controller: _searchController,
+                        onQueryChanged: (q) => setState(() => _query = q),
+                        filters: _filters,
+                        filterPanelOpen: _filterPanelOpen,
+                        onToggleFilterPanel: () =>
+                            setState(() => _filterPanelOpen = !_filterPanelOpen),
+                        onFiltersChanged: () => setState(() {}),
+                        availableGrades: grades,
+                        availableCourseTypes: courseTypes,
+                        availableCredits: credits,
+                        pendingSlot: _pendingSlot,
+                        onClearPendingSlot: _clearPendingSlot,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+                Expanded(child: _buildResultsList()),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -613,11 +709,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
 
     final results = _filteredResults;
-    debugPrint(
-      '[Timetable] _buildResultsList: catalog.length=${_catalog.length} '
-      'results.length=${results.length} query="$_query" '
-      'filters.isDefault=${_filters.isDefault} pendingSlot=$_pendingSlot',
-    );
     if (results.isEmpty) {
       return const Center(
         child: Text(
