@@ -1,6 +1,12 @@
 // 내 시간표 불러오기 응답(EUC-KR 또는 UTF-8 인코딩 HTML) 파싱 로직을 고정된
 // 픽스처로 검증한다. 실제 대진대 서버 호출(네트워크)은 하지 않고
 // http.testing.MockClient로 대체한다.
+//
+// 인코딩 결정은 1순위로 Content-Type 헤더의 charset을 신뢰하고, 헤더가
+// 없거나 불명/불일치일 때만 EUC-KR -> UTF-8(strict) -> UTF-8(allowMalformed)
+// 폴백 체인으로 넘어간다 — 아래 "Content-Type 헤더가 없거나 불명" 테스트들은
+// 헤더를 안 준 경우를 검증하고, "Content-Type 헤더에 charset=..." 테스트들은
+// 헤더가 있을 때 그 값을 우선하는지를 검증한다.
 
 import 'dart:convert';
 
@@ -56,12 +62,65 @@ void main() {
       expect(result.courseSectionCodes, {'CSE301-01'});
     });
 
-    test('응답이 EUC-KR이 아니라 UTF-8이어도 자동으로 재시도해 정상 파싱한다', () async {
+    test(
+      'Content-Type 헤더가 없거나 불명이면 EUC-KR이 아니라 UTF-8이어도 폴백으로 정상 파싱한다',
+      () async {
+        final bytes = _fixtureBytesUtf8([
+          _row(['CSE301', '자료구조', '01']),
+        ]);
+        final mockClient = MockClient((request) async {
+          return http.Response.bytes(bytes, 200);
+        });
+        final service = MyTimetableService(client: mockClient);
+
+        final result = await service.fetchMyTimetable(
+          year: 2026,
+          semester: 2,
+          jsessionId: 'J',
+          wmonid: 'W',
+          userId2: 'REAL_USER_UID',
+        );
+
+        expect(result.courseSectionCodes, {'CSE301-01'});
+      },
+    );
+
+    test('Content-Type 헤더에 charset=UTF-8이 명시되면 EUC-KR 추정보다 헤더를 우선한다', () async {
+      // 헤더가 UTF-8을 선언했는데 EUC-KR로 먼저 시도했다면 깨졌을 바이트
+      // 조합이어도, 헤더를 신뢰하면 한 번에 바로 정상 디코딩돼야 한다.
       final bytes = _fixtureBytesUtf8([
         _row(['CSE301', '자료구조', '01']),
       ]);
       final mockClient = MockClient((request) async {
-        return http.Response.bytes(bytes, 200);
+        return http.Response.bytes(
+          bytes,
+          200,
+          headers: {'content-type': 'text/html; charset=UTF-8'},
+        );
+      });
+      final service = MyTimetableService(client: mockClient);
+
+      final result = await service.fetchMyTimetable(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
+        userId2: 'REAL_USER_UID',
+      );
+
+      expect(result.courseSectionCodes, {'CSE301-01'});
+    });
+
+    test('Content-Type 헤더에 charset=EUC-KR이 명시되면 그대로 EUC-KR로 디코딩한다', () async {
+      final bytes = _fixtureBytes([
+        _row(['CSE301', '자료구조', '01']),
+      ]);
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(
+          bytes,
+          200,
+          headers: {'content-type': 'text/html; charset=EUC-KR'},
+        );
       });
       final service = MyTimetableService(client: mockClient);
 

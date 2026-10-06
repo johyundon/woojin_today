@@ -44,6 +44,15 @@ class MyTimetableParseException extends MyTimetableException {
   const MyTimetableParseException(super.message);
 }
 
+/// 디코딩 결과(본문 문자열)와, 어떤 방법으로 디코딩했는지(진단 로그용)를
+/// 함께 담는다.
+class _DecodedBody {
+  const _DecodedBody(this.body, this.method);
+
+  final String body;
+  final String method;
+}
+
 /// 포털 로그인으로 얻은 세션 쿠키(JSESSIONID/WMONID)와 **본인 userId2**를
 /// 이용해 수강신청 시스템의 "내 시간표 불러오기"
 /// (`POST /sugang/center/BlsnTotalTimeTableLst.jsp`)를 호출한다.
@@ -115,39 +124,106 @@ class MyTimetableService {
       throw MyTimetableNetworkException('네트워크 오류: $e');
     }
 
+    // TODO(debug): 실기기 디코딩/파싱 실패 원인 추적용 진단 로그 — 쿠키 값
+    // 자체는 민감정보라 남기지 않고, 길이/존재 여부만 남긴다. 진단 끝나면
+    // 제거(portal_login_service.dart의 동일 패턴 참고).
+    print(
+      '[MyTimetable] status=${response.statusCode} '
+      'content-type=${response.headers['content-type']} '
+      'bodyBytes=${response.bodyBytes.length}',
+    );
+
     if (response.statusCode != 200) {
       throw MyTimetableServerException('서버 오류 (${response.statusCode})');
     }
 
-    // 명세 본문에는 이 엔드포인트의 인코딩이 명시돼 있지 않아 개설과목
-    // 조회(1단계)와 같은 EUC-KR로 추정했었는데, 실기기 테스트에서 디코딩
-    // 실패가 확인됨 — 이 엔드포인트는 실제로는 UTF-8로 보인다. EUC-KR을
-    // 먼저 시도하고 실패하면 UTF-8로 재시도한다.
-    //
-    // "시간표가 아직 없음"은 정상 상태이지, 디코딩 실패로 보여줄 에러가
-    // 아니다 — 그런데 과목명이 없는 빈 시간표 응답이 두 인코딩 모두로
-    // 깔끔하게 안 읽히는 사례가 있어서(예: 특정 바이트가 EUC-KR/UTF-8
-    // 둘 다에서 유효하지 않은 경우), 둘 다 실패해도 예외를 던지지 않고
-    // UTF-8 "느슨한" 디코딩(깨진 바이트는 대체문자로 치환, 항상 성공)으로
-    // 마지막까지 시도한다. 그래도 결과적으로 table#tTbl을 못 찾으면
-    // _parse()가 알아서 빈 시간표로 처리한다(기존 동작).
-    String body;
-    try {
-      body = cp949.decode(response.bodyBytes);
-    } catch (_) {
-      try {
-        body = utf8.decode(response.bodyBytes);
-      } catch (_) {
-        body = utf8.decode(response.bodyBytes, allowMalformed: true);
-      }
-    }
+    final decoded = _decodeBody(response);
+    print('[MyTimetable] decode=${decoded.method}');
+    final preview = decoded.body.substring(
+      0,
+      decoded.body.length < 200 ? decoded.body.length : 200,
+    );
+    print('[MyTimetable] bodyPreview=$preview');
 
     try {
-      return _parse(body);
+      return _parse(decoded.body);
     } on MyTimetableParseException {
       rethrow;
     } catch (e) {
       throw MyTimetableParseException('응답 구조가 예상과 다릅니다: $e');
+    }
+  }
+
+  // "charset=EUC-KR" / `charset="UTF-8"` 등에서 charset 값만 뽑는다.
+  static final _charsetPattern = RegExp(
+    r'charset\s*=\s*"?([\w-]+)"?',
+    caseSensitive: false,
+  );
+
+  /// 응답 바이트를 디코딩한다.
+  ///
+  /// 1순위: 서버가 `Content-Type` 헤더에 실제로 선언한 charset이 있으면 그걸
+  /// 신뢰한다(EUC-KR 추정이던 기존 방식보다 신뢰도가 높다 — 서버가 스스로
+  /// 밝힌 값이기 때문).
+  /// 2순위(헤더에 charset이 없거나, 헤더가 선언한 값으로 디코딩이 실패하거나,
+  /// 모르는 값인 경우): 기존처럼 EUC-KR -> UTF-8(strict) -> UTF-8
+  /// (allowMalformed, 항상 성공) 순으로 폴백한다. "시간표가 아직 없음"은
+  /// 정상 상태이므로 모든 디코딩이 실패해도 예외를 던지지 않고 마지막
+  /// allowMalformed 단계로 항상 결과를 만든다 — 그래도 table#tTbl을 못
+  /// 찾으면 _parse()가 빈 시간표로 처리한다(기존 동작).
+  _DecodedBody _decodeBody(http.Response response) {
+    final contentType = response.headers['content-type'];
+    final charset = contentType == null
+        ? null
+        : _charsetPattern.firstMatch(contentType)?.group(1)?.toLowerCase();
+
+    if (charset != null) {
+      final isEucKr =
+          charset == 'euc-kr' ||
+          charset == 'cp949' ||
+          charset == 'ks_c_5601-1987' ||
+          charset == 'x-windows-949';
+      final isUtf8 = charset == 'utf-8' || charset == 'utf8';
+
+      if (isEucKr) {
+        try {
+          return _DecodedBody(
+            cp949.decode(response.bodyBytes),
+            'Content-Type 헤더(charset=$charset) 기반 EUC-KR',
+          );
+        } catch (_) {
+          // 헤더가 선언한 값과 실제 바이트가 안 맞음 -> 아래 폴백 체인으로.
+        }
+      } else if (isUtf8) {
+        try {
+          return _DecodedBody(
+            utf8.decode(response.bodyBytes),
+            'Content-Type 헤더(charset=$charset) 기반 UTF-8',
+          );
+        } catch (_) {
+          // 헤더가 선언한 값과 실제 바이트가 안 맞음 -> 아래 폴백 체인으로.
+        }
+      }
+      // charset이 있지만 euc-kr/utf-8이 아닌 값이면 그대로 아래 폴백 체인으로.
+    }
+
+    try {
+      return _DecodedBody(
+        cp949.decode(response.bodyBytes),
+        'Content-Type 헤더 없음/불명 -> EUC-KR 폴백',
+      );
+    } catch (_) {
+      try {
+        return _DecodedBody(
+          utf8.decode(response.bodyBytes),
+          'Content-Type 헤더 없음/불명 -> UTF-8(strict) 폴백',
+        );
+      } catch (_) {
+        return _DecodedBody(
+          utf8.decode(response.bodyBytes, allowMalformed: true),
+          'Content-Type 헤더 없음/불명 -> UTF-8(allowMalformed) 폴백',
+        );
+      }
     }
   }
 
