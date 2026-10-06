@@ -122,18 +122,23 @@ class MyTimetableService {
     // 명세 본문에는 이 엔드포인트의 인코딩이 명시돼 있지 않아 개설과목
     // 조회(1단계)와 같은 EUC-KR로 추정했었는데, 실기기 테스트에서 디코딩
     // 실패가 확인됨 — 이 엔드포인트는 실제로는 UTF-8로 보인다. EUC-KR을
-    // 먼저 시도하고 실패하면 UTF-8로 재시도한다(반대로 양쪽 다 실패하는
-    // 경우만 진짜 파싱 실패로 처리).
+    // 먼저 시도하고 실패하면 UTF-8로 재시도한다.
+    //
+    // "시간표가 아직 없음"은 정상 상태이지, 디코딩 실패로 보여줄 에러가
+    // 아니다 — 그런데 과목명이 없는 빈 시간표 응답이 두 인코딩 모두로
+    // 깔끔하게 안 읽히는 사례가 있어서(예: 특정 바이트가 EUC-KR/UTF-8
+    // 둘 다에서 유효하지 않은 경우), 둘 다 실패해도 예외를 던지지 않고
+    // UTF-8 "느슨한" 디코딩(깨진 바이트는 대체문자로 치환, 항상 성공)으로
+    // 마지막까지 시도한다. 그래도 결과적으로 table#tTbl을 못 찾으면
+    // _parse()가 알아서 빈 시간표로 처리한다(기존 동작).
     String body;
     try {
       body = cp949.decode(response.bodyBytes);
-    } catch (eucKrError) {
+    } catch (_) {
       try {
         body = utf8.decode(response.bodyBytes);
-      } catch (utf8Error) {
-        throw MyTimetableParseException(
-          'EUC-KR 디코딩에 실패했습니다: $eucKrError (UTF-8 재시도도 실패: $utf8Error)',
-        );
+      } catch (_) {
+        body = utf8.decode(response.bodyBytes, allowMalformed: true);
       }
     }
 

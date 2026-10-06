@@ -76,6 +76,27 @@ void main() {
       expect(result.courseSectionCodes, {'CSE301-01'});
     });
 
+    test('EUC-KR도 UTF-8도 아닌 깨진 바이트가 와도 예외 없이 빈 시간표로 처리한다', () async {
+      // "시간표가 아직 없음"은 정상 상태이지 에러가 아니다 — 디코딩이 둘 다
+      // 실패하는 극단적인 경우에도 앱이 죽거나 에러를 보여주면 안 되고,
+      // 그냥 빈 시간표(과목 없음)로 조용히 폴백해야 한다.
+      final garbledBytes = <int>[0xFF, 0xFE, 0x80, 0x81, 0x00, 0xFF];
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(garbledBytes, 200);
+      });
+      final service = MyTimetableService(client: mockClient);
+
+      final result = await service.fetchMyTimetable(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
+        userId2: 'REAL_USER_UID',
+      );
+
+      expect(result.courseSectionCodes, isEmpty);
+    });
+
     test('헤더 행(첫 번째 행)은 제외된다', () async {
       // _fixtureBytes가 항상 첫 행을 헤더로 포함시키므로, 데이터 행이
       // 없으면 결과가 비어 있어야 한다(헤더행이 섞여 들어오지 않음을 검증).
