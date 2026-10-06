@@ -189,22 +189,6 @@ class SearchFilterBar extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _FilterDropdownChip<Weekday?>(
-            label: '요일',
-            selectedLabel: filters.day == null
-                ? null
-                : _weekdayChipLabels[_weekdayChipValues.indexOf(filters.day!)],
-            options: [
-              const _DropdownOption(null, '전체'),
-              for (var i = 0; i < _weekdayChipValues.length; i++)
-                _DropdownOption(_weekdayChipValues[i], _weekdayChipLabels[i]),
-            ],
-            onSelected: (value) {
-              filters.day = value;
-              onFiltersChanged();
-            },
-          ),
-          const SizedBox(width: 8),
           _FilterDropdownChip<String?>(
             label: '학년',
             selectedLabel: filters.grade,
@@ -227,6 +211,22 @@ class SearchFilterBar extends StatelessWidget {
             ],
             onSelected: (value) {
               filters.courseType = value;
+              onFiltersChanged();
+            },
+          ),
+          const SizedBox(width: 8),
+          _FilterDropdownChip<Weekday?>(
+            label: '요일',
+            selectedLabel: filters.day == null
+                ? null
+                : _weekdayChipLabels[_weekdayChipValues.indexOf(filters.day!)],
+            options: [
+              const _DropdownOption(null, '전체'),
+              for (var i = 0; i < _weekdayChipValues.length; i++)
+                _DropdownOption(_weekdayChipValues[i], _weekdayChipLabels[i]),
+            ],
+            onSelected: (value) {
+              filters.day = value;
               onFiltersChanged();
             },
           ),
