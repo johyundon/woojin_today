@@ -107,10 +107,18 @@ class PortalLoginService {
         return step1;
       }
       final fallbackUid = await _step2Fallback(client, cookieJar);
+      // 2단계 폴백(LinkPortal.jsp)은 www.daejin.ac.kr이 아니라
+      // dreams2.daejin.ac.kr(+ nsso.daejin.ac.kr SSO 리다이렉트)을 거치는데,
+      // 이 흐름에서 dreams2 쪽이 1단계와는 다른 자체 JSESSIONID/WMONID를
+      // 새로 내려주는 사례가 실기기에서 확인됐다. 1단계 값을 그대로 쓰면
+      // 이후 dreams2 계열 API 호출(개설과목 조회 등)이 전부 인증 안 된
+      // 요청으로 취급돼 일반 랜딩 페이지로 리다이렉트되는 버그로 이어졌다.
+      // cookieJar는 1단계+2단계 전체 리다이렉트 체인에 걸쳐 계속 갱신된
+      // 값이므로, 여기서 다시 읽어 최신 값을 우선한다.
       return PortalLoginResult(
         success: true,
-        wmonid: step1.wmonid,
-        jsessionId: step1.jsessionId,
+        wmonid: cookieJar['WMONID'] ?? step1.wmonid,
+        jsessionId: cookieJar['JSESSIONID'] ?? step1.jsessionId,
         userId2: fallbackUid,
       );
     } on PortalLoginException {
