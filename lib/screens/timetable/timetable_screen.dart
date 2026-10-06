@@ -172,6 +172,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         jsessionId: widget.jsessionId!,
         wmonid: widget.wmonid!,
         icKwa: '%',
+        userId: widget.userId2,
       );
       if (!mounted) return;
       debugPrint(
@@ -209,6 +210,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               jsessionId: widget.jsessionId!,
               wmonid: widget.wmonid!,
               icKwa: '%',
+              userId: widget.userId2,
             );
       final myTimetable = await _myTimetableService.fetchMyTimetable(
         year: _year,
