@@ -90,10 +90,18 @@ class SearchFilterBar extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: TimetableColors.accent,
-                  shape: BoxShape.circle,
+                  color: filterPanelOpen
+                      ? TimetableColors.accent
+                      : TimetableColors.surface,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.tune, color: Colors.white, size: 20),
+                child: Icon(
+                  Icons.tune,
+                  color: filterPanelOpen
+                      ? Colors.white
+                      : TimetableColors.textSecondary,
+                  size: 20,
+                ),
               ),
             ),
           ],
@@ -243,6 +251,10 @@ class SearchFilterBar extends StatelessWidget {
               onFiltersChanged();
             },
           ),
+          const SizedBox(width: 8),
+          const _DisabledFilterChip(label: '영역', showChevron: true),
+          const SizedBox(width: 8),
+          const _DisabledFilterChip(label: '온라인', showChevron: false),
         ],
       ),
     );
@@ -313,6 +325,50 @@ class _ActiveChip extends StatelessWidget {
             child: const Icon(Icons.close, color: Colors.white, size: 14),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Figma 디자인엔 있지만 실제 개설과목 데이터([CourseCatalogItem])에
+/// 대응 필드가 없는 필터(영역/온라인) 자리만 맞춰두는 비활성 칩.
+/// 탭해도 아무 동작을 하지 않는다 — 없는 데이터로 필터링하는 척하지 않기
+/// 위함.
+class _DisabledFilterChip extends StatelessWidget {
+  const _DisabledFilterChip({required this.label, required this.showChevron});
+
+  final String label;
+  final bool showChevron;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.4,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: TimetableColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: TimetableColors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (showChevron)
+              const Icon(
+                Icons.keyboard_arrow_down,
+                size: 16,
+                color: TimetableColors.textSecondary,
+              ),
+          ],
+        ),
       ),
     );
   }

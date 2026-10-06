@@ -5,6 +5,7 @@ import '../../services/course_catalog_service.dart';
 import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
 import 'course_filters.dart';
+import 'grid_layout.dart';
 import 'models/planned_course.dart';
 import 'models/saved_timetable.dart';
 import 'services/saved_timetable_storage.dart';
@@ -252,7 +253,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
           ancestor: overlay,
         ),
         renderBox.localToGlobal(
-          renderBox.size.bottomRight(const Offset(160, 8)),
+          renderBox.size.bottomRight(const Offset(190, 8)),
           ancestor: overlay,
         ),
       ),
@@ -271,9 +272,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
         for (final option in options)
           PopupMenuItem(
             value: option,
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               '${option.year}년 ${option.semester}학기',
-              style: const TextStyle(color: TimetableColors.textPrimary),
+              style: const TextStyle(
+                color: TimetableColors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
       ],
@@ -325,6 +332,82 @@ class _TimetableScreenState extends State<TimetableScreen> {
       ];
       _pendingSlot = null;
     });
+  }
+
+  /// 규칙 기반 자동 시간표 추천: 외부 AI 호출 없이, 현재 빈 시간대에 완전히
+  /// 들어맞는 미확정 개설과목을 앞에서부터 그리디하게 채운다. 이미 확정된
+  /// 과목·폐강 과목·그리드 범위(월~금 8~22시) 밖 교시는 후보에서 제외한다.
+  void _autoFillSchedule() {
+    if (_catalog.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('추천할 개설과목 데이터가 없어요.')));
+      return;
+    }
+
+    final occupied = <Weekday, List<({int start, int end})>>{
+      for (final day in gridWeekdays) day: [],
+    };
+    for (final course in _confirmedCourses) {
+      for (final slot in parseRawSchedule(course.rawSchedule)) {
+        final range = assumedPeriodTimes[slot.period];
+        if (range == null || !occupied.containsKey(slot.day)) continue;
+        occupied[slot.day]!.add((start: range.startMinutes, end: range.endMinutes));
+      }
+    }
+
+    bool fitsFreely(List<ClassPeriodSlot> slots) {
+      for (final slot in slots) {
+        if (!occupied.containsKey(slot.day)) return false;
+        final range = assumedPeriodTimes[slot.period];
+        if (range == null ||
+            range.startMinutes < gridStartHour * 60 ||
+            range.endMinutes > gridEndHour * 60) {
+          return false;
+        }
+        final overlaps = occupied[slot.day]!.any(
+          (r) => range.startMinutes < r.end && range.endMinutes > r.start,
+        );
+        if (overlaps) return false;
+      }
+      return true;
+    }
+
+    final existingKeys = _confirmedCourses.map((c) => c.key).toSet();
+    final picked = <CourseCatalogItem>[];
+
+    for (final item in _catalog) {
+      if (item.isClosed) continue;
+      final key = '${item.courseCode}-${item.section}';
+      if (existingKeys.contains(key)) continue;
+
+      final slots = parseRawSchedule(item.rawSchedule);
+      if (slots.isEmpty || !fitsFreely(slots)) continue;
+
+      for (final slot in slots) {
+        final range = assumedPeriodTimes[slot.period]!;
+        occupied[slot.day]!.add((start: range.startMinutes, end: range.endMinutes));
+      }
+      picked.add(item);
+      existingKeys.add(key);
+    }
+
+    if (picked.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('빈 시간대에 맞는 과목을 찾지 못했어요.')));
+      return;
+    }
+
+    setState(() {
+      _confirmedCourses = [
+        ..._confirmedCourses,
+        ...picked.map(PlannedCourse.fromCatalogItem),
+      ];
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${picked.length}과목을 추천해서 채웠어요.')));
   }
 
   Future<void> _showCourseDetail(CourseCatalogItem item) async {
@@ -455,6 +538,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 pendingSlot: _pendingSlot,
                 onEmptyCellTap: _onEmptyCellTap,
                 onRemoveCourse: _removeCourse,
+                onAutoFill: _autoFillSchedule,
               ),
             ),
             const SizedBox(height: 8),

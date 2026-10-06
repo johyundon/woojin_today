@@ -28,6 +28,7 @@ class TimetableGrid extends StatelessWidget {
     required this.pendingSlot,
     required this.onEmptyCellTap,
     required this.onRemoveCourse,
+    required this.onAutoFill,
   });
 
   final List<PlannedCourse> courses;
@@ -35,13 +36,39 @@ class TimetableGrid extends StatelessWidget {
   final void Function(Weekday day, int startHour) onEmptyCellTap;
   final ValueChanged<PlannedCourse> onRemoveCourse;
 
+  /// 그리드 우상단(금요일 열 위)에 뜨는 플로팅 반짝이(AI) 버튼 탭 콜백 —
+  /// 규칙 기반 자동 시간표 추천을 실행한다.
+  final VoidCallback onAutoFill;
+
   static const int _hourCount = gridEndHour - gridStartHour;
   static const double _gridHeight = _hourCount * gridHourRowHeight;
+
+  static const double _autoFillButtonSize = 40;
 
   @override
   Widget build(BuildContext context) {
     final layouts = buildBlockLayouts(courses);
 
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _buildGridColumn(layouts),
+        Positioned(
+          // 요일 헤더 줄(대략 20px) 바로 아래, 그리드 오른쪽(금요일 열) 위에
+          // 뜨는 플로팅 버튼 — 스크롤돼도 같이 움직이지 않고 늘 같은 자리에
+          // 떠 있어야 해서(사용자 피드백) 스크롤 영역 밖(이 Stack)에 둔다.
+          top: 20,
+          right: 0,
+          child: _AutoFillFloatingButton(
+            size: _autoFillButtonSize,
+            onTap: onAutoFill,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGridColumn(List<CourseBlockLayout> layouts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -196,5 +223,32 @@ class TimetableGrid extends StatelessWidget {
     if (overlapsExisting) return;
 
     onEmptyCellTap(day, hour);
+  }
+}
+
+/// 자동 시간표 추천을 실행하는 원형 플로팅 버튼.
+class _AutoFillFloatingButton extends StatelessWidget {
+  const _AutoFillFloatingButton({required this.size, required this.onTap});
+
+  final double size;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: TimetableColors.accent,
+      shape: const CircleBorder(),
+      elevation: 4,
+      shadowColor: Colors.black54,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+        ),
+      ),
+    );
   }
 }
