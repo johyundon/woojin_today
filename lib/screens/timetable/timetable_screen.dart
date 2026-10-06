@@ -174,6 +174,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
         icKwa: '%',
       );
       if (!mounted) return;
+      debugPrint(
+        '[Timetable] _loadCatalog 완료: year=$_year semester=$_semester '
+        'catalog.length=${catalog.length}',
+      );
       setState(() {
         _catalog = catalog;
         _catalogLoading = false;
@@ -523,6 +527,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
 
     final results = _filteredResults;
+    debugPrint(
+      '[Timetable] _buildResultsList: catalog.length=${_catalog.length} '
+      'results.length=${results.length} query="$_query" '
+      'filters.isDefault=${_filters.isDefault} pendingSlot=$_pendingSlot',
+    );
     if (results.isEmpty) {
       return const Center(
         child: Text(
