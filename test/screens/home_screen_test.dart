@@ -80,7 +80,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('21°C'), findsOneWidget);
-    expect(find.text('맑음'), findsOneWidget);
     expect(find.byIcon(Icons.wb_sunny), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });

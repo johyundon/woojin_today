@@ -56,10 +56,6 @@ class WeatherIndicator extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          Text(
-            display.label,
-            style: TextStyle(color: colors.textSecondary, fontSize: 12),
-          ),
         ],
       ),
     );
