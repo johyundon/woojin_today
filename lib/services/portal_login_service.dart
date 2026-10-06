@@ -81,6 +81,17 @@ class PortalLoginService {
   static final _uidPattern = RegExp(r'uid%3D(.+?)(?:%26|&|$)');
   static final _userIdCookiePattern = RegExp(r'^userId=([^;]*)');
   static final _remainingAttemptsPattern = RegExp(r'(\d+)회\s*더\s*잘못입력');
+  static final _metaRefreshPattern = RegExp(
+    r'''<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["']?\d+\s*;\s*url=([^"'>]+)["']?''',
+    caseSensitive: false,
+  );
+
+  /// `<meta http-equiv="refresh" content="0;url=...">` 형태의 클라이언트
+  /// 사이드 리다이렉트에서 URL만 뽑는다. 없으면 null.
+  String? _extractMetaRefreshUrl(String body) {
+    final match = _metaRefreshPattern.firstMatch(body);
+    return match?.group(1)?.trim();
+  }
 
   /// 로그인 시도마다 쿠키 저장소를 격리하기 위해 매 [login] 호출마다 새
   /// [http.Client]를 만든다. 테스트에서는 이 팩토리를 교체해 MockClient를
@@ -301,8 +312,16 @@ class PortalLoginService {
           response.statusCode >= 300 &&
           response.statusCode < 400 &&
           location != null;
-      if (!isRedirect) {
-        final body = utf8.decode(response.bodyBytes, allowMalformed: true);
+
+      final body = utf8.decode(response.bodyBytes, allowMalformed: true);
+      // HTTP 3xx가 아니라 <meta http-equiv="refresh" ...>로 클라이언트 쪽
+      // 리다이렉트를 지시하는 응답이 실기기에서 확인됨(200으로 응답하면서
+      // "대진대학교" 안내 페이지 + gopage.jsp로의 메타 리다이렉트). 이걸 안
+      // 따라가면 세션 수립이 끝나기 전에 체인을 끝낸 걸로 착각해서, 이후
+      // dreams2 API 호출이 전부 미인증 취급을 받는 버그로 이어졌다.
+      final metaRefreshUrl = isRedirect ? null : _extractMetaRefreshUrl(body);
+
+      if (!isRedirect && metaRefreshUrl == null) {
         return _RedirectChainResult(
           setCookies: setCookies,
           locations: locations,
@@ -311,12 +330,19 @@ class PortalLoginService {
         );
       }
 
-      final locationUri = Uri.parse(location);
+      final nextLocation = location ?? metaRefreshUrl!;
+      if (metaRefreshUrl != null) {
+        locations.add(metaRefreshUrl);
+        print('[PortalLogin][hop $hop] meta-refresh -> $metaRefreshUrl');
+      }
+
+      final locationUri = Uri.parse(nextLocation);
       final nextUri = locationUri.hasScheme
           ? locationUri
-          : request.url.resolve(location);
-      // 307/308만 원래 메서드를 유지하고, 그 외 3xx는 GET으로 전환한다
-      // (POST 로그인 요청 뒤 이어지는 리다이렉트는 보통 GET 페이지다).
+          : request.url.resolve(nextLocation);
+      // 307/308만 원래 메서드를 유지하고, 그 외(3xx 전환 또는 메타
+      // 리다이렉트)는 GET으로 전환한다 (POST 로그인 요청 뒤 이어지는
+      // 리다이렉트는 보통 GET 페이지다).
       final nextMethod =
           (response.statusCode == 307 || response.statusCode == 308)
           ? request.method

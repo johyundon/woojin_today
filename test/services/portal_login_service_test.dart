@@ -142,6 +142,66 @@ void main() {
       expect(result.userId2, 'stu002');
     });
 
+    test('HTTP 3xx가 아니라 <meta refresh>로 지시하는 클라이언트 사이드 리다이렉트도 따라간다', () async {
+      // 실기기에서 재현된 상황: 2단계 폴백의 마지막 홉이 HTTP 302가 아니라
+      // 200으로 응답하면서 본문에 <meta http-equiv="refresh"
+      // content="0;url=gopage.jsp">를 담아 보낸다. 이걸 안 따라가면 그
+      // 직전 페이지의 쿠키로 체인이 끝난 걸로 착각해, 실제 dreams2 세션
+      // 쿠키(gopage.jsp 응답에서 내려옴)를 놓치게 된다.
+      final mockClient = MockClient((request) async {
+        switch (request.url.toString()) {
+          case 'https://www.daejin.ac.kr/subLogin/daejin/login.do':
+            return http.Response(
+              '',
+              302,
+              headers: {
+                'location': 'https://www.daejin.ac.kr/success2.jsp',
+                'set-cookie':
+                    'WMONID=wmo_old; Path=/, JSESSIONID=js_old; Path=/',
+              },
+            );
+          case 'https://www.daejin.ac.kr/success2.jsp':
+            return http.Response(
+              '<html>메인</html>',
+              200,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+            );
+          case 'https://dreams2.daejin.ac.kr/sugang/LinkPortal.jsp?dvd=P':
+            // HTTP 302가 아니라 200 + 메타 리다이렉트.
+            return http.Response(
+              '<!doctype html><html><head>'
+              '<meta http-equiv="refresh" content="0;url=gopage.jsp">'
+              '</head><body>대진대학교</body></html>',
+              200,
+              headers: {
+                'content-type': 'text/html; charset=utf-8',
+                'set-cookie': 'userId=stu002; Path=/',
+              },
+            );
+          case 'https://dreams2.daejin.ac.kr/sugang/gopage.jsp':
+            // 메타 리다이렉트를 실제로 따라가야만 도달하는, 진짜 세션 쿠키.
+            return http.Response(
+              'ok',
+              200,
+              headers: {
+                'set-cookie':
+                    'JSESSIONID=js_real_session; Path=/, '
+                    'WMONID=wmo_real_session; Path=/',
+              },
+            );
+        }
+        throw StateError('예상치 못한 요청: ${request.url}');
+      });
+      final service = PortalLoginService(clientFactory: () => mockClient);
+
+      final result = await service.login(userId: '20211476', userPwd: 'pw');
+
+      expect(result.success, isTrue);
+      expect(result.jsessionId, 'js_real_session');
+      expect(result.wmonid, 'wmo_real_session');
+      expect(result.userId2, 'stu002');
+    });
+
     test('계정이 존재하지 않으면 failReason이 "계정없음"이다', () async {
       final mockClient = MockClient((request) async {
         return http.Response(
