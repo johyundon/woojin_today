@@ -54,10 +54,10 @@ class TimetableGrid extends StatelessWidget {
       children: [
         _buildGridColumn(layouts),
         Positioned(
-          // 요일 헤더 줄(대략 20px) 바로 아래, 그리드 오른쪽(금요일 열) 위에
+          // 요일 헤더 줄 바로 아래, 그리드 오른쪽(금요일 열) 위에
           // 뜨는 플로팅 버튼 — 스크롤돼도 같이 움직이지 않고 늘 같은 자리에
           // 떠 있어야 해서(사용자 피드백) 스크롤 영역 밖(이 Stack)에 둔다.
-          top: 20,
+          top: 30,
           right: 0,
           child: _AutoFillFloatingButton(
             size: _autoFillButtonSize,
@@ -226,7 +226,8 @@ class TimetableGrid extends StatelessWidget {
   }
 }
 
-/// 자동 시간표 추천을 실행하는 원형 플로팅 버튼.
+/// 자동 시간표 추천을 실행하는 플로팅 버튼. Figma 시안처럼 배경 도형 없이,
+/// 반짝이(큰 별+겹치는 작은 별 묶음 글리프)와 작은 색 포인트 2개만 띄운다.
 class _AutoFillFloatingButton extends StatelessWidget {
   const _AutoFillFloatingButton({required this.size, required this.onTap});
 
@@ -235,20 +236,52 @@ class _AutoFillFloatingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: TimetableColors.accent,
-      shape: const CircleBorder(),
-      elevation: 4,
-      shadowColor: Colors.black54,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Icons.auto_awesome 글리프 자체가 "큰 별 + 겹치는 작은 별"
+            // 묶음이라 하나만 써도 Figma의 주 반짝이 모양과 같다.
+            const Positioned(
+              right: 0,
+              top: 2,
+              child: Icon(Icons.auto_awesome, color: Colors.white, size: 26),
+            ),
+            const Positioned(
+              right: 25,
+              top: 2,
+              child: _SparkleDot(size: 4, color: Color(0xFF4FC3F7)),
+            ),
+            const Positioned(
+              right: 13,
+              top: 29,
+              child: _SparkleDot(size: 3.5, color: Color(0xFFFF5C8A)),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// 작은 색깔 반짝이 포인트 — 45도 회전한 정사각형(다이아몬드)로 단순하게
+/// 흉내 낸다.
+class _SparkleDot extends StatelessWidget {
+  const _SparkleDot({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: 0.785398, // 45도(pi/4) — 정사각형을 다이아몬드로.
+      child: Container(width: size, height: size, color: color),
     );
   }
 }
