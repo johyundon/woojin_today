@@ -200,21 +200,38 @@ class CourseCatalogService {
 
       final noteText = cellText(13);
 
+      // 명세대로 숫자 칼럼([0]/[4]/[10]/[11])을 엄격히 파싱하되, 실제
+      // 응답에는 명세에 없는 예외적인 행(예: 정원/대기인원 칸에 숫자가 아닌
+      // 값이 들어간 행)이 섞여 들어올 수 있다는 게 실기기 테스트로 확인됐다.
+      // 행 하나가 깨졌다고 검색 결과 전체를 날리지 않도록, 해당 행만 건너뛴다.
+      final int seq;
+      final double credit;
+      final int capacity;
+      final int waitlistCount;
+      try {
+        seq = int.parse(cellText(0));
+        credit = double.parse(cellText(4));
+        capacity = int.parse(cellText(10));
+        waitlistCount = int.parse(cellText(11));
+      } catch (_) {
+        continue;
+      }
+
       items.add(
         CourseCatalogItem(
-          seq: int.parse(cellText(0)),
+          seq: seq,
           courseCode: courseCode,
           section: section,
           courseName: cellText(2),
           courseType: cellText(3),
-          credit: double.parse(cellText(4)),
+          credit: credit,
           targetGrade: cellText(5),
           professor: cellText(6),
           rawSchedule: cellText(7),
           room: cellText(8),
           isClosed: cellText(9).isNotEmpty,
-          capacity: int.parse(cellText(10)),
-          waitlistCount: int.parse(cellText(11)),
+          capacity: capacity,
+          waitlistCount: waitlistCount,
           enrollmentRatio: cellText(12),
           note: noteText.isEmpty ? null : noteText,
         ),

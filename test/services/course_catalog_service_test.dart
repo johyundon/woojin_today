@@ -307,24 +307,27 @@ void main() {
       );
     });
 
-    test('셀 값이 숫자로 변환되지 않으면 CourseCatalogParseException을 던진다', () async {
+    test('숫자 칼럼이 깨진 행은 건너뛰고, 나머지 정상 행은 그대로 반환한다', () async {
+      // 실기기 테스트에서 숫자 칼럼이 기대와 다른 행이 섞여 들어오는 사례가
+      // 확인됨 — 행 하나가 깨졌다고 검색 결과 전체가 날아가면 안 된다.
       final bytes = _fixtureBytes([
         _row('tr_a0_chrm', _validCells(seq: '일련번호아님')),
+        _row('tr_a1_chrm', _validCells(seq: '2', codeAndSection: 'MAT201-02')),
       ]);
       final mockClient = MockClient((request) async {
         return http.Response.bytes(bytes, 200);
       });
       final service = CourseCatalogService(client: mockClient);
 
-      expect(
-        () => service.fetchCourseCatalog(
-          year: 2026,
-          semester: 2,
-          jsessionId: 'J',
-          wmonid: 'W',
-        ),
-        throwsA(isA<CourseCatalogParseException>()),
+      final result = await service.fetchCourseCatalog(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
       );
+
+      expect(result, hasLength(1));
+      expect(result.single.courseCode, 'MAT201');
     });
   });
 }
