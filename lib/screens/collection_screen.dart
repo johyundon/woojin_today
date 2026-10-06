@@ -21,7 +21,7 @@ class CollectionScreen extends StatelessWidget {
       iconOnLeft: false,
     ),
     _CollectionItem(
-      title: '공지사항을 알려드릴게요!',
+      title: '공지사항을\n알려드릴게요!',
       description: '무슨일이 있었을까요?!',
       icon: Icons.campaign,
       imagePath: 'assets/images/collection_notice.png',
@@ -175,7 +175,6 @@ class _CollectionItemCard extends StatelessWidget {
     final iconBadge = item.imagePath != null
         ? Image.asset(
             item.imagePath!,
-            width: item.imageSize,
             height: item.imageSize,
             fit: BoxFit.contain,
           )
