@@ -8,7 +8,7 @@ class TimetableHeader extends StatelessWidget {
     required this.semesterLabel,
     required this.totalCredits,
     required this.savedCount,
-    required this.semesterKey,
+    required this.headerKey,
     required this.onBack,
     required this.onSemesterTap,
     required this.onSave,
@@ -18,7 +18,11 @@ class TimetableHeader extends StatelessWidget {
   final String semesterLabel;
   final double totalCredits;
   final int savedCount;
-  final GlobalKey semesterKey;
+
+  /// 학기 드롭다운 위치 계산용 — 헤더 줄(뒤로가기 포함) 전체의 왼쪽 끝을
+  /// 기준점으로 쓴다(Figma 시안에서 드롭다운이 "학기" 필이 아니라 헤더
+  /// 왼쪽 끝에 맞춰 뜨기 때문).
+  final GlobalKey headerKey;
   final VoidCallback onBack;
   final VoidCallback onSemesterTap;
   final VoidCallback onSave;
@@ -34,6 +38,7 @@ class TimetableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      key: headerKey,
       children: [
         IconButton(
           padding: EdgeInsets.zero,
@@ -46,7 +51,6 @@ class TimetableHeader extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         GestureDetector(
-          key: semesterKey,
           onTap: onSemesterTap,
           child: Row(
             mainAxisSize: MainAxisSize.min,

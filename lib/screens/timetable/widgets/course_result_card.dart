@@ -5,26 +5,29 @@ import '../timetable_colors.dart';
 
 /// 검색 결과 카드 하나.
 ///
+/// 카드 전체를 탭하면 [onAdd](시간표에 바로 추가)가 실행된다. 상세 정보는
+/// 별도로 둔 정보 아이콘([onViewDetail])으로 들어간다.
+///
 /// [showAddButtons]가 true면(그리드 빈 셀을 탭해 특정 요일/시간을 선택한
-/// 상태에서 그 시간대와 겹치는 과목일 때) 하단에 "시간표에 추가"/"상세보기"
+/// 상태에서 그 시간대와 겹치는 과목일 때) 하단에도 "시간표에 추가"/"상세보기"
 /// 버튼을 보여준다(상태 10).
 class CourseResultCard extends StatelessWidget {
   const CourseResultCard({
     required this.course,
-    required this.onTap,
+    required this.onAdd,
+    required this.onViewDetail,
     required this.showAddButtons,
-    this.onAdd,
   });
 
   final CourseCatalogItem course;
-  final VoidCallback onTap;
+  final VoidCallback onAdd;
+  final VoidCallback onViewDetail;
   final bool showAddButtons;
-  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onAdd,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
@@ -52,6 +55,19 @@ class CourseResultCard extends StatelessWidget {
                   style: const TextStyle(
                     color: TimetableColors.textSecondary,
                     fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: onViewDetail,
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: TimetableColors.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -99,7 +115,7 @@ class CourseResultCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: onTap,
+                      onPressed: onViewDetail,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: TimetableColors.textPrimary,
                         side: const BorderSide(color: TimetableColors.border),

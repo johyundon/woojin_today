@@ -65,12 +65,11 @@ class CourseFilters {
     final isDefaultTimeRange =
         timeRange.start == 8 * 60 && timeRange.end == 22 * 60;
     if (!isDefaultTimeRange && slots.isNotEmpty) {
-      final overlapsRange = slots.any((slot) {
-        final range = assumedPeriodTimes[slot.period];
-        if (range == null) return false;
-        return range.startMinutes < timeRange.end &&
-            range.endMinutes > timeRange.start;
-      });
+      final overlapsRange = slots.any(
+        (slot) =>
+            slot.startMinutes < timeRange.end &&
+            slot.endMinutes > timeRange.start,
+      );
       if (!overlapsRange) return false;
     }
 
@@ -86,11 +85,11 @@ class CourseFilters {
     required int endMinutes,
   }) {
     final slots = parseRawSchedule(item.rawSchedule);
-    return slots.any((slot) {
-      if (slot.day != day) return false;
-      final range = assumedPeriodTimes[slot.period];
-      if (range == null) return false;
-      return range.startMinutes < endMinutes && range.endMinutes > startMinutes;
-    });
+    return slots.any(
+      (slot) =>
+          slot.day == day &&
+          slot.startMinutes < endMinutes &&
+          slot.endMinutes > startMinutes,
+    );
   }
 }

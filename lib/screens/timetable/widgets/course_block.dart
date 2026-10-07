@@ -18,45 +18,65 @@ class CourseBlock extends StatelessWidget {
     final color = colorForCourseKey(layout.course.key);
     return Container(
       margin: const EdgeInsets.all(2),
-      padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  layout.course.courseName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+          // ×가 오른쪽 위에 떠 있는 배지라 과목명 폭을 뺏지 않는다(겹치는
+          // 부분만큼만 오른쪽 여백을 둔다) — 과목명이 길면 2줄까지 보인다.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 20, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 짧은 시간대로 블록 높이가 아주 작을 때 Text가 고정 크기를
+                // 요구하면 RenderFlex가 넘친다 — Flexible로 감싸 남는
+                // 공간만큼만 쓰게 한다.
+                Flexible(
+                  child: Text(
+                    layout.course.courseName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
                   ),
                 ),
-              ),
-              GestureDetector(
-                onTap: onRemove,
-                child: const Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Icon(Icons.close, color: Colors.white, size: 14),
+                const SizedBox(height: 2),
+                Flexible(
+                  child: Text(
+                    '${layout.course.room} · ${layout.course.section}분반',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 10,
+                      height: 1.25,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
-          Text(
-            '${layout.course.room} · ${layout.course.section}분반',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 10,
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 12),
+              ),
             ),
           ),
         ],
