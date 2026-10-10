@@ -32,6 +32,7 @@ class SearchFilterBar extends StatelessWidget {
     required this.availableGrades,
     required this.availableCourseTypes,
     required this.availableCredits,
+    required this.availableAreas,
     required this.pendingSlot,
     required this.onClearPendingSlot,
   });
@@ -45,6 +46,11 @@ class SearchFilterBar extends StatelessWidget {
   final List<String> availableGrades;
   final List<String> availableCourseTypes;
   final List<double> availableCredits;
+
+  /// 이수구분 문자열에서 뽑아낸 "N영역" 값 목록(예: ['1','2','3','4']).
+  /// [CourseFilters.extractArea] 참고 — 추정 로직이라 실제 데이터에 없는
+  /// 값은 여기도 안 나온다.
+  final List<String> availableAreas;
   final PendingSlot? pendingSlot;
   final VoidCallback onClearPendingSlot;
 
@@ -187,6 +193,28 @@ class SearchFilterBar extends StatelessWidget {
         ),
       );
     }
+    for (final area in filters.areas) {
+      chips.add(
+        _ActiveChip(
+          label: '$area영역',
+          onClear: () {
+            filters.areas.remove(area);
+            onFiltersChanged();
+          },
+        ),
+      );
+    }
+    if (filters.onlineOnly) {
+      chips.add(
+        _ActiveChip(
+          label: '온라인',
+          onClear: () {
+            filters.onlineOnly = false;
+            onFiltersChanged();
+          },
+        ),
+      );
+    }
 
     return chips;
   }
@@ -252,9 +280,23 @@ class SearchFilterBar extends StatelessWidget {
             },
           ),
           const SizedBox(width: 8),
-          const _DisabledFilterChip(label: '영역', showChevron: true),
+          _AreaFilterChip(
+            selectedAreas: filters.areas,
+            availableAreas: availableAreas,
+            onChanged: (areas) {
+              filters.areas = areas;
+              onFiltersChanged();
+            },
+          ),
           const SizedBox(width: 8),
-          const _DisabledFilterChip(label: '온라인', showChevron: false),
+          _ToggleFilterChip(
+            label: '온라인',
+            selected: filters.onlineOnly,
+            onTap: () {
+              filters.onlineOnly = !filters.onlineOnly;
+              onFiltersChanged();
+            },
+          ),
         ],
       ),
     );
@@ -330,43 +372,125 @@ class _ActiveChip extends StatelessWidget {
   }
 }
 
-/// Figma 디자인엔 있지만 실제 개설과목 데이터([CourseCatalogItem])에
-/// 대응 필드가 없는 필터(영역/온라인) 자리만 맞춰두는 비활성 칩.
-/// 탭해도 아무 동작을 하지 않는다 — 없는 데이터로 필터링하는 척하지 않기
-/// 위함.
-class _DisabledFilterChip extends StatelessWidget {
-  const _DisabledFilterChip({required this.label, required this.showChevron});
+/// 단순 켜짐/꺼짐 토글 칩(온라인) — 드롭다운 없이 탭할 때마다 뒤집힌다.
+class _ToggleFilterChip extends StatelessWidget {
+  const _ToggleFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
-  final bool showChevron;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.4,
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: TimetableColors.surface,
+          color: selected ? TimetableColors.accent : TimetableColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : TimetableColors.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "영역" 필터 칩 — Figma 시안(node-id=6-33)처럼 체크박스 여러 개를 동시에
+/// 켤 수 있는 팝업을 띄운다. 체크박스를 눌러도 팝업이 바로 닫히지 않도록
+/// (한 번에 여러 영역을 고를 수 있어야 하므로) [StatefulBuilder]로 팝업
+/// 내부에서만 다시 그린다.
+class _AreaFilterChip extends StatelessWidget {
+  const _AreaFilterChip({
+    required this.selectedAreas,
+    required this.availableAreas,
+    required this.onChanged,
+  });
+
+  final Set<String> selectedAreas;
+  final List<String> availableAreas;
+  final ValueChanged<Set<String>> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = selectedAreas.isNotEmpty;
+    return PopupMenuButton<void>(
+      color: TimetableColors.surfaceElevated,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      itemBuilder: (context) {
+        // 메뉴가 열려 있는 동안엔 바깥(StatelessWidget)이 다시 그려져도 이미
+        // 띄운 팝업엔 반영이 안 된다 — 팝업이 열릴 때 한 번만 복사해서, 그
+        // 안에서는 이 로컬 복사본만 계속 고쳐 쓴다.
+        final selected = {...selectedAreas};
+        return [
+          PopupMenuItem<void>(
+            padding: EdgeInsets.zero,
+            child: StatefulBuilder(
+              builder: (context, setMenuState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final area in availableAreas)
+                      CheckboxListTile(
+                        value: selected.contains(area),
+                        title: Text(
+                          '$area영역',
+                          style: const TextStyle(
+                            color: TimetableColors.textPrimary,
+                          ),
+                        ),
+                        activeColor: TimetableColors.accent,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (checked) {
+                          if (checked == true) {
+                            selected.add(area);
+                          } else {
+                            selected.remove(area);
+                          }
+                          setMenuState(() {});
+                          onChanged({...selected});
+                        },
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ];
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? TimetableColors.accent : TimetableColors.surface,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              label,
-              style: const TextStyle(
-                color: TimetableColors.textPrimary,
+              '영역',
+              style: TextStyle(
+                color: isActive ? Colors.white : TimetableColors.textPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (showChevron)
-              const Icon(
-                Icons.keyboard_arrow_down,
-                size: 16,
-                color: TimetableColors.textSecondary,
-              ),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 16,
+              color: isActive ? Colors.white : TimetableColors.textSecondary,
+            ),
           ],
         ),
       ),

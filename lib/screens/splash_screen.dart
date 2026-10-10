@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../config/mock_mode.dart';
 import '../services/credential_storage.dart';
+import '../services/fakes/fake_portal_login_service.dart';
 import '../services/portal_login_service.dart';
 import '../theme/app_colors.dart';
 import 'student_id_login_complete_screen.dart';
@@ -46,7 +48,10 @@ class _SplashScreenState extends State<SplashScreen> {
     var loginSucceeded = false;
     PortalLoginResult? result;
     try {
-      result = await PortalLoginService().login(
+      final portalLoginService = kUseMockApi
+          ? FakePortalLoginService()
+          : PortalLoginService();
+      result = await portalLoginService.login(
         userId: credentials.userId,
         userPwd: credentials.userPwd,
       );

@@ -49,6 +49,14 @@ dependencies:
   cp949_codec: ^1.0.2
   shared_preferences: ^2.5.6
 
+  # 캘린더 일정 알림(로컬 푸시) — 서버가 없는 앱이라 FCM 같은 서버 발송 방식은
+  # 애초에 안 맞고, OS가 직접 들고 있다가 울려주는 로컬 알림만 필요하다.
+  flutter_local_notifications: ^22.3.1
+  # flutter_local_notifications의 zonedSchedule이 시간대 기준 절대 시각을
+  # 요구해서 같이 써야 함. 국내 전용 앱이라 자동 지역감지 패키지 없이
+  # 'Asia/Seoul'로 고정해서 쓴다.
+  timezone: ^0.11.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

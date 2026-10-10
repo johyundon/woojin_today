@@ -2,10 +2,13 @@ part of 'timetable_screen.dart';
 
 // 그리드 아래 핸들을 드래그해서 조절할 수 있는 그리드 뷰포트 높이의 허용 범위.
 const double _minGridViewportHeight = 240;
-const double _maxGridViewportHeight = 640;
+const double _maxGridViewportHeight = 720;
 
 // 그리드를 아무리 늘려도 검색 결과 리스트에 항상 남겨줄 최소 높이.
 const double _minResultsReserve = 0;
+// 필터 패널이 열려 있을 때는 필터 옵션(요일/학년/학점 드롭다운)이 가려지지
+// 않도록 더 크게 잡는다.
+const double _minResultsReserveWithFilterOpen = 240;
 
 /// 그리드 아래 핸들을 드래그해서 조절하는 그리드 뷰포트 높이 책임.
 ///
@@ -37,10 +40,13 @@ mixin TimetableGridResizeMixin on State<TimetableScreen> {
   double _gridChromeHeight = 0;
   double _bodyHeight = 0;
 
-  double get _computedMaxGridViewportHeight {
+  double _computedMaxGridViewportHeight({required bool filterPanelOpen}) {
+    final minReserve = filterPanelOpen
+        ? _minResultsReserveWithFilterOpen
+        : _minResultsReserve;
     final cap =
         _bodyHeight -
-        _minResultsReserve -
+        minReserve -
         _chromeAboveHeight -
         _chromeBelowHeight -
         _gridChromeHeight;

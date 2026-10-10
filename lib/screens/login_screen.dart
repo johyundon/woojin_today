@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../config/mock_mode.dart';
 import '../services/credential_storage.dart';
+import '../services/fakes/fake_portal_login_service.dart';
 import '../services/portal_login_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_text_field.dart';
@@ -25,7 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _privacyExpanded = false;
   bool _isLoading = false;
 
-  final _portalLoginService = PortalLoginService();
+  final _portalLoginService =
+      kUseMockApi ? FakePortalLoginService() : PortalLoginService();
 
   @override
   void dispose() {

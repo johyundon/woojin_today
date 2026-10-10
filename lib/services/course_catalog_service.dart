@@ -72,15 +72,6 @@ class CourseCatalogParseException extends CourseCatalogException {
   const CourseCatalogParseException(super.message);
 }
 
-/// 디코딩 결과(본문 문자열)와, 어떤 방법으로 디코딩했는지(진단 로그용)를
-/// 함께 담는다.
-class _DecodedCatalogBody {
-  const _DecodedCatalogBody(this.text, this.method);
-
-  final String text;
-  final String method;
-}
-
 /// 포털 로그인으로 얻은 세션 쿠키(JSESSIONID/WMONID)를 이용해 수강신청
 /// 시스템의 "개설과목 조회"(`GET /sugang/center/ProLsnAply06.jsp`)를
 /// 호출한다.
@@ -167,14 +158,6 @@ class CourseCatalogService {
       throw CourseCatalogServerException('서버 오류 (${response.statusCode})');
     }
 
-    // TODO(debug): 실기기 디코딩 실패 원인 추적용 진단 로그 — 쿠키 값 자체는
-    // 민감정보라 남기지 않는다. 진단 끝나면 제거.
-    print(
-      '[CourseCatalog] status=${response.statusCode} '
-      'content-type=${response.headers['content-type']} '
-      'bodyBytes=${response.bodyBytes.length}',
-    );
-
     // 명세엔 "응답은 EUC-KR 인코딩"이라고 적혀 있었지만, 실기기에서
     // my_timetable_service.dart와 똑같은 CP949 디코딩 실패(바이트 0xEB —
     // UTF-8 한글 시작 바이트)가 재현됨 — 이 엔드포인트도 명세와 달리 실제론
@@ -183,15 +166,9 @@ class CourseCatalogService {
     // EUC-KR -> UTF-8(strict) -> UTF-8(allowMalformed, 항상 성공) 순으로
     // 폴백한다 — my_timetable_service.dart와 동일한 패턴.
     final body = _decodeBody(response);
-    print('[CourseCatalog] decode=${body.method}');
-    final preview = body.text.substring(
-      0,
-      body.text.length < 200 ? body.text.length : 200,
-    );
-    print('[CourseCatalog] bodyPreview=$preview');
 
     try {
-      return _parse(body.text);
+      return _parse(body);
     } on CourseCatalogParseException {
       rethrow;
     } catch (e) {
@@ -205,7 +182,7 @@ class CourseCatalogService {
     caseSensitive: false,
   );
 
-  _DecodedCatalogBody _decodeBody(http.Response response) {
+  String _decodeBody(http.Response response) {
     final contentType = response.headers['content-type'];
     final charset = contentType == null
         ? null
@@ -221,19 +198,13 @@ class CourseCatalogService {
 
       if (isEucKr) {
         try {
-          return _DecodedCatalogBody(
-            cp949.decode(response.bodyBytes),
-            'Content-Type 헤더(charset=$charset) 기반 EUC-KR',
-          );
+          return cp949.decode(response.bodyBytes);
         } catch (_) {
           // 헤더가 선언한 값과 실제 바이트가 안 맞음 -> 아래 폴백 체인으로.
         }
       } else if (isUtf8) {
         try {
-          return _DecodedCatalogBody(
-            utf8.decode(response.bodyBytes),
-            'Content-Type 헤더(charset=$charset) 기반 UTF-8',
-          );
+          return utf8.decode(response.bodyBytes);
         } catch (_) {
           // 헤더가 선언한 값과 실제 바이트가 안 맞음 -> 아래 폴백 체인으로.
         }
@@ -241,21 +212,12 @@ class CourseCatalogService {
     }
 
     try {
-      return _DecodedCatalogBody(
-        cp949.decode(response.bodyBytes),
-        'Content-Type 헤더 없음/불명 -> EUC-KR 폴백',
-      );
+      return cp949.decode(response.bodyBytes);
     } catch (_) {
       try {
-        return _DecodedCatalogBody(
-          utf8.decode(response.bodyBytes),
-          'Content-Type 헤더 없음/불명 -> UTF-8(strict) 폴백',
-        );
+        return utf8.decode(response.bodyBytes);
       } catch (_) {
-        return _DecodedCatalogBody(
-          utf8.decode(response.bodyBytes, allowMalformed: true),
-          'Content-Type 헤더 없음/불명 -> UTF-8(allowMalformed) 폴백',
-        );
+        return utf8.decode(response.bodyBytes, allowMalformed: true);
       }
     }
   }

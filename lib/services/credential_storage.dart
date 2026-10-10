@@ -18,13 +18,6 @@ class CredentialStorage {
   Future<void> save({required String userId, required String userPwd}) async {
     await _storage.write(key: _userIdKey, value: userId);
     await _storage.write(key: _userPwdKey, value: userPwd);
-    // TODO(debug): 저장이 실제로 성공하는지 확인하기 위한 임시 로그 — 비밀번호
-    // 값 자체는 찍지 않는다. 확인 끝나면 제거.
-    final saved = await read();
-    print(
-      '[CredentialStorage] save 완료. 저장 확인: '
-      '${saved != null && saved.userId == userId ? "성공" : "실패"}',
-    );
   }
 
   /// 저장된 자격증명이 하나라도 없으면 null을 반환한다.

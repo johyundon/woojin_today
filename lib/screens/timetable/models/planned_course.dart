@@ -37,6 +37,30 @@ class PlannedCourse {
   /// "과목코드-분반" — 시간표 안에서 과목을 구분/중복 제거하는 키.
   String get key => '$courseCode-$section';
 
+  /// 상세보기/강의계획서 화면처럼 [CourseCatalogItem]을 요구하는 위젯에
+  /// 그대로 재사용하기 위한 변환. [PlannedCourse]에 없는 필드
+  /// (seq/isClosed/capacity/waitlistCount)는 그 위젯들이 읽지 않는 값이라
+  /// 더미값을 채운다.
+  CourseCatalogItem toCatalogItem() {
+    return CourseCatalogItem(
+      seq: 0,
+      courseCode: courseCode,
+      section: section,
+      courseName: courseName,
+      courseType: courseType,
+      credit: credit,
+      targetGrade: targetGrade,
+      professor: professor,
+      rawSchedule: rawSchedule,
+      room: room,
+      isClosed: false,
+      capacity: 0,
+      waitlistCount: 0,
+      enrollmentRatio: enrollmentRatio,
+      note: note,
+    );
+  }
+
   factory PlannedCourse.fromCatalogItem(CourseCatalogItem item) {
     return PlannedCourse(
       courseCode: item.courseCode,

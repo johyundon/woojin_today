@@ -301,12 +301,6 @@ class PortalLoginService {
 
       final location = response.headers['location'];
       if (location != null) locations.add(location);
-      // TODO(debug): 404 원인 추적용 임시 로그 — 진단 끝나면 제거.
-      print(
-        '[PortalLogin][hop $hop] ${request.method} ${request.url} '
-        '-> ${response.statusCode}'
-        '${location != null ? ' Location: $location' : ''}',
-      );
 
       final isRedirect =
           response.statusCode >= 300 &&
@@ -333,7 +327,6 @@ class PortalLoginService {
       final nextLocation = location ?? metaRefreshUrl!;
       if (metaRefreshUrl != null) {
         locations.add(metaRefreshUrl);
-        print('[PortalLogin][hop $hop] meta-refresh -> $metaRefreshUrl');
       }
 
       final locationUri = Uri.parse(nextLocation);

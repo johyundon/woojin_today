@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 캘린더 일정 알림(로컬 푸시)용. Android 13+부터 런타임 권한이라 선언만으로는
+         안 뜨고, 앱에서 FlutterLocalNotificationsPlugin.requestNotificationsPermission()
+         을 호출해 사용자에게 따로 물어봐야 한다. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="daejin_app"
         android:name="${applicationName}"

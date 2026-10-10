@@ -8,78 +8,90 @@ import '../timetable_colors.dart';
 /// 주의: 이 ×는 "내가 짜고 있는 시간표 초안"에서만 빼는 것이다 — 실제 수강신청
 /// 내역을 바꾸는 API는 명세서에 없어 호출하지 않는다.
 class CourseBlock extends StatelessWidget {
-  const CourseBlock({required this.layout, required this.onRemove});
+  const CourseBlock({
+    required this.layout,
+    required this.onRemove,
+    required this.onTap,
+  });
 
   final CourseBlockLayout layout;
   final VoidCallback onRemove;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = colorForCourseKey(layout.course.key);
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Stack(
-        children: [
-          // ×가 오른쪽 위에 떠 있는 배지라 과목명 폭을 뺏지 않는다(겹치는
-          // 부분만큼만 오른쪽 여백을 둔다) — 과목명이 길면 2줄까지 보인다.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 20, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 짧은 시간대로 블록 높이가 아주 작을 때 Text가 고정 크기를
-                // 요구하면 RenderFlex가 넘친다 — Flexible로 감싸 남는
-                // 공간만큼만 쓰게 한다.
-                Flexible(
-                  child: Text(
-                    layout.course.courseName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Stack(
+          children: [
+            // ×가 오른쪽 위에 떠 있는 배지라 과목명 폭을 뺏지 않는다(겹치는
+            // 부분만큼만 오른쪽 여백을 둔다) — 과목명이 길면 2줄까지 보인다.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 20, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 짧은 시간대로 블록 높이가 아주 작을 때 Text가 고정
+                  // 크기를 요구하면 RenderFlex가 넘친다 — Flexible로 감싸
+                  // 남는 공간만큼만 쓰게 한다.
+                  Flexible(
+                    child: Text(
+                      layout.course.courseName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Flexible(
-                  child: Text(
-                    '${layout.course.room} · ${layout.course.section}분반',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 10,
-                      height: 1.25,
+                  const SizedBox(height: 2),
+                  Flexible(
+                    child: Text(
+                      '${layout.course.room} · ${layout.course.section}분반',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 11,
+                        height: 1.25,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 12),
+                ],
               ),
             ),
-          ),
-        ],
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

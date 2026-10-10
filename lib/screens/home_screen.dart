@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../config/mock_mode.dart';
 import '../services/class_schedule_parser.dart';
 import '../services/course_catalog_service.dart';
+import '../services/fakes/fake_course_catalog_service.dart';
+import '../services/fakes/fake_my_timetable_service.dart';
+import '../services/fakes/fake_student_info_service.dart';
 import '../services/my_enrolled_courses.dart';
 import '../services/my_timetable_service.dart';
 import '../services/student_info_service.dart';
 import '../services/weather_service.dart';
+import 'calendar/calendar_screen.dart';
 import 'collection_screen.dart';
 import 'home/home_colors.dart';
 import 'home/widgets/ad_banner_placeholder.dart';
@@ -129,10 +134,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _weatherService = widget.weatherService ?? WeatherService();
-    _courseCatalogService =
-        widget.courseCatalogService ?? CourseCatalogService();
-    _myTimetableService = widget.myTimetableService ?? MyTimetableService();
-    _studentInfoService = widget.studentInfoService ?? StudentInfoService();
+    _courseCatalogService = widget.courseCatalogService ??
+        (kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService());
+    _myTimetableService = widget.myTimetableService ??
+        (kUseMockApi ? FakeMyTimetableService() : MyTimetableService());
+    _studentInfoService = widget.studentInfoService ??
+        (kUseMockApi ? FakeStudentInfoService() : StudentInfoService());
     _now = widget.now ?? DateTime.now;
     _loadWeather();
     _loadCurrentClassGreeting();
@@ -296,6 +303,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openCollection() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const CollectionScreen()));
+  }
+
+  void _openCalendar() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
   }
 
   Future<void> _showAvatarMenu() async {
@@ -611,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
                   SectionHeader(colors: colors, onMorePressed: _openCollection),
                   const SizedBox(height: 12),
-                  CalendarPromoCard(colors: colors, onTap: _openPlaceholder),
+                  CalendarPromoCard(colors: colors, onTap: _openCalendar),
                   const SizedBox(height: 14),
                   AdBannerPlaceholder(colors: colors),
                 ],

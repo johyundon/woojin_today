@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../config/mock_mode.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
+import '../../services/fakes/fake_course_catalog_service.dart';
+import '../../services/fakes/fake_my_timetable_service.dart';
 import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
 import 'course_filters.dart';
@@ -74,9 +77,10 @@ class _TimetableScreenState extends State<TimetableScreen>
   @override
   void initState() {
     super.initState();
-    _courseCatalogService =
-        widget.courseCatalogService ?? CourseCatalogService();
-    _myTimetableService = widget.myTimetableService ?? MyTimetableService();
+    _courseCatalogService = widget.courseCatalogService ??
+        (kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService());
+    _myTimetableService = widget.myTimetableService ??
+        (kUseMockApi ? FakeMyTimetableService() : MyTimetableService());
     _savedTimetableStorage =
         widget.savedTimetableStorage ?? SavedTimetableStorage();
     _now = widget.now ?? DateTime.now;
@@ -149,7 +153,18 @@ class _TimetableScreenState extends State<TimetableScreen>
     final grades = _catalog.map((e) => e.targetGrade).toSet().toList()..sort();
     final courseTypes = _catalog.map((e) => e.courseType).toSet().toList()
       ..sort();
-    final credits = _catalog.map((e) => e.credit).toSet().toList()..sort();
+    // 3.0 넘는 학점(복수전공/논문 등 예외적인 값)은 필터 옵션에서 숨긴다 —
+    // 사용자 요청.
+    final credits =
+        _catalog.map((e) => e.credit).where((c) => c <= 3.0).toSet().toList()
+          ..sort();
+    final areas =
+        _catalog
+            .map((e) => extractArea(e.courseType))
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
 
     return Scaffold(
       backgroundColor: TimetableColors.background,
@@ -162,7 +177,7 @@ class _TimetableScreenState extends State<TimetableScreen>
             // (Column)이 넘치지 않는 값으로만 움직이게 한다.
             final displayedGridHeight = _gridViewportHeight.clamp(
               _minGridViewportHeight,
-              _computedMaxGridViewportHeight,
+              _computedMaxGridViewportHeight(filterPanelOpen: _filterPanelOpen),
             );
             _scheduleChromeMeasurement(displayedGridHeight);
 
@@ -207,6 +222,8 @@ class _TimetableScreenState extends State<TimetableScreen>
                     pendingSlot: _pendingSlot,
                     onEmptyCellTap: _onEmptyCellTap,
                     onRemoveCourse: _removeCourse,
+                    onCourseTap: (course) =>
+                        _showCourseDetail(course.toCatalogItem()),
                     onAutoFill: _autoFillSchedule,
                     viewportHeight: displayedGridHeight,
                   ),
@@ -223,7 +240,9 @@ class _TimetableScreenState extends State<TimetableScreen>
                           _gridViewportHeight =
                               (_gridViewportHeight + details.delta.dy).clamp(
                                 _minGridViewportHeight,
-                                _computedMaxGridViewportHeight,
+                                _computedMaxGridViewportHeight(
+                                  filterPanelOpen: _filterPanelOpen,
+                                ),
                               );
                         });
                       },
@@ -244,12 +263,14 @@ class _TimetableScreenState extends State<TimetableScreen>
                         onQueryChanged: (q) => setState(() => _query = q),
                         filters: _filters,
                         filterPanelOpen: _filterPanelOpen,
-                        onToggleFilterPanel: () =>
-                            setState(() => _filterPanelOpen = !_filterPanelOpen),
+                        onToggleFilterPanel: () => setState(
+                          () => _filterPanelOpen = !_filterPanelOpen,
+                        ),
                         onFiltersChanged: () => setState(() {}),
                         availableGrades: grades,
                         availableCourseTypes: courseTypes,
                         availableCredits: credits,
+                        availableAreas: areas,
                         pendingSlot: _pendingSlot,
                         onClearPendingSlot: _clearPendingSlot,
                       ),

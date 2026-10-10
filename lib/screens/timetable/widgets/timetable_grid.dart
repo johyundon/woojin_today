@@ -28,6 +28,7 @@ class TimetableGrid extends StatelessWidget {
     required this.pendingSlot,
     required this.onEmptyCellTap,
     required this.onRemoveCourse,
+    required this.onCourseTap,
     required this.onAutoFill,
     this.viewportHeight = 320,
   });
@@ -36,6 +37,7 @@ class TimetableGrid extends StatelessWidget {
   final PendingSlot? pendingSlot;
   final void Function(Weekday day, int startHour) onEmptyCellTap;
   final ValueChanged<PlannedCourse> onRemoveCourse;
+  final ValueChanged<PlannedCourse> onCourseTap;
 
   /// 그리드(8~22시 전체 896px)에서 실제로 보여줄 스크롤 뷰포트 높이. 핸들
   /// 드래그로 조절하는 값을 받는다 — 기본값 320은 기존 고정값과 동일.
@@ -184,6 +186,7 @@ class TimetableGrid extends StatelessWidget {
       child: CourseBlock(
         layout: layout,
         onRemove: () => onRemoveCourse(layout.course),
+        onTap: () => onCourseTap(layout.course),
       ),
     );
   }

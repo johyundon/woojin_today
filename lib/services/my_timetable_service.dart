@@ -44,15 +44,6 @@ class MyTimetableParseException extends MyTimetableException {
   const MyTimetableParseException(super.message);
 }
 
-/// 디코딩 결과(본문 문자열)와, 어떤 방법으로 디코딩했는지(진단 로그용)를
-/// 함께 담는다.
-class _DecodedBody {
-  const _DecodedBody(this.body, this.method);
-
-  final String body;
-  final String method;
-}
-
 /// 포털 로그인으로 얻은 세션 쿠키(JSESSIONID/WMONID)와 **본인 userId2**를
 /// 이용해 수강신청 시스템의 "내 시간표 불러오기"
 /// (`POST /sugang/center/BlsnTotalTimeTableLst.jsp`)를 호출한다.
@@ -124,29 +115,14 @@ class MyTimetableService {
       throw MyTimetableNetworkException('네트워크 오류: $e');
     }
 
-    // TODO(debug): 실기기 디코딩/파싱 실패 원인 추적용 진단 로그 — 쿠키 값
-    // 자체는 민감정보라 남기지 않고, 길이/존재 여부만 남긴다. 진단 끝나면
-    // 제거(portal_login_service.dart의 동일 패턴 참고).
-    print(
-      '[MyTimetable] status=${response.statusCode} '
-      'content-type=${response.headers['content-type']} '
-      'bodyBytes=${response.bodyBytes.length}',
-    );
-
     if (response.statusCode != 200) {
       throw MyTimetableServerException('서버 오류 (${response.statusCode})');
     }
 
     final decoded = _decodeBody(response);
-    print('[MyTimetable] decode=${decoded.method}');
-    final preview = decoded.body.substring(
-      0,
-      decoded.body.length < 200 ? decoded.body.length : 200,
-    );
-    print('[MyTimetable] bodyPreview=$preview');
 
     try {
-      return _parse(decoded.body);
+      return _parse(decoded);
     } on MyTimetableParseException {
       rethrow;
     } catch (e) {
@@ -171,7 +147,7 @@ class MyTimetableService {
   /// 정상 상태이므로 모든 디코딩이 실패해도 예외를 던지지 않고 마지막
   /// allowMalformed 단계로 항상 결과를 만든다 — 그래도 table#tTbl을 못
   /// 찾으면 _parse()가 빈 시간표로 처리한다(기존 동작).
-  _DecodedBody _decodeBody(http.Response response) {
+  String _decodeBody(http.Response response) {
     final contentType = response.headers['content-type'];
     final charset = contentType == null
         ? null
@@ -187,19 +163,13 @@ class MyTimetableService {
 
       if (isEucKr) {
         try {
-          return _DecodedBody(
-            cp949.decode(response.bodyBytes),
-            'Content-Type 헤더(charset=$charset) 기반 EUC-KR',
-          );
+          return cp949.decode(response.bodyBytes);
         } catch (_) {
           // 헤더가 선언한 값과 실제 바이트가 안 맞음 -> 아래 폴백 체인으로.
         }
       } else if (isUtf8) {
         try {
-          return _DecodedBody(
-            utf8.decode(response.bodyBytes),
-            'Content-Type 헤더(charset=$charset) 기반 UTF-8',
-          );
+          return utf8.decode(response.bodyBytes);
         } catch (_) {
           // 헤더가 선언한 값과 실제 바이트가 안 맞음 -> 아래 폴백 체인으로.
         }
@@ -208,21 +178,12 @@ class MyTimetableService {
     }
 
     try {
-      return _DecodedBody(
-        cp949.decode(response.bodyBytes),
-        'Content-Type 헤더 없음/불명 -> EUC-KR 폴백',
-      );
+      return cp949.decode(response.bodyBytes);
     } catch (_) {
       try {
-        return _DecodedBody(
-          utf8.decode(response.bodyBytes),
-          'Content-Type 헤더 없음/불명 -> UTF-8(strict) 폴백',
-        );
+        return utf8.decode(response.bodyBytes);
       } catch (_) {
-        return _DecodedBody(
-          utf8.decode(response.bodyBytes, allowMalformed: true),
-          'Content-Type 헤더 없음/불명 -> UTF-8(allowMalformed) 폴백',
-        );
+        return utf8.decode(response.bodyBytes, allowMalformed: true);
       }
     }
   }
