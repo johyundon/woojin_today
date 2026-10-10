@@ -5,6 +5,7 @@ import '../../theme/app_colors.dart';
 import 'models/calendar_event.dart';
 import 'services/calendar_event_storage.dart';
 import 'widgets/add_schedule_sheet.dart';
+import 'widgets/calendar_expand_handle.dart';
 import 'widgets/calendar_grid.dart';
 import 'widgets/calendar_search_bar.dart';
 import 'widgets/event_card.dart';
@@ -35,10 +36,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final _storage = CalendarEventStorage();
   final _notifications = NotificationService.instance;
 
-  DateTime _focusedMonth = DateTime(2026, 9);
-  DateTime? _selectedDate = DateTime(2026, 9, 5);
+  DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime? _selectedDate = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
   List<CalendarEvent> _events = [];
   bool _loaded = false;
+
+  /// false(압축, 기본)면 날짜 박스 + 요약 줄, true(확장)면 박스 없이 긴
+  /// 이름표 막대. [CalendarExpandHandle]을 드래그해서 전환한다.
+  bool _expandedView = false;
 
   @override
   void initState() {
@@ -282,7 +291,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       focusedMonth: _focusedMonth,
                       events: _eventsInFocusedMonth,
                       selectedDay: selectedDay,
+                      expanded: _expandedView,
                       onDaySelected: _onDaySelected,
+                    ),
+                    CalendarExpandHandle(
+                      expanded: _expandedView,
+                      onChanged: (value) =>
+                          setState(() => _expandedView = value),
                     ),
                     if (selectedDay != null && selectedDate != null) ...[
                       const SizedBox(height: 20),
@@ -337,19 +352,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 }
 
-/// 2026년 9월 샘플 학사일정 데이터. 참고 스크린샷(여러 날에 걸친 일정이 막대
-/// 하나로 이어지는 레이아웃)에 보이는 날짜 범위/색을 눈으로 보고 근사했다 —
-/// 실제 학사일정 API 연동 전까지의 하드코딩 목업. 제목 중 일부는 스크린샷에서
-/// 말줄임표로 잘려 원문을 확인할 수 없어 그럴듯한 학사일정 제목으로 추정했다
-/// (아래 각 추정 항목에 주석으로 표시).
+/// 샘플 학사일정 데이터. 참고 스크린샷(여러 날에 걸친 일정이 막대 하나로
+/// 이어지는 레이아웃, 원래는 "2026년 9월")에 보이는 날짜 범위/색을 눈으로
+/// 보고 근사했다 — 실제 학사일정 API 연동 전까지의 하드코딩 목업. 앱을 실행한
+/// 달에 바로 일정이 보이도록 날짜는 스크린샷 속 일(day) 그대로, 달/연도만
+/// 실행 시점의 현재 달로 맞춘다. 제목 중 일부는 스크린샷에서 말줄임표로 잘려
+/// 원문을 확인할 수 없어 그럴듯한 학사일정 제목으로 추정했다(아래 각 추정
+/// 항목에 주석으로 표시).
 List<CalendarEvent> _buildSampleEvents() {
+  final now = DateTime.now();
   var nextId = 0;
   CalendarEvent make(int startDay, int endDay, Color color, String title) {
     nextId++;
     return CalendarEvent(
       id: 'sample-$nextId',
-      startDate: DateTime(2026, 9, startDay),
-      endDate: DateTime(2026, 9, endDay),
+      startDate: DateTime(now.year, now.month, startDay),
+      endDate: DateTime(now.year, now.month, endDay),
       label: '학사일정',
       title: title,
       color: color,

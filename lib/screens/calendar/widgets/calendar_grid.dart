@@ -16,6 +16,7 @@ class CalendarGrid extends StatelessWidget {
     required this.focusedMonth,
     required this.events,
     required this.selectedDay,
+    required this.expanded,
     required this.onDaySelected,
     super.key,
   });
@@ -27,6 +28,11 @@ class CalendarGrid extends StatelessWidget {
 
   /// focusedMonth 안에서 선택된 날짜. 다른 달을 보고 있으면 null.
   final int? selectedDay;
+
+  /// false(압축, 기본)면 날짜 박스 안에 얇은 색 줄로 일정을 요약하고, true
+  /// (확장)면 박스 없이 숫자만 그리고 그 아래 긴 이름표 막대로 일정을 그린다.
+  final bool expanded;
+
   final ValueChanged<int> onDaySelected;
 
   @override
@@ -69,6 +75,7 @@ class CalendarGrid extends StatelessWidget {
             focusedMonth: focusedMonth,
             events: events,
             selectedDay: selectedDay,
+            expanded: expanded,
             onDaySelected: onDaySelected,
           ),
       ],

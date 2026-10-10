@@ -16,6 +16,7 @@ class CalendarWeekRow extends StatelessWidget {
     required this.focusedMonth,
     required this.events,
     required this.selectedDay,
+    required this.expanded,
     required this.onDaySelected,
     super.key,
   });
@@ -30,6 +31,11 @@ class CalendarWeekRow extends StatelessWidget {
   final List<CalendarEvent> events;
 
   final int? selectedDay;
+
+  /// false(압축, 기본)면 날짜 박스 안에 얇은 색 줄로 일정을 요약하고, true
+  /// (확장)면 박스 없이 숫자만 그리고 그 아래 긴 이름표 막대로 일정을 그린다.
+  final bool expanded;
+
   final ValueChanged<int> onDaySelected;
 
   @override
@@ -52,29 +58,44 @@ class CalendarWeekRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (var col = 0; col < 7; col++)
-                Expanded(child: _buildDayCell(col)),
+                Expanded(child: _buildDayCell(col, segments)),
             ],
           ),
-          for (var row = 0; row < rowCount; row++)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(children: _buildBarRow(segments, row)),
-            ),
+          if (expanded)
+            for (var row = 0; row < rowCount; row++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(children: _buildBarRow(segments, row)),
+              ),
         ],
       ),
     );
   }
 
-  Widget _buildDayCell(int col) {
+  Widget _buildDayCell(int col, List<_EventSegment> segments) {
     final day = weekFirstDay + col;
     final visible = day >= 1 && day <= daysInMonth;
     return CalendarDayCell(
       day: visible ? day : null,
       isSelected: visible && day == selectedDay,
+      expanded: expanded,
+      eventColors: visible && !expanded
+          ? _lineColorsForCol(segments, col)
+          : const [],
       onTap: visible ? () => onDaySelected(day) : null,
     );
+  }
+
+  /// [col](요일 0~6)에 겹치는 일정들의 색을, 그 주 안에서 배정된 줄(row)
+  /// 순서대로 반환한다 — 압축 뷰에서 날짜 박스 안 색 줄로 쓰인다.
+  List<Color> _lineColorsForCol(List<_EventSegment> segments, int col) {
+    final matches = segments.where((s) => s.startCol <= col && col <= s.endCol)
+        .toList()
+      ..sort((a, b) => a.row.compareTo(b.row));
+    return [for (final s in matches) s.event.color];
   }
 
   List<Widget> _buildBarRow(List<_EventSegment> segments, int row) {
