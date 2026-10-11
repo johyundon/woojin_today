@@ -7,7 +7,6 @@ import '../../services/fakes/fake_course_catalog_service.dart';
 import '../../services/fakes/fake_my_timetable_service.dart';
 import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
-import '../campus_map/campus_map_screen.dart';
 import 'ai_recommend/ai_recommend_result_screen.dart';
 import 'ai_recommend/ai_recommend_wizard_screen.dart';
 import 'course_filters.dart';
@@ -231,7 +230,6 @@ class _TimetableScreenState extends State<TimetableScreen>
                     onCourseTap: (course) =>
                         _showCourseDetail(course.toCatalogItem()),
                     onAutoFill: _openAiRecommendWizard,
-                    onTransitTap: _openCampusMap,
                     viewportHeight: displayedGridHeight,
                   ),
                 ),
