@@ -335,7 +335,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               onPressed: _onAddPressed,
               backgroundColor: AppColors.surface,
               elevation: 0,
-              shape: const StadiumBorder(),
+              shape: const StadiumBorder(
+                side: BorderSide(color: AppColors.border),
+              ),
               icon: const Icon(Icons.add, color: AppColors.accent),
               label: Text(
                 '${selectedDate.month}월 ${selectedDate.day}일 '

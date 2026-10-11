@@ -4,6 +4,12 @@ import '../models/calendar_event.dart';
 import 'calendar_day_cell.dart';
 import 'calendar_event_bar.dart';
 
+/// 압축 뷰에서 날짜 박스가 항상 예약하는 색 줄 자리 수. 달마다 실제 겹치는
+/// 일정 수로 계산하면 일정이 없는 달은 박스가 작아져 달을 넘길 때마다
+/// 크기가 들쭉날쭉해지므로, 데이터와 무관한 고정값을 쓴다(실제 겹치는
+/// 일정이 이보다 많은 날은 그만큼 더 늘어난다).
+const int kCompactLineSlots = 3;
+
 /// 한 주(일~토) 블록: 날짜 숫자 7칸 + 그 주와 겹치는 일정 막대들.
 ///
 /// 막대는 겹치는 일정끼리는 줄을 나눠 쌓고(interval packing), 겹치지 않으면
@@ -54,37 +60,54 @@ class CalendarWeekRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var col = 0; col < 7; col++)
-                Expanded(child: _buildDayCell(col, segments)),
-            ],
-          ),
-          if (expanded)
-            for (var row = 0; row < rowCount; row++)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(children: _buildBarRow(segments, row)),
-              ),
-        ],
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: Alignment.topCenter,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var col = 0; col < 7; col++)
+                  Expanded(child: _buildDayCell(col, segments, rowCount)),
+              ],
+            ),
+            if (expanded)
+              for (var row = 0; row < rowCount; row++)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(children: _buildBarRow(segments, row)),
+                ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildDayCell(int col, List<_EventSegment> segments) {
+  Widget _buildDayCell(
+    int col,
+    List<_EventSegment> segments,
+    int rowCount,
+  ) {
     final day = weekFirstDay + col;
     final visible = day >= 1 && day <= daysInMonth;
+    final lineColors = visible && !expanded
+        ? _lineColorsForCol(segments, col)
+        : const <Color>[];
     return CalendarDayCell(
       day: visible ? day : null,
       isSelected: visible && day == selectedDay,
       expanded: expanded,
-      eventColors: visible && !expanded
-          ? _lineColorsForCol(segments, col)
-          : const [],
+      eventColors: lineColors,
+      // 그 주(week) 전체에서 가장 많이 겹치는 일정 수([rowCount])를 쓴다
+      // (날짜별로 다른 값을 쓰면 같은 주 안에서도 날짜 박스 높이가
+      // 들쭉날쭉해진다). 모자란 자리는 투명한 줄로 채워진다.
+      lineSlotCount: visible && !expanded
+          ? (rowCount > kCompactLineSlots ? rowCount : kCompactLineSlots)
+          : 0,
       onTap: visible ? () => onDaySelected(day) : null,
     );
   }
