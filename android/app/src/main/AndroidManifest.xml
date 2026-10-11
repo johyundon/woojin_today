@@ -13,7 +13,10 @@
     <application
         android:label="daejin_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic: 카카오맵(kakao_map_plugin)이 webview_flutter로
+             지도를 띄우는 데 필요(패키지 요구사항). -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

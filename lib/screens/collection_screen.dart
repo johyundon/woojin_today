@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'advisor/advisor_consultation_screen.dart';
 import 'calendar/calendar_screen.dart';
+import 'campus_map/campus_map_screen.dart';
 import 'fileshare/fileshare_screen.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
@@ -23,6 +24,11 @@ class CollectionScreen extends StatelessWidget {
   static void _openCalendar(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
+  }
+
+  static void _openCampusMap(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const CampusMapScreen()));
   }
 
   static void _openMileage(BuildContext context) {
@@ -67,13 +73,14 @@ class CollectionScreen extends StatelessWidget {
       iconOnLeft: true,
       onTap: _openNotice,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       title: '연강이 가능할까요?',
       description: '건물간 도보 시간을 알려드릴께요!',
       icon: Icons.directions_walk,
       imagePath: 'assets/images/collection_break.png',
       imageSize: 84,
       iconOnLeft: false,
+      onTap: _openCampusMap,
     ),
     _CollectionItem(
       title: '마일리지',

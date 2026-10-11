@@ -75,6 +75,7 @@ dependencies:
   # iOS는 처음 쓸 때 "로컬 네트워크에서 기기를 찾으려고 합니다" 권한 팝업이
   # 한 번 뜬다(iOS 정책, 앱에서 막을 수 없음).
   nsd: ^5.0.1
+  kakao_map_plugin: ^1.0.0
 
 dev_dependencies:
   flutter_test:
@@ -107,6 +108,7 @@ flutter:
   # https://flutter.dev/to/resolution-aware-images
   assets:
     - assets/images/
+    - assets/campus/
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package

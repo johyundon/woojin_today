@@ -26,6 +26,17 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- 카카오맵(kakao_map_plugin)이 webview_flutter로 지도를 띄우는 데
+	     필요(패키지 요구사항). -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 	<!-- "파일공유" 화면의 "사용중" 토글 — 같은 와이파이 안에서 서로를 찾는
 	     mDNS 광고/탐색(nsd 패키지)용. 처음 쓸 때 iOS가 이 문구로 권한을
 	     묻는다. -->

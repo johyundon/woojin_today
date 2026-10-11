@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# 카카오맵 API 키(실제 값) — lib/config/kakao_map_config.example.dart 참고
+lib/config/kakao_map_config.dart
+
 # Symbolication related
 app.*.symbols
 
