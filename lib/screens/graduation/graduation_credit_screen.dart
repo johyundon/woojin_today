@@ -93,6 +93,7 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
                       const SizedBox(height: 20),
                       _DividerStatCard(
                         items: GraduationCreditMockData.detailAreas,
+                        centered: true,
                       ),
                     ],
                   ),
@@ -566,13 +567,36 @@ class _CourseDetailCard extends StatelessWidget {
 /// 아니라 구분선으로만 나뉜 한 장짜리 카드로 되어 있었다). 폭이 넘치면 카드
 /// 안에서만 가로 스크롤된다.
 class _DividerStatCard extends StatelessWidget {
-  const _DividerStatCard({this.title, required this.items});
+  const _DividerStatCard({
+    this.title,
+    required this.items,
+    this.centered = false,
+  });
 
   final String? title;
   final List<GraduationAreaProgress> items;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
+    final row = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 36,
+                margin: const EdgeInsets.symmetric(horizontal: 14),
+                color: AppColors.disabledButton,
+              ),
+            _StatColumn(area: items[i]),
+          ],
+        ],
+      ),
+    );
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -594,23 +618,7 @@ class _DividerStatCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
           ],
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0)
-                    Container(
-                      width: 1,
-                      height: 36,
-                      margin: const EdgeInsets.symmetric(horizontal: 14),
-                      color: AppColors.disabledButton,
-                    ),
-                  _StatColumn(area: items[i]),
-                ],
-              ],
-            ),
-          ),
+          centered ? Center(child: row) : row,
         ],
       ),
     );
