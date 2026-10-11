@@ -311,8 +311,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openCollection() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CollectionScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CollectionScreen(userId2: widget.userId2),
+      ),
+    );
   }
 
   void _openCalendar() {
