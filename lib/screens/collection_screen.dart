@@ -5,6 +5,7 @@ import 'advisor/advisor_consultation_screen.dart';
 import 'calendar/calendar_screen.dart';
 import 'campus_map/campus_map_screen.dart';
 import 'fileshare/fileshare_screen.dart';
+import 'graduation/graduation_credit_screen.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
 import 'notice/notice_screen.dart';
@@ -44,6 +45,12 @@ class CollectionScreen extends StatelessWidget {
   static void _openFileShare(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const FileShareScreen()));
+  }
+
+  static void _openGraduationCredit(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const GraduationCreditScreen()));
   }
 
   void _openAdvisorConsultation(BuildContext context) {
@@ -100,13 +107,14 @@ class CollectionScreen extends StatelessWidget {
       iconOnLeft: false,
       onTap: _openAdvisorConsultation,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       title: '졸업학점',
       description: '졸업하려면 몇학점 남았을까요?',
       icon: Icons.school,
       imagePath: 'assets/images/collection_credit.png',
       imageSize: 84,
       iconOnLeft: true,
+      onTap: _openGraduationCredit,
     ),
     _CollectionItem(
       title: '파일공유',
