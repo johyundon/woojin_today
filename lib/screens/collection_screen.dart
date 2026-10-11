@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'advisor/advisor_consultation_screen.dart';
 import 'calendar/calendar_screen.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
+import 'notice/notice_screen.dart';
 
 /// "모아보기" 화면 (Figma node 6:76 헤더 / 6:77 리스트, 다크 전용).
 ///
@@ -11,21 +13,36 @@ import 'mileage/mileage_screen.dart';
 /// 구현된 기능(캘린더 등)은 그 화면으로, 아직 구현되지 않은 카드는 다른
 /// 미구현 기능 카드와 동일하게 [HomePlaceholderScreen]으로 이동한다.
 class CollectionScreen extends StatelessWidget {
-  const CollectionScreen({super.key});
+  const CollectionScreen({this.userId2, super.key});
+
+  /// 포털 로그인으로 얻은 본인 SSO uid. "지도교수 상담" 카드가 지도교수
+  /// 조회에 써야 해서 홈 화면에서 그대로 전달받는다.
+  final String? userId2;
 
   static void _openCalendar(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
   }
 
   static void _openMileage(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const MileageScreen()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const MileageScreen()));
   }
 
-  static const List<_CollectionItem> _items = [
+  static void _openNotice(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
+  }
+
+  void _openAdvisorConsultation(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdvisorConsultationScreen(userId2: userId2),
+      ),
+    );
+  }
+
+  List<_CollectionItem> get _items => [
     _CollectionItem(
       title: '우진이의 캘린더',
       description: '학교 일정을 알림으로 받아보세요',
@@ -42,8 +59,9 @@ class CollectionScreen extends StatelessWidget {
       imagePath: 'assets/images/collection_notice.png',
       imageSize: 84,
       iconOnLeft: true,
+      onTap: _openNotice,
     ),
-    _CollectionItem(
+    const _CollectionItem(
       title: '연강이 가능할까요?',
       description: '건물간 도보 시간을 알려드릴께요!',
       icon: Icons.directions_walk,
@@ -67,8 +85,9 @@ class CollectionScreen extends StatelessWidget {
       imagePath: 'assets/images/collection_advisor.png',
       imageSize: 84,
       iconOnLeft: false,
+      onTap: _openAdvisorConsultation,
     ),
-    _CollectionItem(
+    const _CollectionItem(
       title: '졸업학점',
       description: '졸업하려면 몇학점 남았을까요?',
       icon: Icons.school,
@@ -76,7 +95,7 @@ class CollectionScreen extends StatelessWidget {
       imageSize: 84,
       iconOnLeft: true,
     ),
-    _CollectionItem(
+    const _CollectionItem(
       title: '파일공유',
       description: '중요한 파일을 안전하고 손쉽게 공유해요!',
       icon: Icons.description,
@@ -93,6 +112,7 @@ class CollectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final items = _items;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -112,10 +132,10 @@ class CollectionScreen extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                itemCount: _items.length,
+                itemCount: items.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 14),
                 itemBuilder: (context, index) {
-                  final item = _items[index];
+                  final item = items[index];
                   return _CollectionItemCard(
                     item: item,
                     onTap: () => (item.onTap ?? _openPlaceholder)(context),

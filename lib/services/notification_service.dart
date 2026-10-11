@@ -21,6 +21,10 @@ class NotificationService {
   static const _channelName = '학사일정 알림';
   static const _channelDescription = '캘린더에 등록한 일정의 알림 시각에 울린다.';
 
+  static const _noticeChannelId = 'notice_updates';
+  static const _noticeChannelName = '공지사항 알림';
+  static const _noticeChannelDescription = '새 공지가 올라오면 울린다.';
+
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
@@ -104,6 +108,30 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
+
+  /// 새 공지 알림을 예약 없이 즉시 띄운다. [scheduleReminder]와 달리 미래
+  /// 시각 예약이 아니라 호출 즉시 표시되는 알림이라 전용 채널을 따로 쓴다.
+  Future<void> showNoticeAlert({
+    required String id,
+    required String title,
+    required String body,
+  }) async {
+    await _plugin.show(
+      id: _notificationIdFor(id),
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _noticeChannelId,
+          _noticeChannelName,
+          channelDescription: _noticeChannelDescription,
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
     );
   }
 
