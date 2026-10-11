@@ -1,15 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'calendar/calendar_screen.dart';
 import 'home_placeholder_screen.dart';
+import 'mileage/mileage_screen.dart';
 
 /// "모아보기" 화면 (Figma node 6:76 헤더 / 6:77 리스트, 다크 전용).
 ///
 /// 홈 화면의 "모아보기" 버튼에서 진입하며, 7개 기능 카드를 세로로 나열한다.
-/// 7개 기능 모두 아직 구현되지 않아 카드를 누르면 다른 미구현 기능 카드와
-/// 동일하게 [HomePlaceholderScreen]으로 이동한다.
+/// 구현된 기능(캘린더 등)은 그 화면으로, 아직 구현되지 않은 카드는 다른
+/// 미구현 기능 카드와 동일하게 [HomePlaceholderScreen]으로 이동한다.
 class CollectionScreen extends StatelessWidget {
   const CollectionScreen({super.key});
+
+  static void _openCalendar(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
+  }
+
+  static void _openMileage(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const MileageScreen()));
+  }
 
   static const List<_CollectionItem> _items = [
     _CollectionItem(
@@ -19,6 +33,7 @@ class CollectionScreen extends StatelessWidget {
       imagePath: 'assets/images/calendar_mascot_dark.png',
       imageSize: 84,
       iconOnLeft: false,
+      onTap: _openCalendar,
     ),
     _CollectionItem(
       title: '공지사항을\n알려드릴게요!',
@@ -43,6 +58,7 @@ class CollectionScreen extends StatelessWidget {
       imagePath: 'assets/images/collection_mileage.png',
       imageSize: 84,
       iconOnLeft: true,
+      onTap: _openMileage,
     ),
     _CollectionItem(
       title: '지도교수 상담',
@@ -102,7 +118,7 @@ class CollectionScreen extends StatelessWidget {
                   final item = _items[index];
                   return _CollectionItemCard(
                     item: item,
-                    onTap: () => _openPlaceholder(context),
+                    onTap: () => (item.onTap ?? _openPlaceholder)(context),
                   );
                 },
               ),
@@ -122,6 +138,7 @@ class _CollectionItem {
     required this.iconOnLeft,
     this.imagePath,
     this.imageSize = 64,
+    this.onTap,
   });
 
   final String title;
@@ -130,6 +147,10 @@ class _CollectionItem {
   final bool iconOnLeft;
   final String? imagePath;
   final double imageSize;
+
+  /// 이 카드를 눌렀을 때 이동할 화면. null이면 아직 구현되지 않은 기능이라
+  /// [CollectionScreen._openPlaceholder]로 대체된다.
+  final void Function(BuildContext context)? onTap;
 }
 
 class _CollectionItemCard extends StatelessWidget {
