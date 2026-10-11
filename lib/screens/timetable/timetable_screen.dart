@@ -7,10 +7,13 @@ import '../../services/fakes/fake_course_catalog_service.dart';
 import '../../services/fakes/fake_my_timetable_service.dart';
 import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
+import 'ai_recommend/ai_recommend_result_screen.dart';
+import 'ai_recommend/ai_recommend_wizard_screen.dart';
 import 'course_filters.dart';
-import 'grid_layout.dart';
+import 'models/ai_recommend_answers.dart';
 import 'models/planned_course.dart';
 import 'models/saved_timetable.dart';
+import 'services/ai_recommend_service.dart';
 import 'services/saved_timetable_storage.dart';
 import 'syllabus_screen.dart';
 import 'saved_timetables_screen.dart';
@@ -77,9 +80,11 @@ class _TimetableScreenState extends State<TimetableScreen>
   @override
   void initState() {
     super.initState();
-    _courseCatalogService = widget.courseCatalogService ??
+    _courseCatalogService =
+        widget.courseCatalogService ??
         (kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService());
-    _myTimetableService = widget.myTimetableService ??
+    _myTimetableService =
+        widget.myTimetableService ??
         (kUseMockApi ? FakeMyTimetableService() : MyTimetableService());
     _savedTimetableStorage =
         widget.savedTimetableStorage ?? SavedTimetableStorage();
@@ -224,7 +229,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                     onRemoveCourse: _removeCourse,
                     onCourseTap: (course) =>
                         _showCourseDetail(course.toCatalogItem()),
-                    onAutoFill: _autoFillSchedule,
+                    onAutoFill: _openAiRecommendWizard,
                     viewportHeight: displayedGridHeight,
                   ),
                 ),

@@ -1,6 +1,6 @@
 part of 'timetable_screen.dart';
 
-/// 빈 셀 탭, 과목 추가/삭제, 규칙 기반 자동 시간표 추천 등 확정 과목
+/// 빈 셀 탭, 과목 추가/삭제, AI 시간표 자동 생성 진입 등 확정 과목
 /// 목록(_confirmedCourses)을 직접 조작하는 책임.
 mixin TimetableCourseMixin on TimetableSessionMixin {
   void _onEmptyCellTap(Weekday day, int startHour) {
@@ -32,75 +32,48 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
     });
   }
 
-  /// 규칙 기반 자동 시간표 추천: 외부 AI 호출 없이, 현재 빈 시간대에 완전히
-  /// 들어맞는 미확정 개설과목을 앞에서부터 그리디하게 채운다. 이미 확정된
-  /// 과목·폐강 과목·그리드 범위(월~금 8~22시) 밖 교시는 후보에서 제외한다.
-  void _autoFillSchedule() {
+  /// 그리드 위 반짝이(AI) 버튼 — 5단계 설문([AiRecommendWizardScreen])으로
+  /// 이동한다. 실제 추천 생성은 [_onAiRecommendSubmit]에서 처리한다.
+  void _openAiRecommendWizard() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AiRecommendWizardScreen(onSubmit: _onAiRecommendSubmit),
+      ),
+    );
+  }
+
+  /// 설문 5단계 "시간표 만들기"를 눌렀을 때 호출된다. 답변으로 후보
+  /// 시간표를 만들어 결과 화면([AiRecommendResultScreen])으로 넘어간다.
+  Future<void> _onAiRecommendSubmit(
+    BuildContext stepContext,
+    AiRecommendAnswers answers,
+  ) async {
     if (_catalog.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('추천할 개설과목 데이터가 없어요.')));
+      ScaffoldMessenger.of(stepContext)
+          .showSnackBar(const SnackBar(content: Text('추천할 개설과목 데이터가 없어요.')));
       return;
     }
 
-    final occupied = <Weekday, List<({int start, int end})>>{
-      for (final day in gridWeekdays) day: [],
-    };
-    for (final course in _confirmedCourses) {
-      for (final slot in parseRawSchedule(course.rawSchedule)) {
-        if (!occupied.containsKey(slot.day)) continue;
-        occupied[slot.day]!.add((start: slot.startMinutes, end: slot.endMinutes));
-      }
-    }
-
-    bool fitsFreely(List<ClassTimeSlot> slots) {
-      for (final slot in slots) {
-        if (!occupied.containsKey(slot.day)) return false;
-        if (slot.startMinutes < gridStartHour * 60 ||
-            slot.endMinutes > gridEndHour * 60) {
-          return false;
-        }
-        final overlaps = occupied[slot.day]!.any(
-          (r) => slot.startMinutes < r.end && slot.endMinutes > r.start,
-        );
-        if (overlaps) return false;
-      }
-      return true;
-    }
-
-    final existingKeys = _confirmedCourses.map((c) => c.key).toSet();
-    final picked = <CourseCatalogItem>[];
-
-    for (final item in _catalog) {
-      if (item.isClosed) continue;
-      final key = '${item.courseCode}-${item.section}';
-      if (existingKeys.contains(key)) continue;
-
-      final slots = parseRawSchedule(item.rawSchedule);
-      if (slots.isEmpty || !fitsFreely(slots)) continue;
-
-      for (final slot in slots) {
-        occupied[slot.day]!.add((start: slot.startMinutes, end: slot.endMinutes));
-      }
-      picked.add(item);
-      existingKeys.add(key);
-    }
-
-    if (picked.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('빈 시간대에 맞는 과목을 찾지 못했어요.')));
-      return;
-    }
-
-    setState(() {
-      _confirmedCourses = [
-        ..._confirmedCourses,
-        ...picked.map(PlannedCourse.fromCatalogItem),
-      ];
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${picked.length}과목을 추천해서 채웠어요.')));
+    await Navigator.of(stepContext).push(
+      MaterialPageRoute(
+        builder: (_) => AiRecommendResultScreen(
+          candidates: generateTimetableCandidates(
+            catalog: _catalog,
+            answers: answers,
+          ),
+          onRegenerate: () async =>
+              generateTimetableCandidates(catalog: _catalog, answers: answers),
+          onConfirm: (chosen) {
+            setState(() => _confirmedCourses = chosen);
+            // 결과 화면 + 설문 화면을 모두 닫고 시간표 화면으로 돌아간다.
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${chosen.length}과목으로 시간표를 채웠어요.')),
+            );
+          },
+        ),
+      ),
+    );
   }
 }
