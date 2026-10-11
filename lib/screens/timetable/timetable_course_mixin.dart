@@ -32,6 +32,19 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
     });
   }
 
+  /// 연강 사이 "이동하기" 칩 — 캠퍼스 지도([CampusMapScreen])로 이동하면서
+  /// 출발지/목적지 건물을 미리 채운다.
+  void _openCampusMap(String originBuilding, String destinationBuilding) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CampusMapScreen(
+          initialOriginBuilding: originBuilding,
+          initialDestinationBuilding: destinationBuilding,
+        ),
+      ),
+    );
+  }
+
   /// 그리드 위 반짝이(AI) 버튼 — 5단계 설문([AiRecommendWizardScreen])으로
   /// 이동한다. 실제 추천 생성은 [_onAiRecommendSubmit]에서 처리한다.
   void _openAiRecommendWizard() {

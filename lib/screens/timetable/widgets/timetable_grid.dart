@@ -4,7 +4,9 @@ import '../../../services/class_schedule_parser.dart';
 import '../grid_layout.dart';
 import '../models/planned_course.dart';
 import '../timetable_colors.dart';
+import '../transit_detection.dart';
 import 'course_block.dart';
+import 'transit_chip.dart';
 
 const List<String> _weekdayLabels = ['월', '화', '수', '목', '금'];
 const double _hourLabelColumnWidth = 28;
@@ -30,6 +32,7 @@ class TimetableGrid extends StatelessWidget {
     required this.onRemoveCourse,
     required this.onCourseTap,
     required this.onAutoFill,
+    required this.onTransitTap,
     this.viewportHeight = 320,
   });
 
@@ -38,6 +41,10 @@ class TimetableGrid extends StatelessWidget {
   final void Function(Weekday day, int startHour) onEmptyCellTap;
   final ValueChanged<PlannedCourse> onRemoveCourse;
   final ValueChanged<PlannedCourse> onCourseTap;
+
+  /// 연강 사이 "이동하기" 칩을 탭했을 때 호출된다(출발 건물명, 도착 건물명).
+  final void Function(String originBuilding, String destinationBuilding)
+  onTransitTap;
 
   /// 그리드(8~22시 전체 896px)에서 실제로 보여줄 스크롤 뷰포트 높이. 핸들
   /// 드래그로 조절하는 값을 받는다 — 기본값 320은 기존 고정값과 동일.
@@ -55,11 +62,12 @@ class TimetableGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layouts = buildBlockLayouts(courses);
+    final transitLinks = computeTransitLinks(courses);
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        _buildGridColumn(layouts),
+        _buildGridColumn(layouts, transitLinks),
         Positioned(
           // 요일 헤더 줄 바로 아래, 그리드 오른쪽(금요일 열) 위에
           // 뜨는 플로팅 버튼 — 스크롤돼도 같이 움직이지 않고 늘 같은 자리에
@@ -75,7 +83,10 @@ class TimetableGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildGridColumn(List<CourseBlockLayout> layouts) {
+  Widget _buildGridColumn(
+    List<CourseBlockLayout> layouts,
+    List<TransitLink> transitLinks,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -128,6 +139,8 @@ class TimetableGrid extends StatelessWidget {
                         _positionedBlock(layout, columnWidth),
                       if (pendingSlot != null)
                         _positionedPreview(pendingSlot!, columnWidth),
+                      for (final link in transitLinks)
+                        _positionedTransitChip(link, columnWidth),
                     ],
                   );
                 },
@@ -202,6 +215,25 @@ class TimetableGrid extends StatelessWidget {
       width: columnWidth,
       height: height,
       child: const CourseBlockPreview(),
+    );
+  }
+
+  Widget _positionedTransitChip(TransitLink link, double columnWidth) {
+    final columnIndex = gridColumnIndexOf(link.day);
+    if (columnIndex == null) return const SizedBox.shrink();
+    final boundaryY = _minutesToY(
+      ((link.gapStartMinutes + link.gapEndMinutes) / 2).round(),
+    );
+    return Positioned(
+      left: _hourLabelColumnWidth + columnIndex * columnWidth,
+      top: boundaryY - 10,
+      width: columnWidth,
+      child: Center(
+        child: TransitChip(
+          onTap: () =>
+              onTransitTap(link.originBuilding, link.destinationBuilding),
+        ),
+      ),
     );
   }
 
