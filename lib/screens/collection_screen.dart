@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'advisor/advisor_consultation_screen.dart';
 import 'calendar/calendar_screen.dart';
+import 'fileshare/fileshare_screen.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
 import 'notice/notice_screen.dart';
@@ -32,6 +33,11 @@ class CollectionScreen extends StatelessWidget {
   static void _openNotice(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
+  }
+
+  static void _openFileShare(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const FileShareScreen()));
   }
 
   void _openAdvisorConsultation(BuildContext context) {
@@ -95,13 +101,14 @@ class CollectionScreen extends StatelessWidget {
       imageSize: 84,
       iconOnLeft: true,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       title: '파일공유',
       description: '중요한 파일을 안전하고 손쉽게 공유해요!',
       icon: Icons.description,
       imagePath: 'assets/images/collection_fileshare.png',
-      imageSize: 56,
+      imageSize: 84,
       iconOnLeft: false,
+      onTap: _openFileShare,
     ),
   ];
 

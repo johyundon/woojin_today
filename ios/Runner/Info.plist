@@ -26,6 +26,15 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- "파일공유" 화면의 "사용중" 토글 — 같은 와이파이 안에서 서로를 찾는
+	     mDNS 광고/탐색(nsd 패키지)용. 처음 쓸 때 iOS가 이 문구로 권한을
+	     묻는다. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>같은 와이파이에 있는 다른 사람을 찾아 파일을 공유하기 위해 필요해요.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_daejinshare._tcp</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -57,6 +57,25 @@ dependencies:
   # 'Asia/Seoul'로 고정해서 쓴다.
   timezone: ^0.11.1
 
+  # "파일공유" 화면(기기 간 자동 탐색/전송) — 그건 OS 네이티브 기능이라 앱이
+  # 직접 구현할 수 없어서, 대신 기기에서 파일을 고르면(file_picker) OS가
+  # 원래 제공하는 "공유하기" 시트(share_plus)로 넘겨 실제 전송은 OS가
+  # 처리하게 한다(그 시트 안에 블루투스 공유/AirDrop/카카오톡 등 진짜 전송
+  # 수단이 이미 다 있음).
+  file_picker: ^13.1.0
+  share_plus: ^13.3.1
+  # 다른 앱에서 "공유하기"로 이 앱을 골랐을 때 그 파일을 실제로 받는다.
+  # iOS는 별도 Xcode Share Extension 타겟을 만들어야 받을 수 있는데 그건 이
+  # 환경에서 만들고 검증할 방법이 없어 안드로이드만 지원한다 — iOS에서는
+  # 조용히 아무 일도 안 일어난다(크래시 없음).
+  receive_sharing_intent: ^1.9.0
+
+  # "사용중" 토글 — 같은 와이파이 안에서 서로 "존재"를 광고/탐색한다(mDNS/
+  # DNS-SD, Bonjour). 서버 없이 안드로이드·iOS 둘 다 되는 방식이라 골랐다.
+  # iOS는 처음 쓸 때 "로컬 네트워크에서 기기를 찾으려고 합니다" 권한 팝업이
+  # 한 번 뜬다(iOS 정책, 앱에서 막을 수 없음).
+  nsd: ^5.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

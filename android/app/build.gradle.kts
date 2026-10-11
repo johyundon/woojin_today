@@ -6,12 +6,16 @@ plugins {
 
 android {
     namespace = "com.example.daejin_app"
-    compileSdk = flutter.compileSdkVersion
+    // "파일공유" 화면의 receive_sharing_intent 플러그인이 SDK 37 이상으로
+    // 컴파일할 것을 요구해서(Flutter 기본값 36보다 높음) 명시적으로 올린다.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications가 요구하는 코어 라이브러리 디슈가링.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -42,6 +46,10 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
