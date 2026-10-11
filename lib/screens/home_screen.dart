@@ -10,9 +10,11 @@ import '../services/my_enrolled_courses.dart';
 import '../services/my_timetable_service.dart';
 import '../services/student_info_service.dart';
 import '../services/weather_service.dart';
+import 'cafeteria/cafeteria_screen.dart';
 import 'calendar/calendar_screen.dart';
 import 'collection_screen.dart';
 import 'home/home_colors.dart';
+import 'home/rank/department_rank_screen.dart';
 import 'home/widgets/ad_banner_placeholder.dart';
 import 'home/widgets/calendar_promo_card.dart';
 import 'home/widgets/header.dart';
@@ -23,7 +25,6 @@ import 'home/widgets/rank_card.dart';
 import 'home/widgets/recommend_card.dart';
 import 'home/widgets/section_header.dart';
 import 'home/widgets/weather_detail_dialog.dart';
-import 'home_placeholder_screen.dart';
 import 'login_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
@@ -134,11 +135,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _weatherService = widget.weatherService ?? WeatherService();
-    _courseCatalogService = widget.courseCatalogService ??
+    _courseCatalogService =
+        widget.courseCatalogService ??
         (kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService());
-    _myTimetableService = widget.myTimetableService ??
+    _myTimetableService =
+        widget.myTimetableService ??
         (kUseMockApi ? FakeMyTimetableService() : MyTimetableService());
-    _studentInfoService = widget.studentInfoService ??
+    _studentInfoService =
+        widget.studentInfoService ??
         (kUseMockApi ? FakeStudentInfoService() : StudentInfoService());
     _now = widget.now ?? DateTime.now;
     _loadWeather();
@@ -283,9 +287,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openPlaceholder() {
+  void _openCafeteria() {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()));
+        .push(MaterialPageRoute(builder: (_) => const CafeteriaScreen()));
   }
 
   void _openTimetable() {
@@ -297,6 +301,12 @@ class _HomeScreenState extends State<HomeScreen> {
           userId2: widget.userId2,
         ),
       ),
+    );
+  }
+
+  void _openDepartmentRank() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DepartmentRankScreen(isDark: _isDark)),
     );
   }
 
@@ -608,15 +618,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: RankCard(
                           isDark: _isDark,
-                          onTap: _openPlaceholder,
+                          onTap: _openDepartmentRank,
                         ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: MenuCard(
-                          isDark: _isDark,
-                          onTap: _openPlaceholder,
-                        ),
+                        child: MenuCard(isDark: _isDark, onTap: _openCafeteria),
                       ),
                     ],
                   ),
