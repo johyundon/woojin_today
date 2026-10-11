@@ -103,10 +103,11 @@ class _BuildingField extends StatelessWidget {
               caption,
               style: const TextStyle(
                 color: CampusMapColors.textSecondary,
-                fontSize: 10,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
+            const SizedBox(height: 4),
             Text(
               label,
               maxLines: 1,
@@ -115,8 +116,8 @@ class _BuildingField extends StatelessWidget {
                 color: isPlaceholder
                     ? CampusMapColors.textSecondary
                     : CampusMapColors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
