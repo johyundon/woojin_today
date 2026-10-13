@@ -15,4 +15,14 @@ class AppColors {
   static const Color disabledButton = Color(0xFF2A2A2D);
   static const Color disabledButtonText = Color(0xFF7A7A7E);
   static const Color error = Color(0xFFFF5C5C);
+
+  // "우진이의 하루 v4" 리디자인 팔레트. 디자인 캔버스 export(standalone.html)의
+  // 스와치 범례를 브라우저에서 oklch -> canvas 2d(sRGB)로 변환해 얻은 정확한
+  // hex 값이며, 섹션별로 화면을 새로 만들 때 이 쪽을 쓴다(기존 토큰은 아직
+  // 리디자인되지 않은 화면을 위해 그대로 둔다).
+  static const Color cobalt = Color(0xFF2857E5);
+  static const Color cobaltDeep = Color(0xFF173EBB);
+  static const Color lime = Color(0xFFD2F66B);
+  static const Color blushPink = Color(0xFFFFACBE);
+  static const Color ink = Color(0xFF121212);
 }

@@ -4,15 +4,17 @@ import '../config/mock_mode.dart';
 import '../services/credential_storage.dart';
 import '../services/fakes/fake_portal_login_service.dart';
 import '../services/portal_login_service.dart';
+import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
+import '../widgets/mascot_sticker.dart';
 import 'student_id_find_screen.dart';
 import 'student_id_login_complete_screen.dart';
+import 'terms_agreement_screen.dart';
 
-/// 로그인 화면 (Figma node 6:7 기본 상태 / 6:8 검증 오류·포커스 상태).
-/// 두 노드는 별도 화면이 아니라 같은 로그인 화면의 상태 차이(포커스 전/후,
-/// 미입력 오류 표시 여부)라고 판단해 하나의 StatefulWidget으로 구현했다.
+/// 로그인 화면 ("우진이의 하루" v4 리디자인).
+/// 로그인 성공 후, 약관에 아직 동의하지 않은 기기라면(최초 로그인) 약관 동의
+/// 화면을 한 번 거치고, 이미 동의한 적이 있으면 바로 로그인 완료 화면으로
+/// 넘어간다.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -24,11 +26,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _errorMessage;
-  bool _privacyExpanded = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _autoLogin = true;
 
-  final _portalLoginService =
-      kUseMockApi ? FakePortalLoginService() : PortalLoginService();
+  final _portalLoginService = kUseMockApi
+      ? FakePortalLoginService()
+      : PortalLoginService();
 
   @override
   void dispose() {
@@ -73,23 +77,37 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result.success) {
-      try {
-        await CredentialStorage().save(userId: userId, userPwd: userPwd);
-      } catch (e) {
-        // 저장 실패가 로그인 자체를 막아서는 안 된다. 다음 앱 시작 시
-        // 자동 재로그인만 안 될 뿐이므로 로그만 남기고 진행한다.
-        debugPrint('[CredentialStorage] 자격증명 저장 실패: $e');
+      if (_autoLogin) {
+        try {
+          await CredentialStorage().save(userId: userId, userPwd: userPwd);
+        } catch (e) {
+          // 저장 실패가 로그인 자체를 막아서는 안 된다. 다음 앱 시작 시
+          // 자동 재로그인만 안 될 뿐이므로 로그만 남기고 진행한다.
+          debugPrint('[CredentialStorage] 자격증명 저장 실패: $e');
+        }
       }
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => StudentIdLoginCompleteScreen(
-            jsessionId: result.jsessionId,
-            wmonid: result.wmonid,
-            userId2: result.userId2,
+
+      final hasAcceptedTerms = await TermsAcceptanceStorage().hasAccepted();
+      if (!mounted) return;
+
+      if (hasAcceptedTerms) {
+        _goToLoginComplete(
+          jsessionId: result.jsessionId,
+          wmonid: result.wmonid,
+          userId2: result.userId2,
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => TermsAgreementScreen(
+              jsessionId: result.jsessionId,
+              wmonid: result.wmonid,
+              userId2: result.userId2,
+            ),
           ),
-        ),
-      );
+        );
+      }
       return;
     }
 
@@ -108,137 +126,389 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _goToLoginComplete({
+    String? jsessionId,
+    String? wmonid,
+    String? userId2,
+  }) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => StudentIdLoginCompleteScreen(
+          jsessionId: jsessionId,
+          wmonid: wmonid,
+          userId2: userId2,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onFindStudentId() async {
+    final foundStudentId = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const StudentIdFindScreen()),
+    );
+    if (foundStudentId != null) {
+      _idController.text = foundStudentId;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
-              Image.asset(
-                'assets/images/login_character.png',
-                width: 132,
-                height: 192,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 22),
-              const Text(
-                '우진이의 하루!',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 32),
-              AppTextField(controller: _idController, hintText: '학번'),
-              const SizedBox(height: 16),
-              AppTextField(
-                controller: _passwordController,
-                hintText: '비밀번호',
-                obscureText: true,
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: () async {
-                    final foundStudentId = await Navigator.of(context)
-                        .push<String>(
-                          MaterialPageRoute(
-                            builder: (_) => const StudentIdFindScreen(),
+      backgroundColor: AppColors.cobalt,
+      // 디자인에서 흰 카드가 화면 맨 밑(홈 인디케이터 뒤)까지 꽉 채워져 있어서
+      // 바깥 SafeArea는 아래쪽을 비우고, 카드 안쪽 콘텐츠에서만 다시
+      // SafeArea로 안전 영역을 띄운다.
+      // 마스코트가 카드(텍스트 입력창) 위로도 넘어와야 해서, 마스코트를
+      // 맨 바깥 Stack의 마지막 자식으로 따로 빼둔다 — Column 안에 있으면
+      // 아무리 겹쳐도 바로 아래의 흰 카드보다 앞으로 나올 수 없기 때문이다.
+      body: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              // 원은 글자보다 뒤로 간다(원 → 글자 순서).
+                              Positioned(
+                                left: 134,
+                                top: 76,
+                                child: Container(
+                                  width: 300,
+                                  height: 300,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.cobaltDeep,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.lime,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 14,
+                                          color: AppColors.ink,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          '대진대 재학생 인증',
+                                          style: TextStyle(
+                                            color: AppColors.ink,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  const Text(
+                                    '반가워!\n학교 계정으로\n로그인',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 40,
+                                      height: 1.25,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        );
-                    if (foundStudentId != null) {
-                      _idController.text = foundStudentId;
-                    }
-                  },
-                  child: const Text(
-                    '학번을 찾아드릴까요?',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 16,
-                      color: AppColors.error,
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    24,
+                    20,
+                    30 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 13,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        offset: const Offset(0, -12),
+                        blurRadius: 30,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _LoginField(
+                        icon: Icons.badge,
+                        label: '학번',
+                        controller: _idController,
+                      ),
+                      const SizedBox(height: 14),
+                      _LoginField(
+                        icon: Icons.lock,
+                        label: '비밀번호',
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        trailing: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 20,
+                            color: Colors.black45,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 22),
-              PrimaryButton(
-                label: _isLoading ? '로그인 중...' : '시작해볼까요?',
-                enabled: !_isLoading,
-                onPressed: _onSubmit,
-              ),
-              const SizedBox(height: 20),
-              const Divider(color: AppColors.border, height: 1),
-              const SizedBox(height: 16),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () =>
-                    setState(() => _privacyExpanded = !_privacyExpanded),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '개인정보는 어떻게 관리되나요?',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Transform.scale(
+                                scale: 0.85,
+                                child: Switch(
+                                  value: _autoLogin,
+                                  activeTrackColor: AppColors.cobalt,
+                                  activeThumbColor: Colors.white,
+                                  onChanged: (v) =>
+                                      setState(() => _autoLogin = v),
+                                ),
+                              ),
+                              const Text(
+                                '자동 로그인',
+                                style: TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: _onFindStudentId,
+                            child: const Text(
+                              '학번 찾기',
+                              style: TextStyle(
+                                color: Colors.black45,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Icon(
-                      _privacyExpanded
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      color: AppColors.textSecondary,
-                    ),
-                  ],
-                ),
-              ),
-              if (_privacyExpanded) ...[
-                const SizedBox(height: 12),
-                const Text(
-                  '[우진이의 하루]는 대진대학교 서버와 직접 통신합니다. 별도의 서버가 '
-                  '존재하지 않아 민감정보(전화번호, 이름, 생년월일, 학번, 비밀번호 '
-                  '등)등은 모두 휴대폰에 저장되고 활용되며 앱 삭제시 전부 폐기 '
-                  '처리됩니다. 따라서 앱을 삭제하거나 휴대폰을 변경하는 등의 경우 '
-                  '이전 앱의 정보는 공유되지 않습니다.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    height: 1.5,
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 16,
+                              color: AppColors.error,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: const TextStyle(
+                                  color: AppColors.error,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Container(
+                        height: 62,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(31),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.cobalt.withValues(alpha: 0.4),
+                              offset: const Offset(0, 12),
+                              blurRadius: 26,
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _onSubmit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.cobalt,
+                            disabledBackgroundColor: AppColors.cobalt
+                                .withValues(alpha: 0.5),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: const StadiumBorder(),
+                          ),
+                          child: Text(
+                            _isLoading ? '로그인 중...' : '로그인 →',
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Center(
+                        child: Text(
+                          '로그인이 안 되면 학생지원처로 문의해 주세요',
+                          style: TextStyle(color: Colors.black45, fontSize: 12),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
+          // 마스코트. 카드보다 나중에(바깥 Stack의 뒤쪽 자식으로) 그려서
+          // 카드 위로도 걸쳐 보이게 한다.
+          Positioned(
+            left: 151,
+            top: 180,
+            child: const MascotSticker(width: 240, angle: 0.1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 로그인 카드 안의 아이콘 + 라벨 + 입력창 한 세트.
+class _LoginField extends StatefulWidget {
+  const _LoginField({
+    required this.icon,
+    required this.label,
+    required this.controller,
+    this.obscureText = false,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String label;
+  final TextEditingController controller;
+  final bool obscureText;
+  final Widget? trailing;
+
+  @override
+  State<_LoginField> createState() => _LoginFieldState();
+}
+
+class _LoginFieldState extends State<_LoginField> {
+  final _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() => _focused = _focusNode.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F3EF),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: _focused ? AppColors.cobalt : Colors.transparent,
+          width: 2,
         ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.cobalt,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(widget.icon, size: 18, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    color: Color(0xFF5A5852),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                TextField(
+                  controller: widget.controller,
+                  focusNode: _focusNode,
+                  obscureText: widget.obscureText,
+                  cursorColor: AppColors.cobalt,
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (widget.trailing != null) widget.trailing!,
+        ],
       ),
     );
   }

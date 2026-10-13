@@ -7,14 +7,15 @@ import '../services/credential_storage.dart';
 import '../services/fakes/fake_portal_login_service.dart';
 import '../services/portal_login_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/mascot_sticker.dart';
+import 'onboarding_screen.dart';
 import 'student_id_login_complete_screen.dart';
-import 'terms_agreement_screen.dart';
 
-/// 스플래시 화면 (Figma node 6:3).
-/// 검은 배경 + 캐릭터 로고를 2초간 보여주는 동안, 저장된 로그인 자격증명이
-/// 있으면 조용히 재로그인을 시도한다. 성공하면 약관 동의/로그인 화면을 거치지
+/// 스플래시 화면 ("우진이의 하루" v4 리디자인).
+/// 코발트 배경 + 마스코트를 2초간 보여주는 동안, 저장된 로그인 자격증명이
+/// 있으면 조용히 재로그인을 시도한다. 성공하면 온보딩/로그인 화면을 거치지
 /// 않고 바로 로그인 완료 화면으로, 저장된 값이 없거나 재로그인에 실패하면
-/// 기존처럼 약관 동의 화면으로 이동한다.
+/// 온보딩 화면으로 이동한다.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -41,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final credentials = await CredentialStorage().read();
     if (credentials == null) {
       await minDisplay;
-      _goToTermsAgreement();
+      _goToOnboarding();
       return;
     }
 
@@ -71,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen> {
         userId2: result.userId2,
       );
     } else {
-      _goToTermsAgreement();
+      _goToOnboarding();
     }
   }
 
@@ -83,10 +84,10 @@ class _SplashScreenState extends State<SplashScreen> {
     return completer.future;
   }
 
-  void _goToTermsAgreement() {
+  void _goToOnboarding() {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const TermsAgreementScreen()),
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
     );
   }
 
@@ -116,27 +117,74 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/splash_character.png',
-              width: 160,
-              height: 185,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 32),
-            const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: AppColors.accent,
+      backgroundColor: AppColors.cobalt,
+      body: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Spacer(flex: 3),
+              Container(
+                width: 260,
+                height: 260,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.cobaltDeep,
+                  shape: BoxShape.circle,
+                ),
+                child: const MascotSticker(width: 190),
               ),
-            ),
-          ],
+              const Spacer(flex: 1),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.lime,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '대진대 새내기 가이드',
+                  style: TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '우진이의 하루',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.lime,
+                ),
+              ),
+              const Spacer(flex: 2),
+              const Text(
+                'DAEJIN UNIVERSITY',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
