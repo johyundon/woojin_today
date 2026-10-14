@@ -1,146 +1,200 @@
 import 'package:flutter/material.dart';
 
-import 'cafeteria_colors.dart';
+import '../../theme/app_colors.dart';
 import 'models/cafeteria_menu.dart';
 import 'services/cafeteria_menu_mock_data.dart';
 import 'widgets/cafeteria_date_picker_dialog.dart';
-import 'widgets/meal_section.dart';
+import 'widgets/cafeteria_venue_tabs.dart';
+import 'widgets/cafeteria_week_row.dart';
+import 'widgets/featured_menu_card.dart';
+import 'widgets/small_menu_card.dart';
 
-const List<String> _weekdayKorLabels = ['일', '월', '화', '수', '목', '금', '토'];
-
-/// "오늘의 학식" 화면 (Figma node 6:70 "학식").
-///
-/// 이 노드는 실제 Figma 벡터 레이어가 아니라 다른 앱을 캡처한 스크린샷 4장
-/// (6:71~6:74)이 평탄화된 상태라 `get_design_context`로 쓸만한 코드를 뽑을 수
-/// 없었다(calendar_screen.dart, timetable_colors.dart와 같은 상황). 스크린샷을
-/// 눈으로 보고 레이아웃/색상/간격을 근사해 재현했다.
+/// "오늘 뭐 먹지?" 화면(v4 리디자인). 위쪽에서 요일(월~금 한 주)과 식당(학생식당/
+/// 교직원식당)을 고르면, 그 식당의 메뉴가 큰 대표 카드 하나와 작은 코너 카드들로
+/// 나온다. 아침/점심/저녁은 위쪽 라임 알약을 눌러 바꾼다.
 ///
 /// 학생식당 메뉴 API 연동이 없어(명세서에 대응 엔드포인트 없음) 메뉴는
-/// [CafeteriaMenuMockData]의 하드코딩된 목데이터로만 조회한다 — 날짜가
-/// 바뀌면 그 함수를 다시 호출해 본문을 갱신한다.
+/// [CafeteriaMenuMockData]의 하드코딩된 목데이터로만 조회한다 — 날짜가 바뀌면 그
+/// 함수를 다시 호출해 본문을 갱신한다.
 class CafeteriaScreen extends StatefulWidget {
-  const CafeteriaScreen({super.key});
+  const CafeteriaScreen({this.now, super.key});
+
+  /// "지금" 기준 시각(오늘 표시와 기본 끼니 고르기에 쓴다). 테스트에서 고정하려고
+  /// 주입할 수 있다.
+  final DateTime? now;
 
   @override
   State<CafeteriaScreen> createState() => _CafeteriaScreenState();
 }
 
 class _CafeteriaScreenState extends State<CafeteriaScreen> {
-  DateTime _selectedDate = _dateOnly(DateTime.now());
+  late final DateTime _now = widget.now ?? DateTime.now();
+  late DateTime _selectedDate = _dateOnly(_now);
+  CafeteriaVenue _venue = CafeteriaVenue.student;
+  late CafeteriaMeal _meal = _defaultMeal();
 
-  // 아코디언 섹션별 펼침 상태(독립 토글). 스크린샷에 보이는 기본 상태(점심만
-  // 펼쳐진 상태)를 그대로 초깃값으로 쓴다.
-  bool _breakfastExpanded = false;
-  bool _lunchExpanded = true;
-  bool _dinnerExpanded = false;
+  /// 즐겨찾기한 메뉴(날짜+메뉴). 화면이 열려 있는 동안만 유지된다.
+  final Set<String> _favorites = {};
 
   static DateTime _dateOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 
-  void _goToPreviousDay() {
-    setState(
-      () => _selectedDate = _selectedDate.subtract(const Duration(days: 1)),
-    );
+  /// 지금 시각에 맞는 끼니(오전 10시 전 아침, 오후 3시 전 점심, 그 뒤 저녁).
+  CafeteriaMeal _defaultMeal() {
+    if (_now.hour < 10) return CafeteriaMeal.breakfast;
+    if (_now.hour < 15) return CafeteriaMeal.lunch;
+    return CafeteriaMeal.dinner;
   }
 
-  void _goToNextDay() {
-    setState(() => _selectedDate = _selectedDate.add(const Duration(days: 1)));
-  }
+  String _dateKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
+
+  void _selectDate(DateTime date) =>
+      setState(() => _selectedDate = _dateOnly(date));
+
+  void _moveWeek(int delta) =>
+      _selectDate(_selectedDate.add(Duration(days: 7 * delta)));
 
   Future<void> _openDatePicker() async {
     final picked = await showCafeteriaDatePickerDialog(
       context,
       initialDate: _selectedDate,
     );
-    if (picked == null) return;
-    setState(() => _selectedDate = _dateOnly(picked));
+    if (picked != null) _selectDate(picked);
+  }
+
+  void _cycleMeal() {
+    final values = CafeteriaMeal.values;
+    setState(() => _meal = values[(_meal.index + 1) % values.length]);
+  }
+
+  /// 지금 탭/끼니에 보여줄 메뉴.
+  List<CafeteriaMenuItem> _itemsToShow(DailyCafeteriaMenu? menu) {
+    if (menu == null) return const [];
+    return menu.itemsFor(_meal).where((item) => item.venue == _venue).toList();
+  }
+
+  /// 위쪽 알약 문구 — 식당/끼니/시간.
+  String get _pillText {
+    switch (_venue) {
+      case CafeteriaVenue.student:
+        final time = _meal == CafeteriaMeal.lunch ? ' 11:30 ~ 13:30' : '';
+        return '학생회관 1층 · ${_meal.label}$time';
+      case CafeteriaVenue.staff:
+        return '교직원식당 · ${_meal.label}';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final menu = CafeteriaMenuMockData.menuFor(_selectedDate);
+    final items = _itemsToShow(menu);
 
     return Scaffold(
-      backgroundColor: CafeteriaColors.background,
+      backgroundColor: AppColors.cobalt,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: CafeteriaColors.textPrimary,
-                    ),
+                  _circleButton(
+                    Icons.arrow_back_ios_new,
+                    () => Navigator.of(context).pop(),
                   ),
+                  const Spacer(),
+                  _circleButton(Icons.calendar_month, _openDatePicker),
                 ],
               ),
             ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: GestureDetector(
+                onTap: _cycleMeal,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.lime,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.restaurant,
+                        size: 14,
+                        color: AppColors.ink,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _pillText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.swap_horiz,
+                        size: 16,
+                        color: AppColors.ink,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                '오늘의 학식',
+                '오늘 뭐 먹지?',
                 style: TextStyle(
-                  color: CafeteriaColors.textPrimary,
-                  fontSize: 22,
+                  color: Colors.white,
+                  fontSize: 34,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: -0.04,
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: _goToPreviousDay,
-                  icon: const Icon(
-                    Icons.chevron_left,
-                    color: CafeteriaColors.accent,
-                  ),
-                ),
-                Text(
-                  '${_selectedDate.month}월 ${_selectedDate.day}일 '
-                  '(${_weekdayKorLabels[_selectedDate.weekday % 7]})',
-                  style: const TextStyle(
-                    color: CafeteriaColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                IconButton(
-                  onPressed: _goToNextDay,
-                  icon: const Icon(
-                    Icons.chevron_right,
-                    color: CafeteriaColors.accent,
-                  ),
-                ),
-              ],
-            ),
-            Center(
-              child: TextButton(
-                onPressed: _openDatePicker,
-                child: const Text(
-                  '날짜 직접 선택',
-                  style: TextStyle(
-                    color: CafeteriaColors.accent,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: CafeteriaWeekRow(
+                selectedDate: _selectedDate,
+                today: _dateOnly(_now),
+                onDaySelected: _selectDate,
+                onWeekChanged: _moveWeek,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: CafeteriaVenueTabs(
+                selected: _venue,
+                onChanged: (v) => setState(() => _venue = v),
+              ),
+            ),
+            const SizedBox(height: 14),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                child: menu == null || menu.isEmpty
-                    ? _buildEmptyCard()
-                    : _buildMenuCard(menu),
-              ),
+              child: items.isEmpty
+                  ? const Center(
+                      child: Text(
+                        '등록된 메뉴가 없어요',
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    )
+                  : _buildMenus(items),
             ),
           ],
         ),
@@ -148,55 +202,66 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     );
   }
 
-  Widget _buildEmptyCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      decoration: BoxDecoration(
-        color: CafeteriaColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Center(
-        child: Text(
-          '이 날은 등록된 학식 정보가 없어요',
-          style: TextStyle(color: CafeteriaColors.textSecondary, fontSize: 14),
-        ),
+  Widget _buildMenus(List<CafeteriaMenuItem> items) {
+    final featured = items.first;
+    final others = items.skip(1).toList();
+    final favKey = '${_dateKey(_selectedDate)}/${featured.key}';
+    const colors = [AppColors.blushPink, Colors.white];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        children: [
+          FeaturedMenuCard(
+            item: featured,
+            favorite: _favorites.contains(favKey),
+            onFavoriteTap: () => setState(() {
+              if (!_favorites.remove(favKey)) _favorites.add(favKey);
+            }),
+          ),
+          if (others.isNotEmpty) const SizedBox(height: 12),
+          // 두 장씩 한 줄. 한 줄 안의 두 카드는 높이를 같게 맞춘다.
+          for (var i = 0; i < others.length; i += 2) ...[
+            if (i > 0) const SizedBox(height: 12),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: SmallMenuCard(
+                      item: others[i],
+                      background: colors[i % 2],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: i + 1 < others.length
+                        ? SmallMenuCard(
+                            item: others[i + 1],
+                            background: colors[(i + 1) % 2],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildMenuCard(DailyCafeteriaMenu menu) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: CafeteriaColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          MealSection(
-            title: '아침',
-            items: menu.breakfast,
-            expanded: _breakfastExpanded,
-            onToggle: () =>
-                setState(() => _breakfastExpanded = !_breakfastExpanded),
-          ),
-          const Divider(color: CafeteriaColors.border, height: 1),
-          MealSection(
-            title: '점심',
-            items: menu.lunch,
-            expanded: _lunchExpanded,
-            onToggle: () => setState(() => _lunchExpanded = !_lunchExpanded),
-          ),
-          const Divider(color: CafeteriaColors.border, height: 1),
-          MealSection(
-            title: '저녁',
-            items: menu.dinner,
-            expanded: _dinnerExpanded,
-            onToggle: () => setState(() => _dinnerExpanded = !_dinnerExpanded),
-          ),
-        ],
+  Widget _circleButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.cobaltDeep,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
