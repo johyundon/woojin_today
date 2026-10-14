@@ -41,12 +41,70 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  /// 입력값 검증 에러를 학번 찾기 화면과 같은 모양의 알림창으로 보여준다.
+  Future<void> _showMessage(String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.cobalt.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline,
+                color: AppColors.cobalt,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 15,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.cobalt,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: const StadiumBorder(),
+                ),
+                child: const Text(
+                  '확인',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _onSubmit() async {
     final userId = _idController.text;
     final userPwd = _passwordController.text;
     final hasInput = userId.isNotEmpty && userPwd.isNotEmpty;
     if (!hasInput) {
-      setState(() => _errorMessage = '학번과 비밀번호를 입력해주세요.');
+      _showMessage('학번과 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -231,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 40,
-                                      height: 1.25,
+                                      height: 1.1,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
@@ -283,7 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            size: 20,
+                            size: 24,
                             color: Colors.black45,
                           ),
                           onPressed: () => setState(
@@ -313,18 +371,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   color: AppColors.ink,
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
                           GestureDetector(
                             onTap: _onFindStudentId,
-                            child: const Text(
-                              '학번 찾기',
-                              style: TextStyle(
-                                color: Colors.black45,
-                                fontSize: 13,
+                            child: const Padding(
+                              padding: EdgeInsets.only(right: 14),
+                              child: Text(
+                                '학번 찾기',
+                                style: TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -476,35 +538,35 @@ class _LoginFieldState extends State<_LoginField> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    color: Color(0xFF5A5852),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              obscureText: widget.obscureText,
+              cursorColor: AppColors.cobalt,
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              // 비어 있고 포커스가 없을 땐 라벨이 입력창 가운데에 있다가,
+              // 입력/포커스하면 작아지면서 위로 올라간다(플로팅 라벨).
+              decoration: InputDecoration(
+                labelText: widget.label,
+                labelStyle: const TextStyle(
+                  color: Color(0xFF5A5852),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
-                TextField(
-                  controller: widget.controller,
-                  focusNode: _focusNode,
-                  obscureText: widget.obscureText,
-                  cursorColor: AppColors.cobalt,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                // 올라갈 때 0.75배로 줄어들므로 16 → 12(기존 라벨 크기)가 된다.
+                floatingLabelStyle: const TextStyle(
+                  color: Color(0xFF5A5852),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
           ),
           if (widget.trailing != null) widget.trailing!,

@@ -5,8 +5,7 @@ import '../config/mock_mode.dart';
 import '../services/fakes/fake_student_id_service.dart';
 import '../services/student_id_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
+import '../widgets/mascot_sticker.dart';
 import 'student_id_result_screen.dart';
 
 /// 학번 찾기 입력 화면 (Figma node 6:10).
@@ -53,8 +52,9 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
     });
   }
 
-  final _studentIdService =
-      kUseMockApi ? FakeStudentIdService() : StudentIdService();
+  final _studentIdService = kUseMockApi
+      ? FakeStudentIdService()
+      : StudentIdService();
   bool _isLoading = false;
 
   late final _yearController = FixedExtentScrollController(
@@ -83,7 +83,7 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
     return showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         content: Column(
@@ -93,12 +93,12 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.15),
+                color: AppColors.cobalt.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.info_outline,
-                color: AppColors.accent,
+                Icons.error_outline,
+                color: AppColors.cobalt,
                 size: 26,
               ),
             ),
@@ -107,7 +107,7 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontSize: 15,
                 height: 1.4,
               ),
@@ -115,10 +115,19 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: '확인',
-                enabled: true,
+              height: 50,
+              child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.cobalt,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: const StadiumBorder(),
+                ),
+                child: const Text(
+                  '확인',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -187,7 +196,8 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
       case StudentIdFound(studentNo: final studentNo):
         final confirmedStudentId = await Navigator.of(context).push<String>(
           MaterialPageRoute(
-            builder: (_) => StudentIdResultScreen(studentId: studentNo),
+            builder: (_) =>
+                StudentIdResultScreen(studentId: studentNo, name: name),
           ),
         );
         if (!mounted) return;
@@ -195,7 +205,7 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
           Navigator.of(context).pop(confirmedStudentId);
         }
       case StudentIdNotFound():
-        _showMessage('일치하는 학번을 찾지 못했어요.');
+        _showMessage('입력하신 정보와 일치하는 학번이 없어요.');
       case StudentIdSearchError():
         _showMessage('조회 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
     }
@@ -204,136 +214,326 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: AppColors.textPrimary,
+      backgroundColor: AppColors.cobalt,
+      body: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.15,
+                              ),
+                              shape: const CircleBorder(),
+                            ),
+                            icon: const Icon(
+                              Icons.chevron_left,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                // 원은 글자보다 뒤로 간다(원 → 글자 순서).
+                                Positioned(
+                                  left: 150,
+                                  top: 30,
+                                  child: Container(
+                                    width: 210,
+                                    height: 210,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.cobaltDeep,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.lime,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Text(
+                                        '학번 찾기',
+                                        style: TextStyle(
+                                          color: AppColors.ink,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      '학번을\n찾아드릴게요!',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 26,
+                                        height: 1.25,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '학번을 찾아드릴게요!',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
+                  Container(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      24,
+                      20,
+                      24 + MediaQuery.of(context).padding.bottom,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          offset: const Offset(0, -12),
+                          blurRadius: 30,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _FieldLabel(
+                          icon: Icons.person_outline,
+                          text: '이름',
+                        ),
+                        const SizedBox(height: 8),
+                        _FindTextField(
+                          controller: _nameController,
+                          hintText: '이름을 입력해주세요',
+                        ),
+                        const SizedBox(height: 18),
+                        const _FieldLabel(
+                          icon: Icons.smartphone_outlined,
+                          text: '휴대폰 번호',
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _PhoneSegmentField(
+                                controller: _phonePrefixController,
+                                maxLength: 3,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _PhoneSegmentField(
+                                controller: _phoneMiddleController,
+                                maxLength: 4,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _PhoneSegmentField(
+                                controller: _phoneLastController,
+                                maxLength: 4,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        const _FieldLabel(
+                          icon: Icons.cake_outlined,
+                          text: '생년월일',
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F3EF),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _WheelColumn(
+                                  controller: _yearController,
+                                  values: _years,
+                                  suffix: '년',
+                                  selectedValue: _selectedYear,
+                                  onChanged: (v) => setState(() {
+                                    _selectedYear = v;
+                                    _clampSelectedDay();
+                                  }),
+                                ),
+                              ),
+                              Expanded(
+                                child: _WheelColumn(
+                                  controller: _monthController,
+                                  values: _months,
+                                  suffix: '월',
+                                  selectedValue: _selectedMonth,
+                                  onChanged: (v) => setState(() {
+                                    _selectedMonth = v;
+                                    _clampSelectedDay();
+                                  }),
+                                ),
+                              ),
+                              Expanded(
+                                child: _WheelColumn(
+                                  controller: _dayController,
+                                  values: _days,
+                                  suffix: '일',
+                                  selectedValue: _selectedDay,
+                                  onChanged: (v) =>
+                                      setState(() => _selectedDay = v),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Container(
+                          height: 62,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(31),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.cobalt.withValues(alpha: 0.4),
+                                offset: const Offset(0, 12),
+                                blurRadius: 26,
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _onSubmit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.cobalt,
+                              disabledBackgroundColor: AppColors.cobalt
+                                  .withValues(alpha: 0.5),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: const StadiumBorder(),
+                            ),
+                            child: Text(
+                              _isLoading ? '조회 중...' : '학번 찾기 →',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                AppTextField(controller: _nameController, hintText: '이름'),
-                const SizedBox(height: 20),
-                const Text(
-                  '휴대폰 번호',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _PhoneSegmentField(
-                        controller: _phonePrefixController,
-                        maxLength: 3,
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        '-',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ),
-                    Expanded(
-                      child: _PhoneSegmentField(
-                        controller: _phoneMiddleController,
-                        maxLength: 4,
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        '-',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ),
-                    Expanded(
-                      child: _PhoneSegmentField(
-                        controller: _phoneLastController,
-                        maxLength: 4,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  '생년월일',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _WheelColumn(
-                        controller: _yearController,
-                        values: _years,
-                        suffix: '년',
-                        selectedValue: _selectedYear,
-                        onChanged: (v) => setState(() {
-                          _selectedYear = v;
-                          _clampSelectedDay();
-                        }),
-                      ),
-                    ),
-                    Expanded(
-                      child: _WheelColumn(
-                        controller: _monthController,
-                        values: _months,
-                        suffix: '월',
-                        selectedValue: _selectedMonth,
-                        onChanged: (v) => setState(() {
-                          _selectedMonth = v;
-                          _clampSelectedDay();
-                        }),
-                      ),
-                    ),
-                    Expanded(
-                      child: _WheelColumn(
-                        controller: _dayController,
-                        values: _days,
-                        suffix: '일',
-                        selectedValue: _selectedDay,
-                        onChanged: (v) => setState(() => _selectedDay = v),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 36),
-                PrimaryButton(
-                  label: _isLoading ? '조회 중...' : '학번 찾기',
-                  enabled: !_isLoading,
-                  onPressed: _onSubmit,
-                ),
-                const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
           ),
+          Positioned(
+            left: 205,
+            top: 150,
+            child: const MascotSticker(width: 155, angle: -0.08),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 흰 카드 안 입력 칸 위에 붙는 아이콘 + 라벨 한 줄.
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppColors.cobalt),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            color: Color(0xFF5A5852),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 이름 입력 칸.
+class _FindTextField extends StatelessWidget {
+  const _FindTextField({required this.controller, required this.hintText});
+
+  final TextEditingController controller;
+  final String hintText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F3EF),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      alignment: Alignment.centerLeft,
+      child: TextField(
+        controller: controller,
+        cursorColor: AppColors.cobalt,
+        style: const TextStyle(
+          color: AppColors.ink,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: const TextStyle(
+            color: Color(0xFFADA89E),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          border: InputBorder.none,
+          isDense: true,
         ),
       ),
     );
@@ -350,9 +550,10 @@ class _PhoneSegmentField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 56,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF5F3EF),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: TextField(
         controller: controller,
@@ -364,12 +565,17 @@ class _PhoneSegmentField extends StatelessWidget {
           LengthLimitingTextInputFormatter(maxLength),
         ],
         textAlign: TextAlign.center,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+        cursorColor: AppColors.cobalt,
+        style: const TextStyle(
+          color: AppColors.ink,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
         decoration: const InputDecoration(
           hintText: '0000',
-          hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+          hintStyle: TextStyle(color: Color(0xFFADA89E), fontSize: 15),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 16),
+          contentPadding: EdgeInsets.zero,
           counterText: '',
         ),
       ),
@@ -397,21 +603,28 @@ class _WheelColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 210,
+      height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Container(
-            height: 54,
+            height: 44,
             margin: const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
           ),
           ListWheelScrollView.useDelegate(
             controller: controller,
-            itemExtent: 46,
+            itemExtent: 40,
             diameterRatio: 1.8,
             onSelectedItemChanged: (index) => onChanged(values[index]),
             childDelegate: ListWheelChildBuilderDelegate(
@@ -424,12 +637,12 @@ class _WheelColumn extends StatelessWidget {
                     '$value$suffix',
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                      fontSize: isSelected ? 20 : 18,
+                          ? AppColors.cobalt
+                          : const Color(0xFFADA89E),
+                      fontSize: isSelected ? 18 : 16,
                       fontWeight: isSelected
                           ? FontWeight.w800
-                          : FontWeight.w400,
+                          : FontWeight.w500,
                     ),
                   ),
                 );
