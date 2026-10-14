@@ -1,5 +1,5 @@
-// 홈 화면 헤드라인의 날씨 표시 상태(로딩/성공/에러)와, 날짜 아래 인사말이
-// 실제 수업 시간 여부에 따라 바뀌는 로직을 검증한다.
+// 홈 화면의 날씨 표시 상태(로딩/성공/에러)와, 인사말/다음 수업 카드가
+// 오늘 남은 수업 여부에 따라 바뀌는 로직을 검증한다.
 // 실제 네트워크 호출 없이 WeatherService/CourseCatalogService/
 // MyTimetableService에 http.testing.MockClient를 주입해서 각 상태로 분기시킨다.
 
@@ -12,7 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:daejin_app/screens/home/widgets/header.dart';
 import 'package:daejin_app/screens/home_screen.dart';
 import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
@@ -48,61 +47,7 @@ const _fixtureJson = '''
 ''';
 
 void main() {
-  testWidgets('날씨 조회가 끝나기 전에는 로딩 인디케이터를 보여준다', (tester) async {
-    // 응답을 completer로 보류해서 로딩 상태를 고정시킨 뒤, 테스트 종료 전에
-    // 완료시켜 pending timer가 남지 않게 한다.
-    final responseCompleter = Completer<http.Response>();
-    final mockClient = MockClient((request) => responseCompleter.future);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(weatherService: WeatherService(client: mockClient)),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-    responseCompleter.complete(http.Response(_fixtureJson, 200));
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets('날씨 조회 성공 시 현재 온도와 날씨 아이콘을 보여준다', (tester) async {
-    final mockClient = MockClient((request) async {
-      return http.Response(_fixtureJson, 200);
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(weatherService: WeatherService(client: mockClient)),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('21°C'), findsOneWidget);
-    expect(find.byIcon(Icons.wb_sunny), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-  });
-
-  testWidgets('날씨 조회 실패 시 cloud_off 아이콘만 조용히 보여준다', (tester) async {
-    final mockClient = MockClient((request) async {
-      return http.Response('Internal Server Error', 500);
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(weatherService: WeatherService(client: mockClient)),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byIcon(Icons.cloud_off), findsOneWidget);
-    // 에러 시 스낵바/다이얼로그 같은 방해 UI는 뜨지 않아야 한다.
-    expect(find.byType(SnackBar), findsNothing);
-    expect(find.byType(Dialog), findsNothing);
-  });
-
-  group('인사말(오늘 하루도 화이팅!/{과목명} 수업 화이팅!)', () {
+  group('인사말(오늘 수업 N개 남았어/오늘 하루도 화이팅!)', () {
     // 날씨 조회는 이 그룹의 관심사가 아니므로, 전부 같은 성공 응답으로 고정해
     // 실제 네트워크 호출 없이 끝내고 greeting 로직만 분리해서 본다.
     WeatherService fakeWeatherService() => WeatherService(
@@ -156,7 +101,7 @@ void main() {
       return cp949.encode(html);
     }
 
-    testWidgets('세션이 있고 현재 수업이 매칭되면 "{과목명} 수업 화이팅!"으로 바뀐다', (tester) async {
+    testWidgets('세션이 있고 오늘 남은 수업이 있으면 "오늘 수업 N개 남았어"와 다음 수업 카드를 보여준다', (tester) async {
       final catalogClient = MockClient(
         (request) async => http.Response.bytes(catalogFixtureBytes(), 200),
       );
@@ -180,7 +125,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('자료구조 수업 화이팅!'), findsOneWidget);
+      expect(find.text('오늘 수업 1개 남았어'), findsOneWidget);
+      expect(find.text('자료구조'), findsOneWidget);
       expect(find.text('오늘 하루도 화이팅!'), findsNothing);
     });
 
@@ -195,7 +141,7 @@ void main() {
       expect(find.text('오늘 하루도 화이팅!'), findsOneWidget);
     });
 
-    testWidgets('세션은 있지만 지금이 수업 시간이 아니면 원래 문구 그대로다', (tester) async {
+    testWidgets('세션은 있지만 오늘 수업이 모두 끝났으면 그 안내 문구를 보여준다', (tester) async {
       final catalogClient = MockClient(
         (request) async => http.Response.bytes(catalogFixtureBytes(), 200),
       );
@@ -219,7 +165,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘 하루도 화이팅!'), findsOneWidget);
+      expect(find.text('오늘도 수고했어!'), findsOneWidget);
     });
 
     testWidgets('서비스 호출 중 예외가 발생해도 앱이 죽지 않고 원래 문구로 폴백한다', (tester) async {
@@ -272,10 +218,7 @@ void main() {
       return cp949.encode(html);
     }
 
-    // 아바타를 탭해 메뉴를 띄우고 "내 정보"를 눌러 다이얼로그를 연다.
-    // 아바타는 Header 안에서 유일한 ClipOval(아바타 원형 썸네일)로 찾는다 —
-    // 이를 감싼 GestureDetector는 Header의 다른 자손(Switch 등)이 내부적으로
-    // 쓰는 GestureDetector와 섞여 타입만으로는 특정할 수 없기 때문이다.
+    // 하단 탭 바의 MY 탭을 눌러 메뉴를 띄우고 "내 정보"를 눌러 다이얼로그를 연다.
     // [settleAfterOpen]은 기본 true. 로딩 중(스피너가 떠 있는) 상태를
     // 검증하는 테스트에서는 false로 넘겨야 한다 — CircularProgressIndicator는
     // 계속 애니메이션 프레임을 요청해서 pumpAndSettle이 끝나지 않는다.
@@ -283,12 +226,7 @@ void main() {
       WidgetTester tester, {
       bool settleAfterOpen = true,
     }) async {
-      await tester.tap(
-        find.descendant(
-          of: find.byType(Header),
-          matching: find.byType(ClipOval),
-        ),
-      );
+      await tester.tap(find.text('MY'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('내 정보'));
       if (settleAfterOpen) {
@@ -396,117 +334,6 @@ void main() {
 
       expect(find.text('테스트학생'), findsOneWidget);
       expect(find.text('네트워크 연결을 확인해주세요.'), findsNothing);
-    });
-  });
-
-  group('날씨 상세 모달', () {
-    // daily 2일치 + 모달이 쓰는 시간대(오늘 18시, 내일 6/9/15/18시)만 채운
-    // hourly 응답. 날짜를 넘겨보는 테스트까지 커버하려면 _fixtureJson(1일치)
-    // 로는 부족해서 이 그룹 전용으로 따로 둔다.
-    const detailFixtureJson = '''
-{
-  "current": {
-    "temperature_2m": 21.3,
-    "relative_humidity_2m": 55,
-    "apparent_temperature": 20.9,
-    "precipitation": 0.0,
-    "weather_code": 0,
-    "wind_speed_10m": 4.2
-  },
-  "hourly": {
-    "time": [
-      "2026-10-06T18:00",
-      "2026-10-07T06:00",
-      "2026-10-07T09:00",
-      "2026-10-07T15:00",
-      "2026-10-07T18:00"
-    ],
-    "temperature_2m": [19.5, 16.9, 15.3, 25.9, 23.9],
-    "precipitation": [0.0, 0.0, 0.0, 0.0, 0.0],
-    "precipitation_probability": [10, 0, 0, 0, 0],
-    "weather_code": [0, 0, 0, 0, 0]
-  },
-  "daily": {
-    "time": ["2026-10-06", "2026-10-07"],
-    "temperature_2m_max": [20.1, 27.2],
-    "temperature_2m_min": [10.2, 15.3],
-    "precipitation_sum": [0.0, 0.0],
-    "precipitation_probability_max": [10, 0],
-    "weather_code": [0, 0]
-  }
-}
-''';
-
-    WeatherService fakeDetailWeatherService() => WeatherService(
-      client: MockClient(
-        (request) async => http.Response(detailFixtureJson, 200),
-      ),
-    );
-
-    testWidgets('날씨 아이콘을 누르면 상세 모달이 뜨고 오늘 날씨를 보여준다', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: HomeScreen(weatherService: fakeDetailWeatherService()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('21°C'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('우리 학교 날씨는?!'), findsOneWidget);
-      expect(find.text('오늘'), findsOneWidget);
-      expect(find.text('21.3°'), findsOneWidget);
-      expect(find.text('강수확률 10%'), findsOneWidget);
-      expect(find.text('지금'), findsOneWidget);
-      expect(find.text('저녁'), findsOneWidget);
-      expect(find.text('20°'), findsOneWidget); // 저녁 19.5°를 반올림한 값
-
-      await tester.tap(find.byIcon(Icons.arrow_back));
-      await tester.pumpAndSettle();
-
-      expect(find.text('우리 학교 날씨는?!'), findsNothing);
-    });
-
-    testWidgets('오른쪽 화살표를 누르면 다음 날짜의 날씨로 넘어간다', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: HomeScreen(weatherService: fakeDetailWeatherService()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('21°C'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.chevron_right));
-      await tester.pumpAndSettle();
-
-      expect(find.text('오늘'), findsNothing);
-      expect(find.text('15.3° / 27.2°'), findsOneWidget);
-      expect(find.text('강수확률 0%'), findsOneWidget);
-      expect(find.text('새벽'), findsOneWidget);
-      expect(find.text('아침'), findsOneWidget);
-      expect(find.text('낮'), findsOneWidget);
-      expect(find.text('저녁'), findsOneWidget);
-    });
-
-    testWidgets('날씨 조회 실패 상태에서는 날씨 아이콘을 눌러도 모달이 뜨지 않는다', (tester) async {
-      final mockClient = MockClient(
-        (request) async => http.Response('Internal Server Error', 500),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: HomeScreen(weatherService: WeatherService(client: mockClient)),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.cloud_off));
-      await tester.pumpAndSettle();
-
-      expect(find.text('우리 학교 날씨는?!'), findsNothing);
     });
   });
 }

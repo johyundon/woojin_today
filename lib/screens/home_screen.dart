@@ -11,21 +11,20 @@ import '../services/my_timetable_service.dart';
 import '../services/student_info_service.dart';
 import '../services/weather_service.dart';
 import 'cafeteria/cafeteria_screen.dart';
+import 'cafeteria/services/cafeteria_menu_mock_data.dart';
 import 'calendar/calendar_screen.dart';
 import 'collection_screen.dart';
 import 'home/home_colors.dart';
 import 'home/rank/department_rank_screen.dart';
-import 'home/widgets/ad_banner_placeholder.dart';
-import 'home/widgets/calendar_promo_card.dart';
-import 'home/widgets/header.dart';
-import 'home/widgets/headline.dart';
-import 'home/widgets/menu_card.dart';
+import 'home/widgets/home_bottom_nav.dart';
+import 'home/widgets/home_mini_card.dart';
 import 'home/widgets/my_info_row.dart';
-import 'home/widgets/rank_card.dart';
-import 'home/widgets/recommend_card.dart';
-import 'home/widgets/section_header.dart';
-import 'home/widgets/weather_detail_dialog.dart';
+import 'home/widgets/next_class_card.dart';
+import '../theme/app_colors.dart';
+import '../widgets/mascot_sticker.dart';
+import 'campus_map/campus_map_screen.dart';
 import 'login_screen.dart';
+import 'notice/notice_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
 
@@ -86,10 +85,6 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-/// 홈 화면 인사말 자리의 고정 문구 기본값. 지금이 사용자의 실제 수업
-/// 시간이면 "{과목명} 수업 화이팅!"으로 바뀐다.
-const String _defaultGreeting = '오늘 하루도 화이팅!';
-
 /// 현재 학기를 추정한다.
 ///
 /// *** 추정 규칙 *** API 명세에 학기 계산 규칙이 정의돼 있지 않아 간단한
@@ -106,9 +101,6 @@ const String _defaultGreeting = '오늘 하루도 화이팅!';
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isDark = true;
-  final _avatarKey = GlobalKey();
-
   late final WeatherService _weatherService;
   WeatherResponse? _weatherData;
   bool _weatherLoading = true;
@@ -117,7 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
   late final CourseCatalogService _courseCatalogService;
   late final MyTimetableService _myTimetableService;
   late final DateTime Function() _now;
-  String _greeting = _defaultGreeting;
+  List<TodayClass> _todayClasses = const [];
+  List<CourseCatalogItem> _enrolledCourses = const [];
+  bool _timetableLoaded = false;
 
   late final StudentInfoService _studentInfoService;
   StudentInfoResponse? _studentInfoData;
@@ -146,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
         (kUseMockApi ? FakeStudentInfoService() : StudentInfoService());
     _now = widget.now ?? DateTime.now;
     _loadWeather();
-    _loadCurrentClassGreeting();
+    _loadTodayClasses();
     _loadStudentInfo();
   }
 
@@ -219,16 +213,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _myInfoDialogRefresh?.call(() {});
   }
 
-  /// 세션이 있으면(jsessionId/wmonid/userId2 전부 non-null) 지금이 실제 수업
-  /// 시간인지 조회해 인사말을 "{과목명} 수업 화이팅!"으로 바꾼다. 세션이
-  /// 없거나, 현재 수업이 없거나, 네트워크/서버/파싱 등 어떤 예외가 나도
-  /// 조용히 기존 고정 문구로 남긴다 — 스낵바/다이얼로그 등 방해 UI는 쓰지
-  /// 않는다(날씨 에러 처리와 동일한 원칙).
-  Future<void> _loadCurrentClassGreeting() async {
+  /// 세션이 있으면(jsessionId/wmonid/userId2 전부 non-null) 내 시간표에서
+  /// 오늘 수업 목록을 만들어 인사말("오늘 수업 N개 남았어")과 "다음 수업" 카드에
+  /// 쓴다. 세션이 없거나 네트워크/서버/파싱 등 어떤 예외가 나도 조용히
+  /// 빈 목록으로 남긴다 — 스낵바/다이얼로그 등 방해 UI는 쓰지 않는다(날씨
+  /// 에러 처리와 동일한 원칙).
+  Future<void> _loadTodayClasses() async {
     final jsessionId = widget.jsessionId;
     final wmonid = widget.wmonid;
     final userId2 = widget.userId2;
     if (jsessionId == null || wmonid == null || userId2 == null) {
+      setState(() => _timetableLoaded = true);
       return;
     }
 
@@ -252,16 +247,16 @@ class _HomeScreenState extends State<HomeScreen> {
         catalog: catalog,
         myTimetable: myTimetable,
       );
-      final currentClass = findCurrentClass(
-        courses: matched.courses,
-        now: _now(),
-      );
-      if (!mounted || currentClass == null) return;
+      if (!mounted) return;
       setState(() {
-        _greeting = '${currentClass.courseName} 수업 화이팅!';
+        _todayClasses = todayClasses(courses: matched.courses, now: _now());
+        _enrolledCourses = matched.courses;
+        _timetableLoaded = true;
       });
     } catch (e) {
-      debugPrint('[Home] 현재 수업 조회 실패: $e');
+      debugPrint('[Home] 오늘 수업 조회 실패: $e');
+      if (!mounted) return;
+      setState(() => _timetableLoaded = true);
     }
   }
 
@@ -306,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openDepartmentRank() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DepartmentRankScreen(isDark: _isDark)),
+      MaterialPageRoute(builder: (_) => DepartmentRankScreen(isDark: true)),
     );
   }
 
@@ -318,86 +313,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openNotice() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
+  }
+
+  void _openCampusMap() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const CampusMapScreen()));
+  }
+
   void _openCalendar() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
   }
 
-  Future<void> _showAvatarMenu() async {
-    final renderBox =
-        _avatarKey.currentContext?.findRenderObject() as RenderBox?;
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    if (renderBox == null) return;
-
-    final colors = HomeColors(_isDark);
-    // 아바타 하단에서 8px 떨어진 지점에 메뉴를 띄운다. Rect.fromPoints는 두
-    // 점을 정규화해서 좌상단/우하단을 스스로 계산하므로, 두 점 모두에 같은
-    // +8 오프셋을 줘야 의도한 간격이 실제로 반영된다(한쪽에만 주면 정규화
-    // 과정에서 간격이 사라진다).
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        renderBox.localToGlobal(
-          Offset(0, renderBox.size.height + 8),
-          ancestor: overlay,
-        ),
-        renderBox.localToGlobal(
-          renderBox.size.bottomRight(const Offset(0, 8)),
-          ancestor: overlay,
-        ),
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    const itemTextStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
-
-    final selected = await showMenu<_AvatarMenuAction>(
-      context: context,
-      position: position,
-      color: colors.cardSurface,
-      elevation: 1,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      menuPadding: EdgeInsets.zero,
-      items: [
-        PopupMenuItem(
-          value: _AvatarMenuAction.myInfo,
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '내 정보',
-            style: itemTextStyle.copyWith(color: colors.textPrimary),
-          ),
-        ),
-        const PopupMenuDivider(
-          height: 1,
-          thickness: 1,
-          color: _menuDividerColor,
-        ),
-        PopupMenuItem(
-          value: _AvatarMenuAction.terms,
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '이용약관',
-            style: itemTextStyle.copyWith(color: colors.textPrimary),
-          ),
-        ),
-        const PopupMenuDivider(
-          height: 1,
-          thickness: 1,
-          color: _menuDividerColor,
-        ),
-        PopupMenuItem(
-          value: _AvatarMenuAction.logout,
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('로그아웃', style: itemTextStyle.copyWith(color: _accentRed)),
-        ),
-      ],
-    );
-
-    if (!mounted || selected == null) return;
-    switch (selected) {
+  void _handleMenuAction(_AvatarMenuAction action) {
+    switch (action) {
       case _AvatarMenuAction.myInfo:
         _showMyInfoDialog();
       case _AvatarMenuAction.terms:
@@ -417,6 +349,57 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// 하단 탭 바의 탭을 눌렀을 때. 0(홈)은 이미 홈이라 아무것도 하지 않는다.
+  void _onTabTap(int index) {
+    switch (index) {
+      case 0:
+        _openTimetable();
+      case 1:
+        _openCollection();
+      case 3:
+        _openCalendar();
+      case 4:
+        _showMyMenu();
+    }
+  }
+
+  /// MY 탭: 아바타 메뉴와 같은 항목(내 정보/이용약관/로그아웃)을 바텀시트로 보여준다.
+  Future<void> _showMyMenu() async {
+    final selected = await showModalBottomSheet<_AvatarMenuAction>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              title: const Text('내 정보'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_AvatarMenuAction.myInfo),
+            ),
+            ListTile(
+              title: const Text('이용약관'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_AvatarMenuAction.terms),
+            ),
+            ListTile(
+              title: const Text('로그아웃', style: TextStyle(color: _accentRed)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_AvatarMenuAction.logout),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    _handleMenuAction(selected);
+  }
+
   /// "내 정보" 모달 (Figma node 6:17). 홈 화면 진입 시 미리 불러온(또는
   /// 로딩/에러 중인) [_studentInfoData]/[_studentInfoLoading]/
   /// [_studentInfoError]를 그대로 보여준다. [StatefulBuilder]의 로컬
@@ -426,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 콜백을 반드시 해제한다 — 그러지 않으면 닫힌 다이얼로그의 setState를
   /// 호출하려다 에러가 난다.
   Future<void> _showMyInfoDialog() async {
-    final colors = HomeColors(_isDark);
+    final colors = HomeColors(false);
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -458,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(dialogContext).pop(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: accentOrange,
+                      backgroundColor: AppColors.cobalt,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -576,66 +559,265 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
+  /// 이름("홍길동")에서 성을 뗀 호칭("길동아")을 만든다. 받침이 있으면 "아",
+  /// 없으면 "야". 이름을 모르거나 두 글자 미만이면 null.
+  String? _callName() {
+    final name = _studentInfoData?.name?.trim();
+    if (name == null || name.length < 2) return null;
+    final given = name.length >= 3 ? name.substring(name.length - 2) : name;
+    final last = given.codeUnitAt(given.length - 1);
+    final hasBatchim =
+        last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 != 0;
+    return '$given${hasBatchim ? '아' : '야'}';
+  }
+
+  static const _weekdayNames = ['월', '화', '수', '목', '금', '토', '일'];
+
+  Widget _topIconButton(IconData icon, VoidCallback onTap, {bool dot = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.cobaltDeep,
+          shape: BoxShape.circle,
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            if (dot)
+              Positioned(
+                top: 9,
+                right: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppColors.blushPink,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 분홍색 "오늘 학식" 카드. 학식 데이터는 목데이터([CafeteriaMenuMockData])라
+  /// 오늘 점심 메뉴가 등록돼 있으면 첫 번째 식당의 메뉴 두 가지와 가격을, 없으면
+  /// 안내 문구를 보여준다.
+  Widget _buildMenuCard(DateTime now) {
+    final lunch = CafeteriaMenuMockData.menuFor(now)?.lunch ?? const [];
+    final item = lunch.isEmpty ? null : lunch.first;
+    final title = item == null
+        ? '오늘의 메뉴는\n무엇일까?'
+        : item.dishes.take(2).join('\n');
+    return HomeMiniCard(
+      icon: Icons.restaurant,
+      iconBackground: Colors.white,
+      iconColor: AppColors.ink,
+      label: '오늘 점심',
+      title: title,
+      footer: item == null
+          ? Text(
+              '학식을 조회할 수 있어요',
+              style: TextStyle(
+                color: AppColors.ink.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.restaurant,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.ink.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    item.priceText,
+                    style: const TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      backgroundColor: AppColors.blushPink,
+      textColor: AppColors.ink,
+      onTap: _openCafeteria,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colors = HomeColors(_isDark);
+    final now = _now();
+    final nowMinutes = now.hour * 60 + now.minute;
+    final remaining = _todayClasses
+        .where((c) => c.slot.endMinutes > nowMinutes)
+        .toList();
+    final next = remaining.isEmpty ? null : remaining.first;
+
+    final callName = _callName();
+    final greetingHead = callName == null ? '' : '$callName,\n';
+    final greeting = !_timetableLoaded || _todayClasses.isEmpty
+        ? '$greetingHead오늘 하루도 화이팅!'
+        : remaining.isEmpty
+        ? '$greetingHead오늘도 수고했어!'
+        : '$greetingHead오늘 수업 ${remaining.length}개 남았어';
+    final dateBadge =
+        '${now.month.toString().padLeft(2, '0')}.'
+        '${now.day.toString().padLeft(2, '0')} '
+        '${_weekdayNames[now.weekday - 1]}요일';
+    final upcoming = next == null
+        ? nextClassAfterToday(courses: _enrolledCourses, now: now)
+        : null;
+    final upcomingDayLabel = upcoming == null
+        ? ''
+        : Weekday.values.indexOf(upcoming.day) == now.weekday % 7
+        ? '내일'
+        : '${_weekdayNames[Weekday.values.indexOf(upcoming.day)]}요일';
+
     return Scaffold(
-      backgroundColor: colors.background,
+      backgroundColor: AppColors.cobalt,
+      extendBody: true,
+      bottomNavigationBar: HomeBottomNav(selectedIndex: 2, onTap: _onTabTap),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Header(
-                isDark: _isDark,
-                colors: colors,
-                avatarKey: _avatarKey,
-                onAvatarTap: _showAvatarMenu,
-                onToggle: (isDark) => setState(() => _isDark = isDark),
-                greeting: _greeting,
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
                 children: [
-                  Headline(
-                    colors: colors,
-                    weatherLoading: _weatherLoading,
-                    weatherHasError: _weatherHasError,
-                    weatherData: _weatherData,
-                    onWeatherTap: _weatherData == null
-                        ? null
-                        : () => showWeatherDetailDialog(
-                            context,
-                            colors: colors,
-                            weather: _weatherData!,
-                          ),
-                  ),
-                  const SizedBox(height: 16),
-                  RecommendCard(isDark: _isDark, onTap: _openTimetable),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: RankCard(
-                          isDark: _isDark,
-                          onTap: _openDepartmentRank,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: Row(
+                      children: [
+                        const Spacer(),
+                        _topIconButton(Icons.search, _openTimetable),
+                        const SizedBox(width: 8),
+                        _topIconButton(
+                          Icons.notifications_none,
+                          _openNotice,
+                          dot: true,
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: MenuCard(isDark: _isDark, onTap: _openCafeteria),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  SectionHeader(colors: colors, onMorePressed: _openCollection),
-                  const SizedBox(height: 12),
-                  CalendarPromoCard(colors: colors, onTap: _openCalendar),
-                  const SizedBox(height: 14),
-                  AdBannerPlaceholder(colors: colors),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lime,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  dateBadge,
+                                  style: const TextStyle(
+                                    color: AppColors.ink,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 70),
+                                child: Text(
+                                  greeting,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    height: 1.22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Positioned(
+                          right: -20,
+                          top: 10,
+                          child: MascotSticker(width: 100, angle: 0.1),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    child: NextClassCard(
+                      next: next,
+                      nowMinutes: nowMinutes,
+                      timetableLoaded: _timetableLoaded,
+                      hasClassesToday: _todayClasses.isNotEmpty,
+                      upcoming: upcoming,
+                      upcomingDayLabel: upcomingDayLabel,
+                      onDirectionsTap: _openCampusMap,
+                      onTimetableTap: _openTimetable,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: HomeMiniCard(
+                            icon: Icons.bar_chart_rounded,
+                            iconBackground: AppColors.lime,
+                            iconColor: AppColors.ink,
+                            label: '학과 등수',
+                            title: '나는 학과에서\n몇등일까?',
+                            titleColor: AppColors.lime,
+                            footer: const Text(
+                              '두근두근',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            backgroundColor: AppColors.ink,
+                            textColor: Colors.white,
+                            onTap: _openDepartmentRank,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildMenuCard(now)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 140),
                 ],
               ),
             ),
@@ -648,7 +830,3 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // Figma 스크린샷(node 6:16)의 "로그아웃" 텍스트를 스포이드로 찍어 확인한 값.
 const Color _accentRed = Color(0xFFFF4D4F);
-
-// 같은 스크린샷에서 "내 정보"/"이용약관"/"로그아웃" 사이 구분선을 스포이드로
-// 찍어 확인한 값 — 카드 배경(약 0x19191B)보다 살짝 밝은 저대비 선.
-const Color _menuDividerColor = Color(0xFF2C2C2F);

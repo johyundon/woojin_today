@@ -150,3 +150,50 @@ CourseCatalogItem? findCurrentClass({
 
   return null;
 }
+
+/// 오늘 요일에 해당하는 수업 시간대 하나(과목 + 시간대).
+typedef TodayClass = ({CourseCatalogItem course, ClassTimeSlot slot});
+
+/// [now]와 같은 요일의 수업 시간대를 시작 시각 순으로 모아 반환한다.
+/// 홈 화면의 "오늘 수업 N개 남았어" / "다음 수업" 계산에 쓴다.
+List<TodayClass> todayClasses({
+  required List<CourseCatalogItem> courses,
+  required DateTime now,
+}) {
+  final today = _weekdayFromDateTime(now);
+  final result = <TodayClass>[
+    for (final course in courses)
+      for (final slot in parseRawSchedule(course.rawSchedule))
+        if (slot.day == today) (course: course, slot: slot),
+  ];
+  result.sort((a, b) => a.slot.startMinutes.compareTo(b.slot.startMinutes));
+  return result;
+}
+
+/// [nextClassAfterToday]의 반환 타입: 과목 + 시간대 + 그 수업이 있는 요일.
+typedef UpcomingClass = ({CourseCatalogItem course, ClassTimeSlot slot, Weekday day});
+
+/// [now] 다음 날부터 최대 7일 안에서, 수업이 있는 가장 가까운 날의 첫 수업을
+/// 찾는다("내일 첫 수업" 안내에 쓴다). 그 안에 수업이 하나도 없으면(일주일
+/// 내내 공강) null.
+UpcomingClass? nextClassAfterToday({
+  required List<CourseCatalogItem> courses,
+  required DateTime now,
+}) {
+  final todayIndex = Weekday.values.indexOf(_weekdayFromDateTime(now));
+
+  for (var offset = 1; offset <= 7; offset++) {
+    final day = Weekday.values[(todayIndex + offset) % 7];
+    final matches = <TodayClass>[
+      for (final course in courses)
+        for (final slot in parseRawSchedule(course.rawSchedule))
+          if (slot.day == day) (course: course, slot: slot),
+    ];
+    if (matches.isEmpty) continue;
+    matches.sort((a, b) => a.slot.startMinutes.compareTo(b.slot.startMinutes));
+    final first = matches.first;
+    return (course: first.course, slot: first.slot, day: day);
+  }
+
+  return null;
+}

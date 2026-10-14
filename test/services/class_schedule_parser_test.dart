@@ -129,4 +129,59 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('nextClassAfterToday', () {
+    test('내일 수업이 있으면 그 과목을 반환한다', () {
+      // 2026-10-06은 화요일 -> 내일은 수요일.
+      final course = _item(rawSchedule: '수09:00-09:50', courseName: '내일수업');
+      final now = DateTime(2026, 10, 6, 11, 20);
+
+      final result = nextClassAfterToday(courses: [course], now: now);
+
+      expect(result?.course, same(course));
+      expect(result?.day, Weekday.wed);
+    });
+
+    test('내일은 공강이고 모레 수업이 있으면 모레 수업을 반환한다', () {
+      // 2026-10-06은 화요일 -> 수요일 건너뛰고 목요일.
+      final course = _item(rawSchedule: '목09:00-09:50', courseName: '모레수업');
+      final now = DateTime(2026, 10, 6, 11, 20);
+
+      final result = nextClassAfterToday(courses: [course], now: now);
+
+      expect(result?.course, same(course));
+      expect(result?.day, Weekday.thu);
+    });
+
+    test('같은 날 여러 수업이 있으면 시작 시각이 가장 빠른 수업을 반환한다', () {
+      final late_ = _item(rawSchedule: '수14:00-14:50', courseName: '늦은수업');
+      final early = _item(rawSchedule: '수09:00-09:50', courseName: '이른수업');
+      final now = DateTime(2026, 10, 6, 11, 20);
+
+      final result = nextClassAfterToday(courses: [late_, early], now: now);
+
+      expect(result?.course, same(early));
+    });
+
+    test('일주일 내내 수업이 없으면 null을 반환한다', () {
+      final now = DateTime(2026, 10, 6, 11, 20);
+
+      final result = nextClassAfterToday(courses: const [], now: now);
+
+      expect(result, isNull);
+    });
+
+    test('오늘과 같은 요일 수업만 있으면(매주 반복) 7일째(다음주 같은 요일)에서 찾는다', () {
+      // now가 화요일이고 유일한 수업도 화요일이면, 탐색 범위(1~7일 뒤)의
+      // 마지막 날에서 매칭돼야 한다 — 탐색 범위가 한 주 전체를 커버하는지
+      // 확인한다.
+      final course = _item(rawSchedule: '화15:00-15:50', courseName: '매주화요일');
+      final now = DateTime(2026, 10, 6, 11, 20);
+
+      final result = nextClassAfterToday(courses: [course], now: now);
+
+      expect(result?.course, same(course));
+      expect(result?.day, Weekday.tue);
+    });
+  });
 }
