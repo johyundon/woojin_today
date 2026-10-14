@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import 'department_picker_screen.dart';
 import 'models/department_rank.dart';
-import 'rank_colors.dart';
 import 'services/fake_department_rank_service.dart';
-import 'widgets/rank_banner.dart';
-import 'widgets/rank_distribution_row.dart';
-import 'widgets/rank_stat_card.dart';
+import 'widgets/rank_hero_card.dart';
+import 'widgets/rank_summary_cards.dart';
+import 'widgets/subject_rank_card.dart';
 
-/// "학과등수" 결과 화면 (Figma node 6:67 / 6:69 — 학과가 다르면 숫자만
+/// "학과등수" 결과 화면("나 몇 등이야?" v4 리디자인 — 학과가 다르면 숫자만
 /// 달라지는 같은 레이아웃).
 ///
 /// 학과 전체 성적 분포를 조회하는 실제 API가 없어, [FakeDepartmentRankService]가
@@ -54,8 +54,9 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
     final selected = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => DepartmentPickerScreen(
-          isDark: widget.isDark,
+          currentDepartment: _departmentName,
           departmentNames: FakeDepartmentRankService.departmentNames,
+          colleges: FakeDepartmentRankService.departmentColleges,
         ),
       ),
     );
@@ -69,124 +70,91 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = RankColors(widget.isDark);
     final data = _data;
 
     return Scaffold(
-      backgroundColor: colors.background,
+      backgroundColor: AppColors.cobalt,
       body: SafeArea(
         child: data == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
             : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
-                  IconButton(
-                    padding: EdgeInsets.zero,
+                  Align(
                     alignment: Alignment.centerLeft,
-                    icon: Icon(Icons.arrow_back, color: colors.textPrimary),
-                    onPressed: () => Navigator.of(context).pop(),
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: AppColors.cobaltDeep,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '나는 학과에서\n몇등일까요?',
+                  const SizedBox(height: 14),
+                  // 누르면 학과를 바꾼다(기존 "학과 변경" 버튼 자리).
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: _changeDepartment,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.lime,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${data.departmentName} · ${data.grade}학년',
+                              style: const TextStyle(
+                                color: AppColors.ink,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 16,
+                              color: AppColors.ink,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    '나 몇 등이야?',
                     style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 24,
+                      color: Colors.white,
+                      fontSize: 34,
                       fontWeight: FontWeight.w800,
-                      height: 1.3,
+                      letterSpacing: -0.04,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          data.departmentName,
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      _ChangeDepartmentButton(
-                        colors: colors,
-                        onTap: _changeDepartment,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RankStatCard(
-                          colors: colors,
-                          label: '내 성적',
-                          gpa: data.myGpa,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: RankStatCard(
-                          colors: colors,
-                          label: '${data.departmentName} 평균',
-                          gpa: data.departmentAverageGpa,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  RankBanner(
-                    colors: colors,
-                    totalCount: data.totalCount,
-                    myRank: data.myRank,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    '${data.departmentName}(${data.grade}학년) 성적 분포',
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  const SizedBox(height: 18),
+                  RankHeroCard(data: data),
                   const SizedBox(height: 12),
-                  for (final entry in data.distribution)
-                    RankDistributionRow(
-                      colors: colors,
-                      entry: entry,
-                      myGpa: data.myGpa,
-                      maxGpa: data.distribution.first.gpa,
-                    ),
+                  RankSummaryCards(data: data),
+                  const SizedBox(height: 12),
+                  SubjectRankCard(subjects: data.subjects),
                 ],
               ),
-      ),
-    );
-  }
-}
-
-class _ChangeDepartmentButton extends StatelessWidget {
-  const _ChangeDepartmentButton({required this.colors, required this.onTap});
-
-  final RankColors colors;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: colors.border),
-        shape: const StadiumBorder(),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      ),
-      child: Text(
-        '학과 변경',
-        style: TextStyle(
-          color: colors.textPrimary,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }

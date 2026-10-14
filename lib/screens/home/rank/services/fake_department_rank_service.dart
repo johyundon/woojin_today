@@ -44,6 +44,21 @@ class FakeDepartmentRankService {
     '영어영문학과',
   ];
 
+  /// 학과 변경 화면에서 학과 이름 아래에 보여줄 단과대학(목업).
+  static const Map<String, String> departmentColleges = {
+    '컴퓨터공학전공': '공과대학',
+    '대순종학과': '인문대학',
+    '사학과': '인문대학',
+    '전기공학과': '공과대학',
+    'IT기계공학과': '공과대학',
+    '화학공학과': '공과대학',
+    '데이터경영산업공학과': '공과대학',
+    '토목공학전공': '공과대학',
+    '건축공학과': '공과대학',
+    '건축공학전공': '공과대학',
+    '영어영문학과': '인문대학',
+  };
+
   static const Map<String, _DeptConfig> _configs = {
     '컴퓨터공학전공': _DeptConfig(
       totalCount: 52,
@@ -165,6 +180,27 @@ class FakeDepartmentRankService {
       distribution: [
         for (var i = 0; i < gpas.length; i++)
           DepartmentRankEntry(rank: i + 1, gpa: gpas[i]),
+      ],
+      subjects: [
+        // 내 등수에 비례해 과목별 석차를 지어낸다(등급 순서대로 좋은 석차부터).
+        SubjectRank(
+          name: '컴퓨터개론',
+          grade: 'A+',
+          rank: max(1, (config.myRank * 0.25).round()),
+          total: config.totalCount,
+        ),
+        SubjectRank(
+          name: '이산수학',
+          grade: 'A0',
+          rank: max(1, (config.myRank * 0.75).round()),
+          total: config.totalCount,
+        ),
+        SubjectRank(
+          name: '대학영어',
+          grade: 'B+',
+          rank: min(config.totalCount, (config.myRank * 2.6).round()),
+          total: config.totalCount,
+        ),
       ],
     );
   }
