@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 
-/// shot4/shot6/shot7 스타일 iOS풍 시/분 휠 피커.
+/// iOS풍 시/분 휠 피커(v4 스타일).
 ///
-/// 가운데 값만 굵고 크게, 위아래 값은 흐린 회색으로 보이는 걸 재현하기 위해
-/// [ListWheelScrollView]를 쓰되 기본 선택 하이라이트 박스는 쓰지 않고
-/// (스크린샷에 그런 배경 박스가 없다) 텍스트 스타일만 가운데 기준 거리로 바꾼다.
+/// 가운데 값만 굵고 크게, 위아래 값은 흐린 회색으로 보이게 [ListWheelScrollView]의
+/// 텍스트 스타일을 가운데 기준 거리로 바꾼다. 선택된 줄 뒤에는 연한 파란 알약
+/// 띠를 깔아 어디가 선택값인지 한눈에 보이게 한다.
 class TimeWheelPicker extends StatefulWidget {
   const TimeWheelPicker({
     required this.initialTime,
@@ -33,29 +33,41 @@ class _TimeWheelPickerState extends State<TimeWheelPicker> {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 180,
-      child: Row(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Expanded(
-            child: _WheelColumn(
-              itemCount: 24,
-              initialIndex: _hour,
-              labelBuilder: (i) => '${i.toString().padLeft(2, '0')}시',
-              onSelectedItemChanged: (i) {
-                setState(() => _hour = i);
-                _emitChange();
-              },
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCE6FB),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-          Expanded(
-            child: _WheelColumn(
-              itemCount: 60,
-              initialIndex: _minute,
-              labelBuilder: (i) => '${i.toString().padLeft(2, '0')}분',
-              onSelectedItemChanged: (i) {
-                setState(() => _minute = i);
-                _emitChange();
-              },
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _WheelColumn(
+                  itemCount: 24,
+                  initialIndex: _hour,
+                  labelBuilder: (i) => '${i.toString().padLeft(2, '0')}시',
+                  onSelectedItemChanged: (i) {
+                    setState(() => _hour = i);
+                    _emitChange();
+                  },
+                ),
+              ),
+              Expanded(
+                child: _WheelColumn(
+                  itemCount: 60,
+                  initialIndex: _minute,
+                  labelBuilder: (i) => '${i.toString().padLeft(2, '0')}분',
+                  onSelectedItemChanged: (i) {
+                    setState(() => _minute = i);
+                    _emitChange();
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -111,11 +123,9 @@ class _WheelColumnState extends State<_WheelColumn> {
             child: Text(
               widget.labelBuilder(index),
               style: TextStyle(
-                color: isSelected
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
+                color: isSelected ? AppColors.cobalt : const Color(0xFFB5B5BC),
                 fontSize: isSelected ? 22 : 16,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w400,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
               ),
             ),
           );

@@ -2,23 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../../services/notification_service.dart';
 import '../../theme/app_colors.dart';
+import 'event_edit_screen.dart';
 import 'models/calendar_event.dart';
 import 'services/calendar_event_storage.dart';
-import 'widgets/add_schedule_sheet.dart';
-import 'widgets/calendar_expand_handle.dart';
-import 'widgets/calendar_grid.dart';
-import 'widgets/calendar_search_bar.dart';
-import 'widgets/event_card.dart';
-import 'widgets/month_navigator.dart';
-import 'widgets/reminder_time_sheet.dart';
+import '../home/widgets/home_bottom_nav.dart';
+import 'widgets/calendar_month_grid.dart';
+import 'widgets/event_delete_dialog.dart';
+import 'widgets/event_detail_sheet.dart';
+import 'widgets/event_row.dart';
+import 'widgets/reminder_past_dialog.dart';
+import 'widgets/reminder_set_dialog.dart';
+
+/// [_CalendarScreenState._syncReminder]의 결과.
+enum _ReminderResult { ok, denied, past }
 
 const List<String> _weekdayKorLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
-/// "우진이의 캘린더" 화면 (Figma node 6:39).
-///
-/// 이 노드는 실제 Figma 벡터 레이어가 아니라 다른 앱을 캡처한 스크린샷 7장이
-/// 평탄화된 상태라 `get_design_context`로 쓸만한 코드를 뽑을 수 없었다. 스크린샷을
-/// 눈으로 보고 레이아웃/색상/간격을 근사해 재현했다.
+/// "캘린더" 화면(v4 리디자인). 코발트 헤더에서 달을 넘기고, 흰 패널의 월간
+/// 격자에서 날짜를 고르면 그날의 일정이 시간순 카드로 아래에 나온다.
 ///
 /// 학사일정 API 연동이 없어(`kUseMockApi = true`) 일정은 최초 1회 하드코딩된
 /// 샘플로 시드되지만, 알림(로컬 푸시)을 걸 수 있어야 해서 이후로는
@@ -44,10 +45,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   );
   List<CalendarEvent> _events = [];
   bool _loaded = false;
-
-  /// false(압축, 기본)면 날짜 박스 + 요약 줄, true(확장)면 박스 없이 긴
-  /// 이름표 막대. [CalendarExpandHandle]을 드래그해서 전환한다.
-  bool _expandedView = false;
 
   @override
   void initState() {
@@ -108,18 +105,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return _events.where((e) => _eventCoversDate(e, selected)).toList();
   }
 
-  void _goToPreviousMonth() {
-    setState(
-      () =>
-          _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1),
-    );
-  }
+  void _goToPreviousMonth() => _moveMonth(-1);
 
-  void _goToNextMonth() {
-    setState(
-      () =>
-          _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1),
-    );
+  void _goToNextMonth() => _moveMonth(1);
+
+  /// 달을 넘기면 그 달의 날짜를 하나 골라 둔다(오늘이 그 달이면 오늘, 아니면
+  /// 1일) — 아래 일정 목록과 "+" 버튼이 항상 쓸 수 있게.
+  void _moveMonth(int delta) {
+    final month = DateTime(_focusedMonth.year, _focusedMonth.month + delta);
+    final now = DateTime.now();
+    final isTodayMonth = now.year == month.year && now.month == month.month;
+    setState(() {
+      _focusedMonth = month;
+      _selectedDate = DateTime(
+        month.year,
+        month.month,
+        isTodayMonth ? now.day : 1,
+      );
+    });
   }
 
   void _onDaySelected(int day) {
@@ -132,224 +135,360 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// [event.startDate]와 [time]을 합친 실제 알림 시각. 여러 날짜짜리
-  /// 일정이어도 마감일이 아닌 시작일 기준으로 한 번만 울린다(제품 결정).
-  DateTime _reminderMoment(CalendarEvent event, TimeOfDay time) {
-    return DateTime(
-      event.startDate.year,
-      event.startDate.month,
-      event.startDate.day,
-      time.hour,
-      time.minute,
-    );
-  }
-
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// 알림 스위치/종 버튼. 켜면 "정각" 알림(일정 시간에 한 번)을 걸고, 끄면 알림을
+  /// 없앤다. 이미 지난 시각이라 못 거는 경우에는 알림을 되돌려 놓은 뒤 팝업으로
+  /// 알려준다.
   Future<void> _onReminderToggled(CalendarEvent event, bool turnOn) async {
     if (!turnOn) {
-      setState(() => event.reminderTime = null);
-      await _notifications.cancelReminder(event.id);
+      setState(() => event.reminderOffset = null);
+      await _syncReminder(event);
       await _persist();
       return;
     }
-    await _promptAndScheduleReminder(event);
+    final previous = event.reminderOffset;
+    setState(() => event.reminderOffset = ReminderOffset.atStart);
+    final attemptedAt = event.reminderAt;
+    final outcome = await _syncReminder(event);
+    if (outcome.result != _ReminderResult.ok && mounted) {
+      setState(() => event.reminderOffset = previous);
+    }
+    await _persist();
+    if (outcome.result == _ReminderResult.past &&
+        attemptedAt != null &&
+        mounted) {
+      await showReminderPastDialog(context, attemptedAt: attemptedAt);
+    }
+    // 시간 정보가 없는 일정(학사일정 등)은 언제 울리는지 팝업으로 알려준다. 여러 날
+    // 일정은 시작일과 마감일 둘 다, 시작일이 이미 지났으면 남은 마감일만 나온다.
+    if (outcome.result == _ReminderResult.ok && event.isAllDay && mounted) {
+      await showReminderSetDialog(context, dates: outcome.scheduled);
+    }
   }
 
-  /// "HH:mm 알림" 텍스트를 눌러 이미 켜진 알림의 시간을 바꿀 때 호출된다.
-  /// 토글을 껐다 켜지 않고도 바로 시간 설정 시트를 다시 띄운다.
-  Future<void> _onEditReminderTime(CalendarEvent event) {
-    return _promptAndScheduleReminder(event);
+  /// [event]에 걸려 있던 알림 예약을 전부 취소한다(시작일 알림과, 여러 날 일정의
+  /// 마감일 알림).
+  Future<void> _cancelReminders(CalendarEvent event) async {
+    await _notifications.cancelReminder(event.id);
+    await _notifications.cancelReminder('${event.id}#end');
   }
 
-  /// 시간 설정 시트를 띄워 알림을 (다시) 예약한다. 토글을 켤 때와 이미 켜진
-  /// 알림의 시간을 바꿀 때 둘 다 이 로직을 그대로 쓴다.
-  Future<void> _promptAndScheduleReminder(CalendarEvent event) async {
+  /// [event]의 알림을 폰에 (다시) 예약하거나, 알림이 꺼져 있으면 예약을 취소한다.
+  /// 울려야 할 시각([CalendarEvent.reminderAts]) 중 아직 안 지난 것만 건다 — 하나라도
+  /// 걸리면 성공이고, 건 시각들을 [scheduled]로 돌려준다. 전부 지났으면
+  /// [_ReminderResult.past], 권한이 없으면 안내 메시지를 띄우고
+  /// [_ReminderResult.denied]를 돌려준다. 실패하면 호출한 쪽이 알림 상태를 되돌린다.
+  Future<({_ReminderResult result, List<DateTime> scheduled})> _syncReminder(
+    CalendarEvent event,
+  ) async {
+    final all = event.reminderAts;
+    if (all.isEmpty) {
+      await _cancelReminders(event);
+      return (result: _ReminderResult.ok, scheduled: const <DateTime>[]);
+    }
+
     final granted = await _notifications.requestPermission();
-    if (!mounted) return;
+    if (!mounted) {
+      return (result: _ReminderResult.denied, scheduled: const <DateTime>[]);
+    }
     if (!granted) {
       _showMessage('알림을 받으려면 설정에서 알림 권한을 허용해주세요');
-      return;
+      await _cancelReminders(event);
+      return (result: _ReminderResult.denied, scheduled: const <DateTime>[]);
     }
 
-    final time = await showReminderTimeSheet(
+    final now = DateTime.now();
+    final scheduled = <DateTime>[];
+    await _cancelReminders(event);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].isBefore(now)) continue;
+      await _notifications.scheduleReminder(
+        // 첫 번째는 시작일, 두 번째는 마감일 알림 — 따로 취소할 수 있게 번호를 나눈다.
+        eventId: i == 0 ? event.id : '${event.id}#end',
+        title: event.title,
+        body: '${event.label} · ${event.reminderOffset!.label}',
+        scheduledAt: all[i],
+      );
+      scheduled.add(all[i]);
+    }
+    return (
+      result: scheduled.isEmpty ? _ReminderResult.past : _ReminderResult.ok,
+      scheduled: scheduled,
+    );
+  }
+
+  /// 일정 카드를 눌렀을 때 — 상세 팝업을 열고, 거기서 고른 동작을 처리한다.
+  Future<void> _openEventDetail(CalendarEvent event) async {
+    final action = await showEventDetailSheet(
+      context,
+      event: event,
+      onReminderToggled: (turnOn) => _onReminderToggled(event, turnOn),
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case EventDetailAction.delete:
+        await _confirmAndDelete(event);
+      case EventDetailAction.edit:
+        await _openEditor(event);
+    }
+  }
+
+  /// "일정을 삭제할까요?" 확인 뒤 일정을 지운다. 걸려 있던 알림 예약도 같이
+  /// 취소해야 한다(안 그러면 없는 일정의 알림이 울린다).
+  Future<void> _confirmAndDelete(CalendarEvent event) async {
+    final confirmed = await showEventDeleteDialog(
       context,
       eventTitle: event.title,
-      initialTime: event.reminderTime ?? const TimeOfDay(hour: 9, minute: 0),
     );
-    if (time == null) return; // 취소 -> 이전 상태 그대로 유지.
+    if (!confirmed || !mounted) return;
 
-    final scheduledAt = _reminderMoment(event, time);
-    if (scheduledAt.isBefore(DateTime.now())) {
-      _showMessage('이미 지난 일정이라 알림을 걸 수 없어요');
-      return;
-    }
-
-    setState(() => event.reminderTime = time);
-    await _notifications.scheduleReminder(
-      eventId: event.id,
-      title: event.title,
-      body:
-          '${event.label} · ${time.hour.toString().padLeft(2, '0')}:'
-          '${time.minute.toString().padLeft(2, '0')} 알림',
-      scheduledAt: scheduledAt,
-    );
+    await _cancelReminders(event);
+    setState(() => _events.removeWhere((e) => e.id == event.id));
     await _persist();
   }
 
   Future<void> _onAddPressed() async {
-    final selected = _selectedDate;
-    if (selected == null) return;
-    final result = await showAddScheduleSheet(context);
-    if (result == null) return;
-    final (title, time) = result;
+    if (_selectedDate == null) return;
+    await _openEditor(null);
+  }
 
-    final newEvent = CalendarEvent(
-      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
-      startDate: selected,
-      endDate: selected,
-      label: '내 일정',
-      title: title,
-      color: AppColors.accent,
-      reminderTime: time,
+  /// 수정/추가 화면을 열고, 저장돼 돌아오면 목록에 반영하고 알림을 다시 건다.
+  /// [event]가 null이면 새 일정이다.
+  Future<void> _openEditor(CalendarEvent? event) async {
+    final saved = await Navigator.of(context).push<CalendarEvent>(
+      MaterialPageRoute(
+        builder: (_) => EventEditScreen(
+          event: event,
+          initialDate: _selectedDate ?? DateTime.now(),
+        ),
+      ),
     );
-    final scheduledAt = _reminderMoment(newEvent, time);
-    if (scheduledAt.isBefore(DateTime.now())) {
-      _showMessage('이미 지난 시각이라 알림 없이 일정만 추가할게요');
-      newEvent.reminderTime = null;
-    } else {
-      final granted = await _notifications.requestPermission();
-      if (granted) {
-        await _notifications.scheduleReminder(
-          eventId: newEvent.id,
-          title: newEvent.title,
-          body:
-              '${newEvent.label} · '
-              '${time.hour.toString().padLeft(2, '0')}:'
-              '${time.minute.toString().padLeft(2, '0')} 알림',
-          scheduledAt: scheduledAt,
-        );
-      } else {
-        _showMessage('알림 권한이 없어 일정만 추가할게요');
-        newEvent.reminderTime = null;
-      }
-    }
+    if (saved == null || !mounted) return;
 
-    setState(() => _events.add(newEvent));
+    // 알림을 걸 수 없으면(권한 거부/이미 지난 시각) 일정은 저장하고 알림만 뺀다.
+    final attemptedAt = saved.reminderAt;
+    final result = (await _syncReminder(saved)).result;
+    if (result != _ReminderResult.ok) saved.reminderOffset = null;
+
+    setState(() {
+      final index = _events.indexWhere((e) => e.id == saved.id);
+      if (index == -1) {
+        _events.add(saved);
+      } else {
+        _events[index] = saved;
+      }
+      // 저장한 일정이 보이는 날짜로 따라간다.
+      _focusedMonth = DateTime(saved.startDate.year, saved.startDate.month);
+      _selectedDate = saved.startDate;
+    });
     await _persist();
+    if (result == _ReminderResult.past && attemptedAt != null && mounted) {
+      await showReminderPastDialog(context, attemptedAt: attemptedAt);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
       return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        backgroundColor: AppColors.cobalt,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
     final selectedDay = _selectedDayInFocusedMonth;
     final selectedDate = _selectedDate;
+    final dayEvents = _selectedDateEvents;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.cobalt,
+      extendBody: true,
+      // 다른 탭은 이 화면을 닫고 이전 화면(홈/모아보기)으로 돌아간다 — 시간표
+      // 화면과 같은 방식.
+      bottomNavigationBar: HomeBottomNav(
+        selectedIndex: 3,
+        onTap: (index) {
+          if (index != 3) Navigator.of(context).pop();
+        },
+      ),
       body: SafeArea(
+        bottom: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.textPrimary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.lime,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      '${_focusedMonth.year}',
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${_focusedMonth.month}월',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.04,
+                    ),
+                  ),
+                  const Spacer(),
+                  _monthButton(Icons.chevron_left, _goToPreviousMonth),
+                  const SizedBox(width: 8),
+                  _monthButton(Icons.chevron_right, _goToNextMonth),
                 ],
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const CalendarSearchBar(),
-                    const SizedBox(height: 12),
-                    MonthNavigator(
-                      focusedMonth: _focusedMonth,
-                      onPreviousMonth: _goToPreviousMonth,
-                      onNextMonth: _goToNextMonth,
-                    ),
-                    const SizedBox(height: 4),
-                    CalendarGrid(
-                      focusedMonth: _focusedMonth,
-                      events: _eventsInFocusedMonth,
-                      selectedDay: selectedDay,
-                      expanded: _expandedView,
-                      onDaySelected: _onDaySelected,
-                    ),
-                    CalendarExpandHandle(
-                      expanded: _expandedView,
-                      onChanged: (value) =>
-                          setState(() => _expandedView = value),
-                    ),
-                    if (selectedDay != null && selectedDate != null) ...[
-                      const SizedBox(height: 20),
-                      Text(
-                        '${selectedDate.month}월 ${selectedDate.day}일 '
-                        '(${_weekdayKorLabels[selectedDate.weekday % 7]})',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
+                child: ColoredBox(
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 달력 격자와 날짜 줄은 고정하고, 아래 일정 목록만
+                      // 스크롤된다.
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                        child: CalendarMonthGrid(
+                          focusedMonth: _focusedMonth,
+                          events: _eventsInFocusedMonth,
+                          selectedDay: selectedDay,
+                          today: DateTime.now(),
+                          onDaySelected: _onDaySelected,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      for (final event in _selectedDateEvents)
+                      if (selectedDay != null && selectedDate != null) ...[
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: EventCard(
-                            event: event,
-                            onReminderToggled: (turnOn) =>
-                                _onReminderToggled(event, turnOn),
-                            onEditReminderTime: () =>
-                                _onEditReminderTime(event),
+                          padding: const EdgeInsets.fromLTRB(20, 22, 20, 14),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${selectedDate.month}월 ${selectedDate.day}일 '
+                                '${_weekdayKorLabels[selectedDate.weekday % 7]}요일',
+                                style: const TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '일정 ${dayEvents.length}개',
+                                style: const TextStyle(
+                                  color: AppColors.cobalt,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: _onAddPressed,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cobalt,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.cobalt.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        Expanded(
+                          child: dayEvents.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    '이 날은 일정이 없어요',
+                                    style: TextStyle(
+                                      color: Color(0xFF6B6B70),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    0,
+                                    20,
+                                    130,
+                                  ),
+                                  itemCount: dayEvents.length,
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, index) {
+                                    final event = dayEvents[index];
+                                    return EventRow(
+                                      event: event,
+                                      onReminderToggled: (turnOn) =>
+                                          _onReminderToggled(event, turnOn),
+                                      onTap: () => _openEventDetail(event),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: selectedDay != null && selectedDate != null
-          ? FloatingActionButton.extended(
-              onPressed: _onAddPressed,
-              backgroundColor: AppColors.surface,
-              elevation: 0,
-              shape: const StadiumBorder(
-                side: BorderSide(color: AppColors.border),
-              ),
-              icon: const Icon(Icons.add, color: AppColors.accent),
-              label: Text(
-                '${selectedDate.month}월 ${selectedDate.day}일 '
-                '(${_weekdayKorLabels[selectedDate.weekday % 7]})',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _monthButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.cobaltDeep,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white),
+      ),
     );
   }
 }

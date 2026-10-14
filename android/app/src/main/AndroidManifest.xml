@@ -4,6 +4,9 @@
          안 뜨고, 앱에서 FlutterLocalNotificationsPlugin.requestNotificationsPermission()
          을 호출해 사용자에게 따로 물어봐야 한다. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 예약 알림(캘린더 일정/강의시간 알림)은 폰을 재부팅하면 사라진다 — 부팅이
+         끝났을 때 플러그인이 다시 걸어 둘 수 있게 하는 권한. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- "파일공유" 화면에서 다른 앱의 공유하기 메뉴로 이 앱을 골랐을 때 그
          파일을 실제로 받기 위한 권한(receive_sharing_intent 패키지 요구사항). -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -51,6 +54,22 @@
                 <data android:mimeType="*/*"/>
             </intent-filter>
         </activity>
+        <!-- 예약 알림을 정해진 시각에 실제로 띄우는 수신기(flutter_local_notifications
+             설명서 요구사항). 이게 없으면 Android에서는 예약한 알림이 울리지 않는다.
+             BootReceiver는 재부팅/앱 업데이트 뒤에 예약을 다시 건다. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
