@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/mascot_sticker.dart';
 import 'advisor/advisor_consultation_screen.dart';
 import 'calendar/calendar_screen.dart';
 import 'campus_map/campus_map_screen.dart';
 import 'fileshare/fileshare_screen.dart';
 import 'graduation/graduation_credit_screen.dart';
+import 'home/rank/department_rank_screen.dart';
+import 'home/widgets/home_bottom_nav.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
 import 'notice/notice_screen.dart';
+import 'weather/weather_page.dart';
 
-/// "모아보기" 화면 (Figma node 6:76 헤더 / 6:77 리스트, 다크 전용).
+/// "모아보기" 화면 ("우진이의 하루" v4 리디자인).
 ///
-/// 홈 화면의 "모아보기" 버튼에서 진입하며, 7개 기능 카드를 세로로 나열한다.
-/// 구현된 기능(캘린더 등)은 그 화면으로, 아직 구현되지 않은 카드는 다른
-/// 미구현 기능 카드와 동일하게 [HomePlaceholderScreen]으로 이동한다.
+/// 홈 화면의 "모아보기" 탭에서 진입하며, 파란 헤더 아래 흰 시트에 전체 기능을
+/// 4열 아이콘 그리드로 나열한다. 구현된 기능은 그 화면으로, 아직 구현되지 않은
+/// 항목은 [HomePlaceholderScreen]으로 이동한다.
 class CollectionScreen extends StatelessWidget {
-  const CollectionScreen({this.userId2, super.key});
+  const CollectionScreen({this.userId2, this.onTabTap, super.key});
+
+  /// 하단 탭 바의 시간표/캘린더/MY 탭 동작. 홈 화면이 쓰는 핸들러를 그대로
+  /// 받는다(MY 메뉴가 홈의 학생 정보 상태에 의존하기 때문). 홈(2) 탭은 이
+  /// 화면을 닫고 홈으로 돌아가는 것으로 여기서 직접 처리한다.
+  final ValueChanged<int>? onTabTap;
 
   /// 포털 로그인으로 얻은 본인 SSO uid. "지도교수 상담" 카드가 지도교수
   /// 조회에 써야 해서 홈 화면에서 그대로 전달받는다.
@@ -42,9 +51,20 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
   }
 
+  static void _openWeather(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const WeatherPage()));
+  }
+
   static void _openFileShare(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const FileShareScreen()));
+  }
+
+  static void _openDepartmentRank(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DepartmentRankScreen(isDark: true)),
+    );
   }
 
   static void _openGraduationCredit(BuildContext context) {
@@ -62,68 +82,56 @@ class CollectionScreen extends StatelessWidget {
   }
 
   List<_CollectionItem> get _items => [
-    _CollectionItem(
-      title: '우진이의 캘린더',
-      description: '학교 일정을 알림으로 받아보세요',
-      icon: Icons.calendar_month,
-      imagePath: 'assets/images/calendar_mascot_dark.png',
-      imageSize: 84,
-      iconOnLeft: false,
-      onTap: _openCalendar,
-    ),
-    _CollectionItem(
-      title: '공지사항을\n알려드릴게요!',
-      description: '무슨일이 있었을까요?!',
-      icon: Icons.campaign,
-      imagePath: 'assets/images/collection_notice.png',
-      imageSize: 84,
-      iconOnLeft: true,
-      onTap: _openNotice,
-    ),
-    _CollectionItem(
-      title: '연강이 가능할까요?',
-      description: '건물간 도보 시간을 알려드릴께요!',
-      icon: Icons.directions_walk,
-      imagePath: 'assets/images/collection_break.png',
-      imageSize: 84,
-      iconOnLeft: false,
+    const _CollectionItem(
+      label: '연강',
+      icon: Icons.directions_walk_rounded,
       onTap: _openCampusMap,
     ),
-    _CollectionItem(
-      title: '마일리지',
-      description: '마일리지 관련 정보를 알려드릴게요!',
-      icon: Icons.emoji_events,
-      imagePath: 'assets/images/collection_mileage.png',
-      imageSize: 84,
-      iconOnLeft: true,
-      onTap: _openMileage,
+    const _CollectionItem(
+      label: '학과등수',
+      icon: Icons.bar_chart_rounded,
+      onTap: _openDepartmentRank,
     ),
     _CollectionItem(
-      title: '지도교수 상담',
-      description: '내 지도교수님은 누구실까요?',
-      icon: Icons.person_search,
-      imagePath: 'assets/images/collection_advisor.png',
-      imageSize: 84,
-      iconOnLeft: false,
+      label: '교수상담',
+      icon: Icons.school_rounded,
       onTap: _openAdvisorConsultation,
     ),
-    _CollectionItem(
-      title: '졸업학점',
-      description: '졸업하려면 몇학점 남았을까요?',
-      icon: Icons.school,
-      imagePath: 'assets/images/collection_credit.png',
-      imageSize: 84,
-      iconOnLeft: true,
-      onTap: _openGraduationCredit,
-    ),
-    _CollectionItem(
-      title: '파일공유',
-      description: '중요한 파일을 안전하고 손쉽게 공유해요!',
-      icon: Icons.description,
-      imagePath: 'assets/images/collection_fileshare.png',
-      imageSize: 84,
-      iconOnLeft: false,
+    const _CollectionItem(
+      label: '파일공유',
+      icon: Icons.folder_shared_rounded,
       onTap: _openFileShare,
+    ),
+    const _CollectionItem(
+      label: '마일리지',
+      icon: Icons.stars_rounded,
+      onTap: _openMileage,
+    ),
+    const _CollectionItem(
+      label: '날씨',
+      icon: Icons.wb_cloudy_rounded,
+      onTap: _openWeather,
+    ),
+    const _CollectionItem(
+      label: '캘린더',
+      icon: Icons.event_rounded,
+      onTap: _openCalendar,
+    ),
+    const _CollectionItem(
+      label: '공지사항',
+      icon: Icons.campaign_rounded,
+      onTap: _openNotice,
+    ),
+    const _CollectionItem(
+      label: '캠퍼스 지도',
+      icon: Icons.map_rounded,
+      onTap: _openCampusMap,
+    ),
+    const _CollectionItem(label: '셔틀버스', icon: Icons.directions_bus_rounded),
+    const _CollectionItem(
+      label: '졸업학점',
+      icon: Icons.fact_check_rounded,
+      onTap: _openGraduationCredit,
     ),
   ];
 
@@ -132,37 +140,120 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()));
   }
 
+  void _onTabTap(BuildContext context, int index) {
+    if (index == 2) {
+      Navigator.of(context).pop();
+    } else if (index != 1) {
+      onTabTap?.call(index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = _items;
+    final bottomInset = 12 + 68 + MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.cobalt,
+      extendBody: true,
+      bottomNavigationBar: HomeBottomNav(
+        selectedIndex: 1,
+        onTap: (i) => _onTabTap(context, i),
+      ),
       body: SafeArea(
+        bottom: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 20, 8),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: AppColors.textPrimary,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '필요한 거 다 있음',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '뭐 찾아?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Positioned(
+                    top: -6,
+                    right: 4,
+                    child: MascotSticker(width: 64),
+                  ),
+                ],
               ),
             ),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 14),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return _CollectionItemCard(
-                    item: item,
-                    onTap: () => (item.onTap ?? _openPlaceholder)(context),
-                  );
-                },
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            '전체 메뉴',
+                            style: TextStyle(
+                              color: AppColors.ink,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          Text(
+                            '편집',
+                            style: TextStyle(
+                              color: AppColors.ink.withValues(alpha: 0.5),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      GridView.count(
+                        crossAxisCount: 4,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 20,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 0.8,
+                        children: [
+                          for (final item in items)
+                            _CollectionGridItem(
+                              item: item,
+                              onTap: () =>
+                                  (item.onTap ?? _openPlaceholder)(context),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -173,98 +264,50 @@ class CollectionScreen extends StatelessWidget {
 }
 
 class _CollectionItem {
-  const _CollectionItem({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.iconOnLeft,
-    this.imagePath,
-    this.imageSize = 64,
-    this.onTap,
-  });
+  const _CollectionItem({required this.label, required this.icon, this.onTap});
 
-  final String title;
-  final String description;
+  final String label;
   final IconData icon;
-  final bool iconOnLeft;
-  final String? imagePath;
-  final double imageSize;
 
-  /// 이 카드를 눌렀을 때 이동할 화면. null이면 아직 구현되지 않은 기능이라
+  /// 이 항목을 눌렀을 때 이동할 화면. null이면 아직 구현되지 않은 기능이라
   /// [CollectionScreen._openPlaceholder]로 대체된다.
   final void Function(BuildContext context)? onTap;
 }
 
-class _CollectionItemCard extends StatelessWidget {
-  const _CollectionItemCard({required this.item, required this.onTap});
+class _CollectionGridItem extends StatelessWidget {
+  const _CollectionGridItem({required this.item, required this.onTap});
 
   final _CollectionItem item;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textBlock = Expanded(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
       child: Column(
-        crossAxisAlignment: item.iconOnLeft
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1EFEA),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(item.icon, color: AppColors.cobalt, size: 28),
+          ),
+          const SizedBox(height: 8),
           Text(
-            item.title,
-            textAlign: item.iconOnLeft ? TextAlign.right : TextAlign.left,
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
+              color: AppColors.ink,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            item.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: item.iconOnLeft ? TextAlign.right : TextAlign.left,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
         ],
-      ),
-    );
-
-    final iconBadge = item.imagePath != null
-        ? Image.asset(
-            item.imagePath!,
-            height: item.imageSize,
-            fit: BoxFit.contain,
-          )
-        : Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.accent,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(item.icon, color: Colors.white, size: 24),
-          );
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: item.iconOnLeft
-              ? [iconBadge, const SizedBox(width: 16), textBlock]
-              : [textBlock, const SizedBox(width: 16), iconBadge],
-        ),
       ),
     );
   }

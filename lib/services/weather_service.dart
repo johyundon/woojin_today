@@ -6,8 +6,9 @@ import 'package:http/http.dart' as http;
 /// `GET https://api.open-meteo.com/v1/forecast` 응답.
 ///
 /// 요청 쿼리에는 `current`/`hourly`에 더 많은 필드를 넣지만(명세에 그렇게
-/// 정의돼 있음), 실제로 쓰는 건 current 3개(temperature_2m, weather_code,
-/// precipitation)와 hourly 3개(time, temperature_2m, weather_code)뿐이다.
+/// 정의돼 있음), 실제로 쓰는 건 current 5개(temperature_2m, weather_code,
+/// precipitation, apparent_temperature)와 hourly 3개(time,
+/// temperature_2m, weather_code)뿐이다.
 /// daily는 요청한 5개 필드를 전부 사용한다.
 class WeatherResponse {
   const WeatherResponse({
@@ -16,11 +17,16 @@ class WeatherResponse {
     required this.currentPrecipitation,
     required this.hourly,
     required this.daily,
+    this.currentApparentTemp,
   });
 
   final double currentTemp;
   final int currentWeatherCode;
   final double currentPrecipitation;
+
+  /// 체감온도(°C). 응답에 없으면 null.
+  final double? currentApparentTemp;
+
   final List<HourlyWeather> hourly;
   final List<DailyWeather> daily;
 
@@ -45,6 +51,8 @@ class WeatherResponse {
       currentTemp: (current['temperature_2m'] as num).toDouble(),
       currentWeatherCode: (current['weather_code'] as num).toInt(),
       currentPrecipitation: (current['precipitation'] as num).toDouble(),
+      currentApparentTemp: (current['apparent_temperature'] as num?)
+          ?.toDouble(),
       hourly: List.generate(
         hourlyTime.length,
         (i) => HourlyWeather(
