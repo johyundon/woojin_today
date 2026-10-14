@@ -1,12 +1,13 @@
 import '../../mileage/models/mileage_models.dart';
 
-/// "공지사항" 화면의 카테고리 탭 3개(Figma node 6:47/6:50/6:54).
-enum NoticeCategory {
-  academic('학사공지'),
-  comprehensiveTimetable('종합강의시간표'),
-  mileage('마일리지');
+/// "공지사항" 화면의 분류 칩(전체 제외 4개).
+enum NoticeTag {
+  academic('학사'),
+  scholarship('장학'),
+  department('학과'),
+  event('행사');
 
-  const NoticeCategory(this.label);
+  const NoticeTag(this.label);
 
   final String label;
 }
@@ -23,7 +24,9 @@ class NoticeItem {
     required this.author,
     required this.date,
     required this.viewCount,
+    required this.tag,
     this.isNew = false,
+    this.isRequired = false,
     this.body,
     this.attachmentFileName,
     this.scholarshipNotice,
@@ -33,7 +36,16 @@ class NoticeItem {
   final String author;
   final String date;
   final int viewCount;
+  final NoticeTag tag;
+
+  /// 공지를 구분하는 키(읽음/북마크 저장에 쓴다). 날짜+제목.
+  String get key => '$date-$title';
+
+  /// 새로 올라온 공지(안 읽었으면 빨간 점으로 표시).
   final bool isNew;
+
+  /// "필독" 공지(검은 칩으로 표시).
+  final bool isRequired;
 
   /// 상세 화면 본문. [scholarshipNotice]가 있으면 안 쓰인다.
   final String? body;

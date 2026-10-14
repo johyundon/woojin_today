@@ -15,16 +15,59 @@ import '../models/notice_item.dart';
 class NoticeMockData {
   NoticeMockData._();
 
-  static List<NoticeItem> noticesFor(NoticeCategory category) {
-    switch (category) {
-      case NoticeCategory.academic:
-        return _academic;
-      case NoticeCategory.comprehensiveTimetable:
-        return _comprehensiveTimetable;
-      case NoticeCategory.mileage:
-        return _mileage;
-    }
-  }
+  /// 전체 공지를 최신(날짜 내림차순) 순으로. 날짜가 "2026.09.03" 형식이라
+  /// 문자열 비교가 곧 날짜 비교다.
+  static final List<NoticeItem> all = [
+    ..._featured,
+    ..._academic,
+    ..._comprehensiveTimetable,
+    ..._mileage,
+  ]..sort((a, b) => b.date.compareTo(a.date));
+
+  /// [tag]가 null이면 전체, 아니면 그 분류만.
+  static List<NoticeItem> noticesFor(NoticeTag? tag) =>
+      tag == null ? all : all.where((n) => n.tag == tag).toList();
+
+  // 공지사항 v4 시안에 나온 공지 4건(필독/장학/학과/행사). 본문은 시안에 없어
+  // 제목에 맞춰 지어낸 안내문이다(실제 공지 아님).
+  static const _featured = [
+    NoticeItem(
+      tag: NoticeTag.academic,
+      title: '2026-2학기 수강 정정 및 철회 안내',
+      author: '교무처',
+      date: '2026.10.08',
+      viewCount: 1204,
+      isNew: true,
+      isRequired: true,
+      body: '2026-2학기 수강 정정 및 철회 기간과 절차를 아래와 같이 안내드립니다.',
+    ),
+    NoticeItem(
+      tag: NoticeTag.scholarship,
+      title: '교내 성적우수 장학금 신청 (D-3)',
+      author: '학생지원처',
+      date: '2026.10.07',
+      viewCount: 876,
+      isNew: true,
+      body: '2026학년도 2학기 교내 성적우수 장학금 신청을 아래와 같이 안내드립니다.',
+    ),
+    NoticeItem(
+      tag: NoticeTag.department,
+      title: '컴공과 신입생 멘토링 2차 모집',
+      author: '컴퓨터공학전공',
+      date: '2026.10.06',
+      viewCount: 233,
+      isNew: true,
+      body: '컴퓨터공학전공 신입생 멘토링 2차 멘토 모집을 아래와 같이 안내드립니다.',
+    ),
+    NoticeItem(
+      tag: NoticeTag.event,
+      title: '대진 축제 부스 운영 동아리 신청',
+      author: '총학생회',
+      date: '2026.10.02',
+      viewCount: 512,
+      body: '대진 축제 부스 운영을 희망하는 동아리의 신청을 아래와 같이 받습니다.',
+    ),
+  ];
 
   // 스크린샷(Figma node 6:47)에서 그대로 읽은 제목/작성자/날짜/조회수.
   // 목록에서 "..."로 잘려 보인 2/3번째 제목은 맥락에 맞게 이어서 완성했다
@@ -34,6 +77,7 @@ class NoticeMockData {
   // 스크린샷에 없어 제목에 맞춰 적당히 지어낸 안내문이다.
   static const _academic = [
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026학년도 2학기 조기졸업 신청 안내',
       author: '최선미',
       date: '2026.09.03',
@@ -49,6 +93,7 @@ class NoticeMockData {
           '(이하 생략)',
     ),
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026학년도 2학기 강사/비전임교원 신규임용자 및 임용예정자 공고',
       author: '김천수',
       date: '2026.08.26',
@@ -56,6 +101,7 @@ class NoticeMockData {
       body: '2026학년도 2학기 강사 및 비전임교원 신규임용자·임용예정자 명단을 붙임과 같이 공고합니다.',
     ),
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026학년도 2학기 크로스리스팅(Cross-Listing) 교과목 안내',
       author: '정한별',
       date: '2026.08.18',
@@ -63,6 +109,7 @@ class NoticeMockData {
       body: '2026학년도 2학기 크로스리스팅(Cross-Listing) 운영 교과목을 붙임과 같이 안내드립니다.',
     ),
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026학년도 2학기 복학 및 휴학 안내',
       author: '이영선',
       date: '2026.08.11',
@@ -70,6 +117,7 @@ class NoticeMockData {
       body: '2026학년도 2학기 복학 및 휴학 신청 기간과 절차를 아래와 같이 안내드립니다.',
     ),
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026-2학기 교양 강의시간표 변경사항 안내',
       author: '유경재',
       date: '2026.08.10',
@@ -83,6 +131,7 @@ class NoticeMockData {
   // 같은 패턴으로 적당히 지어냈다(지어낸 값, 실제 공지 아님).
   static const _comprehensiveTimetable = [
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026학년도 2학기 종합강의시간표',
       author: '이경원',
       date: '2026.07.24',
@@ -95,6 +144,7 @@ class NoticeMockData {
       attachmentFileName: '2026학년도 2학기 종합강의시간표_게시용.pdf',
     ),
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2026학년도 1학기 종합강의시간표',
       author: '조창묵',
       date: '2026.01.23',
@@ -103,6 +153,7 @@ class NoticeMockData {
       attachmentFileName: '2026학년도 1학기 종합강의시간표_게시용.pdf',
     ),
     NoticeItem(
+      tag: NoticeTag.academic,
       title: '2025학년도 2학기 종합강의시간표',
       author: '이경원',
       date: '2025.07.31',
@@ -118,6 +169,7 @@ class NoticeMockData {
   // (본문은 스크린샷에 없어 지어낸 값).
   static final _mileage = [
     NoticeItem(
+      tag: NoticeTag.scholarship,
       title: MileageNoticeMockData.notices[0].title,
       author: MileageNoticeMockData.notices[0].author,
       date: MileageNoticeMockData.notices[0].date,
@@ -125,6 +177,7 @@ class NoticeMockData {
       scholarshipNotice: MileageNoticeMockData.notices[0],
     ),
     const NoticeItem(
+      tag: NoticeTag.scholarship,
       title: '2026학년도 1학기 마일리지장학 시행 안내',
       author: '이용진',
       date: '2026.05.19',
@@ -132,6 +185,7 @@ class NoticeMockData {
       body: '2026학년도 1학기 마일리지장학 시행 계획을 아래와 같이 안내드립니다.',
     ),
     NoticeItem(
+      tag: NoticeTag.scholarship,
       title: MileageNoticeMockData.notices[1].title,
       author: MileageNoticeMockData.notices[1].author,
       date: MileageNoticeMockData.notices[1].date,
@@ -139,6 +193,7 @@ class NoticeMockData {
       scholarshipNotice: MileageNoticeMockData.notices[1],
     ),
     const NoticeItem(
+      tag: NoticeTag.scholarship,
       title: '2025학년도 2학기 마일리지장학 시행 안내',
       author: '이용진',
       date: '2025.10.10',
@@ -146,6 +201,7 @@ class NoticeMockData {
       body: '2025학년도 2학기 마일리지장학 시행 계획을 아래와 같이 안내드립니다.',
     ),
     NoticeItem(
+      tag: NoticeTag.scholarship,
       title: MileageNoticeMockData.notices[2].title,
       author: MileageNoticeMockData.notices[2].author,
       date: MileageNoticeMockData.notices[2].date,
