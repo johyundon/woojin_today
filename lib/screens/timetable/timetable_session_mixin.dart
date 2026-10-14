@@ -25,9 +25,11 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
   bool _myTimetableLoading = false;
 
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   String _query = '';
   final _filters = CourseFilters();
   bool _filterPanelOpen = false;
+  bool _addPanelOpen = false;
   PendingSlot? _pendingSlot;
 
   int _savedCount = 0;

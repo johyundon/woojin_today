@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../config/mock_mode.dart';
+import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
 import '../../services/fakes/fake_course_catalog_service.dart';
 import '../../services/fakes/fake_my_timetable_service.dart';
 import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
+import '../../widgets/top_banner.dart';
+import '../home/widgets/home_bottom_nav.dart';
 import 'ai_recommend/ai_recommend_result_screen.dart';
 import 'ai_recommend/ai_recommend_wizard_screen.dart';
 import 'course_filters.dart';
@@ -18,6 +21,7 @@ import 'services/saved_timetable_storage.dart';
 import 'syllabus_screen.dart';
 import 'saved_timetables_screen.dart';
 import 'timetable_colors.dart';
+import 'widgets/course_add_panel.dart';
 import 'widgets/course_detail_dialog.dart';
 import 'widgets/course_result_card.dart';
 import 'widgets/quick_actions_row.dart';
@@ -106,6 +110,7 @@ class _TimetableScreenState extends State<TimetableScreen>
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -155,6 +160,126 @@ class _TimetableScreenState extends State<TimetableScreen>
 
   @override
   Widget build(BuildContext context) {
+    final now = _now();
+    return Scaffold(
+      backgroundColor: AppColors.cobalt,
+      extendBody: true,
+      bottomNavigationBar: _addPanelOpen
+          ? null
+          : HomeBottomNav(selectedIndex: 0, onTap: _onTabTap),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+              child: TimetableHeader(
+                semesterLabel: '$_year년 $_semester학기',
+                totalCredits: _totalCredits,
+                savedCount: _savedCount,
+                headerKey: _headerKey,
+                onBack: () => Navigator.of(context).pop(),
+                onSemesterTap: _openSemesterMenu,
+                onSave: _openSaveDialog,
+                onOpenSavedList: _openSavedList,
+                onAutoFill: _openAiRecommendWizard,
+                onAddCourse: () =>
+                    setState(() => _addPanelOpen = !_addPanelOpen),
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(36),
+                ),
+                child: ColoredBox(
+                  color: TimetableColors.panelBackground,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      _bodyHeight = constraints.maxHeight;
+                      // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의
+                      // 실측 높이"를 기준으로 상한을 계산해서, 핸들을 아무리
+                      // 당겨도 화면(Column)이 넘치지 않는 값으로만 움직이게
+                      // 한다.
+                      final panelHeight = constraints.maxHeight * 0.75;
+                      final displayedGridHeight =
+                          _computedMaxGridViewportHeight(
+                            filterPanelOpen: false,
+                            extraReserve: _addPanelOpen ? panelHeight : 0,
+                          );
+                      _scheduleChromeMeasurement(displayedGridHeight);
+
+                      final gridColumn = Column(
+                        children: [
+                          Column(
+                            key: _chromeAboveGridKey,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 18),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: QuickActionsRow(
+                                  loading: _myTimetableLoading,
+                                  onLoadMyTimetable: _loadMyTimetable,
+                                  notificationsEnabled: _notificationsEnabled,
+                                  onNotificationsChanged: (v) =>
+                                      setState(() => _notificationsEnabled = v),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          ),
+                          Padding(
+                            key: _gridWrapperKey,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: TimetableGrid(
+                              courses: _confirmedCourses,
+                              pendingSlot: _pendingSlot,
+                              onEmptyCellTap: _onEmptyCellTap,
+                              onRemoveCourse: _removeCourse,
+                              onCourseTap: (course) =>
+                                  _showCourseDetail(course.toCatalogItem()),
+                              today: Weekday.values[now.weekday - 1],
+                              viewportHeight: displayedGridHeight,
+                            ),
+                          ),
+                          // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
+                          // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
+                          SizedBox(
+                            key: _chromeBelowGridKey,
+                            height: _addPanelOpen ? 0 : 100,
+                          ),
+                        ],
+                      );
+
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          gridColumn,
+                          if (_addPanelOpen)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              height: panelHeight,
+                              child: _buildAddPanel(),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddPanel() {
     final grades = _catalog.map((e) => e.targetGrade).toSet().toList()..sort();
     final courseTypes = _catalog.map((e) => e.courseType).toSet().toList()
       ..sort();
@@ -171,124 +296,25 @@ class _TimetableScreenState extends State<TimetableScreen>
             .toList()
           ..sort();
 
-    return Scaffold(
-      backgroundColor: TimetableColors.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _bodyHeight = constraints.maxHeight;
-            // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의 실측
-            // 높이"를 기준으로 상한을 계산해서, 핸들을 아무리 당겨도 화면
-            // (Column)이 넘치지 않는 값으로만 움직이게 한다.
-            final displayedGridHeight = _gridViewportHeight.clamp(
-              _minGridViewportHeight,
-              _computedMaxGridViewportHeight(filterPanelOpen: _filterPanelOpen),
-            );
-            _scheduleChromeMeasurement(displayedGridHeight);
-
-            return Column(
-              children: [
-                Column(
-                  key: _chromeAboveGridKey,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 20, 0),
-                      child: TimetableHeader(
-                        semesterLabel: '$_year년 $_semester학기',
-                        totalCredits: _totalCredits,
-                        savedCount: _savedCount,
-                        headerKey: _headerKey,
-                        onBack: () => Navigator.of(context).pop(),
-                        onSemesterTap: _openSemesterMenu,
-                        onSave: _openSaveDialog,
-                        onOpenSavedList: _openSavedList,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: QuickActionsRow(
-                        loading: _myTimetableLoading,
-                        onLoadMyTimetable: _loadMyTimetable,
-                        notificationsEnabled: _notificationsEnabled,
-                        onNotificationsChanged: (v) =>
-                            setState(() => _notificationsEnabled = v),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-                Padding(
-                  key: _gridWrapperKey,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TimetableGrid(
-                    courses: _confirmedCourses,
-                    pendingSlot: _pendingSlot,
-                    onEmptyCellTap: _onEmptyCellTap,
-                    onRemoveCourse: _removeCourse,
-                    onCourseTap: (course) =>
-                        _showCourseDetail(course.toCatalogItem()),
-                    onAutoFill: _openAiRecommendWizard,
-                    viewportHeight: displayedGridHeight,
-                  ),
-                ),
-                Column(
-                  key: _chromeBelowGridKey,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: (details) {
-                        setState(() {
-                          _gridViewportHeight =
-                              (_gridViewportHeight + details.delta.dy).clamp(
-                                _minGridViewportHeight,
-                                _computedMaxGridViewportHeight(
-                                  filterPanelOpen: _filterPanelOpen,
-                                ),
-                              );
-                        });
-                      },
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: TimetableColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: SearchFilterBar(
-                        controller: _searchController,
-                        onQueryChanged: (q) => setState(() => _query = q),
-                        filters: _filters,
-                        filterPanelOpen: _filterPanelOpen,
-                        onToggleFilterPanel: () => setState(
-                          () => _filterPanelOpen = !_filterPanelOpen,
-                        ),
-                        onFiltersChanged: () => setState(() {}),
-                        availableGrades: grades,
-                        availableCourseTypes: courseTypes,
-                        availableCredits: credits,
-                        availableAreas: areas,
-                        pendingSlot: _pendingSlot,
-                        onClearPendingSlot: _clearPendingSlot,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                ),
-                Expanded(child: _buildResultsList()),
-              ],
-            );
-          },
-        ),
+    return CourseAddPanel(
+      onClose: () => setState(() => _addPanelOpen = false),
+      searchFilterBar: SearchFilterBar(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        onQueryChanged: (q) => setState(() => _query = q),
+        filters: _filters,
+        filterPanelOpen: _filterPanelOpen,
+        onToggleFilterPanel: () =>
+            setState(() => _filterPanelOpen = !_filterPanelOpen),
+        onFiltersChanged: () => setState(() {}),
+        availableGrades: grades,
+        availableCourseTypes: courseTypes,
+        availableCredits: credits,
+        availableAreas: areas,
+        pendingSlot: _pendingSlot,
+        onClearPendingSlot: _clearPendingSlot,
       ),
+      results: _buildResultsList(),
     );
   }
 
@@ -347,9 +373,17 @@ class _TimetableScreenState extends State<TimetableScreen>
           course: item,
           onAdd: () => _addCourse(item),
           onViewDetail: () => _showCourseDetail(item),
-          showAddButtons: _pendingSlot != null,
         );
       },
     );
+  }
+
+  /// 하단 탭 바를 눌렀을 때. 0(시간표)은 이미 이 화면이라 아무것도 하지
+  /// 않는다. 이 화면은 홈에서 push된 하위 화면이라, 다른 탭은 세션/콜백을
+  /// 다시 꾸릴 필요 없이 홈으로 돌아가는 것으로 충분하다 — 홈 화면이 그
+  /// 탭들의 실제 진입점이다.
+  void _onTabTap(int index) {
+    if (index == 0) return;
+    Navigator.of(context).pop();
   }
 }

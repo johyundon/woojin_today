@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
+import '../../../theme/app_colors.dart';
 import '../models/ai_recommend_answers.dart';
-import '../timetable_colors.dart';
 
 const List<String> _weekdayLabels = ['월', '화', '수', '목', '금'];
 const List<Weekday> _weekdayValues = [
@@ -16,10 +16,10 @@ const List<Weekday> _weekdayValues = [
 /// "AI 시간표 자동 생성" 5단계 설문 (Figma node 6:59, node-id 6:60~6:64).
 ///
 /// 이 노드는 실제 Figma 벡터 레이어가 아니라 앱 스크린샷 6장이 평탄화된
-/// 상태라 `get_design_context`로 쓸만한 코드를 뽑을 수 없었다(캘린더 화면,
-/// [TimetableColors]와 같은 선례). 스크린샷을 눈으로 보고 레이아웃/색상/
-/// 간격을 근사해 재현했다. 6번째 화면(결과 미리보기)은 이 위젯의 범위
-/// 밖이다 — [onSubmit]이 호출된 뒤 어디로 이동할지는 호출부가 결정한다.
+/// 상태라 `get_design_context`로 쓸만한 코드를 뽑을 수 없었다. 스크린샷을
+/// 눈으로 보고 레이아웃/색상/간격을 근사해 재현했다. 6번째 화면(결과
+/// 미리보기)은 이 위젯의 범위 밖이다 — [onSubmit]이 호출된 뒤 어디로
+/// 이동할지는 호출부가 결정한다.
 class AiRecommendWizardScreen extends StatefulWidget {
   const AiRecommendWizardScreen({required this.onSubmit, super.key});
 
@@ -61,7 +61,7 @@ class _AiRecommendWizardScreenState extends State<AiRecommendWizardScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: TimetableColors.background,
+      backgroundColor: AppColors.cobalt,
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
@@ -72,7 +72,8 @@ class _AiRecommendWizardScreenState extends State<AiRecommendWizardScreen> {
   }
 }
 
-/// 5개 단계 화면 전부가 공유하는 뼈대: X 닫기, "n/5", 제목, 내용, 하단 버튼.
+/// 5개 단계 화면 전부가 공유하는 뼈대: X 닫기 + 진행바, "n/5" 배지, 제목,
+/// 내용, 하단 버튼.
 class _StepChrome extends StatelessWidget {
   const _StepChrome({
     required this.step,
@@ -89,43 +90,80 @@ class _StepChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
           child: Row(
             children: [
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(
-                  Icons.close,
-                  color: TimetableColors.textPrimary,
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: AppColors.cobaltDeep,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 18),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Row(
+                  children: [
+                    for (var i = 0; i < 5; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Expanded(
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: i < step
+                                ? AppColors.lime
+                                : AppColors.cobaltDeep,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '$step/5',
-                style: const TextStyle(
-                  color: TimetableColors.textSecondary,
-                  fontSize: 13,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.lime,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  '$step/5',
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 title,
                 style: const TextStyle(
-                  color: TimetableColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  height: 1.25,
+                  letterSpacing: -0.02,
                 ),
               ),
             ],
@@ -146,7 +184,7 @@ class _StepChrome extends StatelessWidget {
   }
 }
 
-/// 좌측 "< 이전" + 우측 꽉 찬 주황 버튼. [onBack]이 null이면(1단계) 다음
+/// 좌측 "< 이전" + 우측 꽉 찬 라임 버튼. [onBack]이 null이면(1단계) 다음
 /// 버튼만 풀폭으로 보여준다.
 class _StepBottomBar extends StatelessWidget {
   const _StepBottomBar({
@@ -162,20 +200,20 @@ class _StepBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nextButton = SizedBox(
-      height: 52,
+      height: 56,
       child: ElevatedButton(
         onPressed: onNext,
         style: ElevatedButton.styleFrom(
-          backgroundColor: TimetableColors.accent,
+          backgroundColor: AppColors.lime,
           shape: const StadiumBorder(),
           elevation: 0,
         ),
         child: Text(
           nextLabel,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.ink,
             fontSize: 16,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
@@ -189,17 +227,17 @@ class _StepBottomBar extends StatelessWidget {
       children: [
         SizedBox(
           width: 92,
-          height: 52,
+          height: 56,
           child: OutlinedButton(
             onPressed: onBack,
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: TimetableColors.border),
+              side: const BorderSide(color: Colors.white54),
               shape: const StadiumBorder(),
             ),
             child: const Text(
               '< 이전',
               style: TextStyle(
-                color: TimetableColors.textSecondary,
+                color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -213,7 +251,8 @@ class _StepBottomBar extends StatelessWidget {
   }
 }
 
-/// 세로로 쌓이는 풀폭 선택 버튼(3/5, 5/5 화면에서 공용).
+/// 세로로 쌓이는 풀폭 선택 버튼(3/5, 5/5 화면에서 공용). 파란 배경 위에
+/// 직접 놓이므로 미선택 상태는 반투명 흰 오버레이, 선택 상태는 라임색.
 class _SelectableTile extends StatelessWidget {
   const _SelectableTile({
     required this.label,
@@ -235,16 +274,18 @@ class _SelectableTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? TimetableColors.accent : TimetableColors.surface,
+          color: selected
+              ? AppColors.lime
+              : Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: selected ? Colors.white : TimetableColors.textPrimary,
+            color: selected ? AppColors.ink : Colors.white,
             fontSize: 15,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
           ),
         ),
       ),
@@ -269,58 +310,73 @@ class _CreditStepState extends State<_CreditStep> {
     return _StepChrome(
       step: 1,
       title: '이번학기 몇학점\n들으실건가요?',
-      content: Column(
-        children: [
-          const SizedBox(height: 24),
-          Text(
-            '${widget.answers.credit.round()}학점',
-            style: const TextStyle(
-              color: TimetableColors.accent,
-              fontSize: 40,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: TimetableColors.accent,
-              inactiveTrackColor: TimetableColors.surfaceElevated,
-              thumbColor: TimetableColors.accent,
-              overlayColor: TimetableColors.accent.withValues(alpha: 0.2),
-            ),
-            child: Slider(
-              value: widget.answers.credit,
-              min: 5,
-              max: 22,
-              divisions: 17,
-              onChanged: (value) {
-                setState(() => widget.answers.credit = value);
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  '5학점',
-                  style: TextStyle(
-                    color: TimetableColors.textSecondary,
-                    fontSize: 12,
+      content: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          children: [
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${widget.answers.credit.round()}',
+                    style: const TextStyle(
+                      color: AppColors.cobalt,
+                      fontSize: 48,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                Text(
-                  '22학점',
-                  style: TextStyle(
-                    color: TimetableColors.textSecondary,
-                    fontSize: 12,
+                  const TextSpan(
+                    text: '학점',
+                    style: TextStyle(
+                      color: AppColors.cobalt,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: AppColors.cobalt,
+                inactiveTrackColor: AppColors.cobalt.withValues(alpha: 0.15),
+                thumbColor: AppColors.cobalt,
+                overlayColor: AppColors.cobalt.withValues(alpha: 0.2),
+              ),
+              child: Slider(
+                value: widget.answers.credit,
+                min: 5,
+                max: 22,
+                divisions: 17,
+                onChanged: (value) {
+                  setState(() => widget.answers.credit = value);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text(
+                    '5학점',
+                    style: TextStyle(color: Color(0xFF9A978F), fontSize: 12),
+                  ),
+                  Text(
+                    '22학점',
+                    style: TextStyle(color: Color(0xFF9A978F), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       bottomBar: _StepBottomBar(nextLabel: '다음', onNext: widget.onNext),
     );
@@ -391,20 +447,15 @@ class _FreeDayStepState extends State<_FreeDayStep> {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: answers.freeDayMode == FreeDayMode.anyDaysCount
-                  ? TimetableColors.surfaceElevated
-                  : TimetableColors.surface,
-              borderRadius: BorderRadius.circular(16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(16)),
             ),
             child: Row(
               children: [
                 const Text(
                   '아무 요일이나',
-                  style: TextStyle(
-                    color: TimetableColors.textPrimary,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: AppColors.ink, fontSize: 14),
                 ),
                 Expanded(
                   child: Row(
@@ -427,7 +478,7 @@ class _FreeDayStepState extends State<_FreeDayStep> {
                   '일이면\n돼요',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: TimetableColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 14,
                     height: 1.2,
                   ),
@@ -471,15 +522,17 @@ class _WeekdayChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? TimetableColors.accent : TimetableColors.surface,
+          color: selected
+              ? AppColors.lime
+              : Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : TimetableColors.textPrimary,
+            color: selected ? AppColors.ink : Colors.white,
             fontSize: 14,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
           ),
         ),
       ),
@@ -508,14 +561,14 @@ class _RoundNumberButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected
-              ? TimetableColors.accent
-              : TimetableColors.surfaceElevated,
+              ? AppColors.cobalt
+              : AppColors.cobalt.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Text(
           '$number',
           style: TextStyle(
-            color: selected ? Colors.white : TimetableColors.textPrimary,
+            color: selected ? Colors.white : AppColors.ink,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -614,98 +667,110 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
             ignoring: answers.majorRatioAny,
             child: Opacity(
               opacity: answers.majorRatioAny ? 0.4 : 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '전공(주전공+타전공) ${answers.majorRatio.round()}%',
-                        style: const TextStyle(
-                          color: TimetableColors.textPrimary,
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        '교양 ${liberalRatio.round()}%',
-                        style: const TextStyle(
-                          color: TimetableColors.textPrimary,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: TimetableColors.accent,
-                      inactiveTrackColor: TimetableColors.surfaceElevated,
-                      thumbColor: TimetableColors.accent,
-                    ),
-                    child: Slider(
-                      value: liberalRatio,
-                      min: 0,
-                      max: 100,
-                      onChanged: (value) {
-                        setState(() => answers.majorRatio = 100 - value);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: TimetableColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          '전공 비중 중에서, 주전공과 타전공 비율',
-                          style: TextStyle(
-                            color: TimetableColors.textSecondary,
-                            fontSize: 12,
+                        Text(
+                          '전공(주전공+타전공) ${answers.majorRatio.round()}%',
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 13,
                           ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '주전공 ${answers.majorSubRatio.round()}%',
-                              style: const TextStyle(
-                                color: TimetableColors.textPrimary,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              '타전공 ${(100 - answers.majorSubRatio).round()}%',
-                              style: const TextStyle(
-                                color: TimetableColors.textPrimary,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            activeTrackColor: TimetableColors.accent,
-                            inactiveTrackColor: TimetableColors.surfaceElevated,
-                            thumbColor: TimetableColors.accent,
-                          ),
-                          child: Slider(
-                            value: answers.majorSubRatio,
-                            min: 0,
-                            max: 100,
-                            onChanged: (value) {
-                              setState(() => answers.majorSubRatio = value);
-                            },
+                        Text(
+                          '교양 ${liberalRatio.round()}%',
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 13,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: AppColors.cobalt,
+                        inactiveTrackColor: AppColors.cobalt.withValues(
+                          alpha: 0.15,
+                        ),
+                        thumbColor: AppColors.cobalt,
+                      ),
+                      child: Slider(
+                        value: liberalRatio,
+                        min: 0,
+                        max: 100,
+                        onChanged: (value) {
+                          setState(() => answers.majorRatio = 100 - value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.cobalt.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            '전공 비중 중에서, 주전공과 타전공 비율',
+                            style: TextStyle(
+                              color: Color(0xFF9A978F),
+                              fontSize: 12,
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '주전공 ${answers.majorSubRatio.round()}%',
+                                style: const TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                '타전공 ${(100 - answers.majorSubRatio).round()}%',
+                                style: const TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: AppColors.cobalt,
+                              inactiveTrackColor: AppColors.cobalt.withValues(
+                                alpha: 0.15,
+                              ),
+                              thumbColor: AppColors.cobalt,
+                            ),
+                            child: Slider(
+                              value: answers.majorSubRatio,
+                              min: 0,
+                              max: 100,
+                              onChanged: (value) {
+                                setState(() => answers.majorSubRatio = value);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

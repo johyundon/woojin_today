@@ -3,53 +3,68 @@ import 'package:flutter/material.dart';
 import '../../../services/course_catalog_service.dart';
 import '../timetable_colors.dart';
 
-/// 검색 결과 카드 하나.
+/// 과목 추가 패널의 검색 결과 한 줄.
 ///
-/// 카드 전체를 탭하면 [onAdd](시간표에 바로 추가)가 실행된다. 상세 정보는
-/// 별도로 둔 정보 아이콘([onViewDetail])으로 들어간다.
-///
-/// [showAddButtons]가 true면(그리드 빈 셀을 탭해 특정 요일/시간을 선택한
-/// 상태에서 그 시간대와 겹치는 과목일 때) 하단에도 "시간표에 추가"/"상세보기"
-/// 버튼을 보여준다(상태 10).
+/// 오른쪽 "담기" 버튼이 시간표에 바로 추가([onAdd])하고, 줄 자체를 탭하면
+/// 상세 정보([onViewDetail])가 열린다.
 class CourseResultCard extends StatelessWidget {
   const CourseResultCard({
     required this.course,
     required this.onAdd,
     required this.onViewDetail,
-    required this.showAddButtons,
   });
 
   final CourseCatalogItem course;
   final VoidCallback onAdd;
   final VoidCallback onViewDetail;
-  final bool showAddButtons;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onAdd,
+    return InkWell(
+      onTap: onViewDetail,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: TimetableColors.surface,
-          borderRadius: BorderRadius.circular(14),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: TimetableColors.gridLine)),
         ),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     course.courseName,
                     style: const TextStyle(
                       color: TimetableColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${course.professor} · ${_formatCredit(course.credit)}학점 · ${course.courseType}',
+                    style: const TextStyle(
+                      color: TimetableColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${course.rawSchedule} · ${course.room}',
+                    style: const TextStyle(
+                      color: TimetableColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
                 Text(
                   '담은인원 ${course.enrollmentRatio}',
                   style: const TextStyle(
@@ -57,85 +72,30 @@ class CourseResultCard extends StatelessWidget {
                     fontSize: 11,
                   ),
                 ),
-                const SizedBox(width: 4),
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: onViewDetail,
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: TimetableColors.textSecondary,
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onAdd,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCE6FF),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: const Text(
+                      '담기',
+                      style: TextStyle(
+                        color: TimetableColors.accent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${course.professor} · ${_formatCredit(course.credit)}학점 · ${course.courseType}',
-              style: const TextStyle(
-                color: TimetableColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${course.rawSchedule} · ${course.room}',
-              style: const TextStyle(
-                color: TimetableColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-            if (showAddButtons) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onAdd,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TimetableColors.accent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        '시간표에 추가',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onViewDetail,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: TimetableColors.textPrimary,
-                        side: const BorderSide(color: TimetableColors.border),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        '상세보기',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),

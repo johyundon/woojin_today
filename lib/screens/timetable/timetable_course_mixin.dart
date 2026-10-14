@@ -61,6 +61,7 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
             catalog: _catalog,
             answers: answers,
           ),
+          answers: answers,
           onRegenerate: () async =>
               generateTimetableCandidates(catalog: _catalog, answers: answers),
           onConfirm: (chosen) {
@@ -68,8 +69,10 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
             // 결과 화면 + 설문 화면을 모두 닫고 시간표 화면으로 돌아간다.
             Navigator.of(context).pop();
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${chosen.length}과목으로 시간표를 채웠어요.')),
+            showTopBanner(
+              context,
+              title: '우진이',
+              message: '${chosen.length}과목으로 시간표를 채웠어요.',
             );
           },
         ),

@@ -21,6 +21,7 @@ class CourseBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = colorForCourseKey(layout.course.key);
+    final textColor = textColorOnBlock(color);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -47,8 +48,8 @@ class CourseBlock extends StatelessWidget {
                       layout.course.courseName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         height: 1.25,
@@ -62,7 +63,7 @@ class CourseBlock extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: textColor.withValues(alpha: 0.85),
                         fontSize: 11,
                         height: 1.25,
                       ),
@@ -82,11 +83,7 @@ class CourseBlock extends StatelessWidget {
                     color: Colors.black.withValues(alpha: 0.25),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 12,
-                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 12),
                 ),
               ),
             ),

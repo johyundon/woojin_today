@@ -117,7 +117,11 @@ List<ClassTimeSlot> parseRawSchedule(String rawSchedule) {
     if (endMinutes <= startMinutes) continue;
 
     slots.add(
-      ClassTimeSlot(day: day, startMinutes: startMinutes, endMinutes: endMinutes),
+      ClassTimeSlot(
+        day: day,
+        startMinutes: startMinutes,
+        endMinutes: endMinutes,
+      ),
     );
   }
 
@@ -171,7 +175,11 @@ List<TodayClass> todayClasses({
 }
 
 /// [nextClassAfterToday]의 반환 타입: 과목 + 시간대 + 그 수업이 있는 요일.
-typedef UpcomingClass = ({CourseCatalogItem course, ClassTimeSlot slot, Weekday day});
+typedef UpcomingClass = ({
+  CourseCatalogItem course,
+  ClassTimeSlot slot,
+  Weekday day,
+});
 
 /// [now] 다음 날부터 최대 7일 안에서, 수업이 있는 가장 가까운 날의 첫 수업을
 /// 찾는다("내일 첫 수업" 안내에 쓴다). 그 안에 수업이 하나도 없으면(일주일

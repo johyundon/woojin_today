@@ -24,6 +24,7 @@ String _formatMinutes(double minutes) {
 class SearchFilterBar extends StatelessWidget {
   const SearchFilterBar({
     required this.controller,
+    this.focusNode,
     required this.onQueryChanged,
     required this.filters,
     required this.filterPanelOpen,
@@ -38,6 +39,7 @@ class SearchFilterBar extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final ValueChanged<String> onQueryChanged;
   final CourseFilters filters;
   final bool filterPanelOpen;
@@ -71,6 +73,7 @@ class SearchFilterBar extends StatelessWidget {
                 ),
                 child: TextField(
                   controller: controller,
+                  focusNode: focusNode,
                   onChanged: onQueryChanged,
                   style: const TextStyle(color: TimetableColors.textPrimary),
                   decoration: const InputDecoration(
@@ -112,6 +115,10 @@ class SearchFilterBar extends StatelessWidget {
             ),
           ],
         ),
+        if (filterPanelOpen) ...[
+          const SizedBox(height: 10),
+          _buildFilterOptionsRow(),
+        ],
         if (activeChips.isNotEmpty) ...[
           const SizedBox(height: 10),
           SizedBox(
@@ -123,8 +130,6 @@ class SearchFilterBar extends StatelessWidget {
           ),
         ],
         if (filterPanelOpen) ...[
-          const SizedBox(height: 10),
-          _buildFilterOptionsRow(),
           const SizedBox(height: 14),
           _buildTimeRangeSlider(),
         ],
@@ -163,7 +168,7 @@ class SearchFilterBar extends StatelessWidget {
     if (filters.grade != null) {
       chips.add(
         _ActiveChip(
-          label: '${filters.grade}학년',
+          label: filters.grade!,
           onClear: () {
             filters.grade = null;
             onFiltersChanged();

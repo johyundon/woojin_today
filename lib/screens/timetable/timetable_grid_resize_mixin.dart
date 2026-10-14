@@ -40,13 +40,17 @@ mixin TimetableGridResizeMixin on State<TimetableScreen> {
   double _gridChromeHeight = 0;
   double _bodyHeight = 0;
 
-  double _computedMaxGridViewportHeight({required bool filterPanelOpen}) {
+  double _computedMaxGridViewportHeight({
+    required bool filterPanelOpen,
+    double extraReserve = 0,
+  }) {
     final minReserve = filterPanelOpen
         ? _minResultsReserveWithFilterOpen
         : _minResultsReserve;
     final cap =
         _bodyHeight -
         minReserve -
+        extraReserve -
         _chromeAboveHeight -
         _chromeBelowHeight -
         _gridChromeHeight;

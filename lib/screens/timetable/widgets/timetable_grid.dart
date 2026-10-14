@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
+import '../../../theme/app_colors.dart';
 import '../grid_layout.dart';
 import '../models/planned_course.dart';
 import '../timetable_colors.dart';
@@ -29,7 +30,7 @@ class TimetableGrid extends StatelessWidget {
     required this.onEmptyCellTap,
     required this.onRemoveCourse,
     required this.onCourseTap,
-    required this.onAutoFill,
+    this.today,
     this.viewportHeight = 320,
   });
 
@@ -39,40 +40,22 @@ class TimetableGrid extends StatelessWidget {
   final ValueChanged<PlannedCourse> onRemoveCourse;
   final ValueChanged<PlannedCourse> onCourseTap;
 
+  /// 오늘 요일. 월~금 밖(주말)이면 null — 요일 헤더에서 오늘 칸만 강조
+  /// 표시하는 데 쓴다.
+  final Weekday? today;
+
   /// 그리드(8~22시 전체 896px)에서 실제로 보여줄 스크롤 뷰포트 높이. 핸들
   /// 드래그로 조절하는 값을 받는다 — 기본값 320은 기존 고정값과 동일.
   final double viewportHeight;
 
-  /// 그리드 우상단(금요일 열 위)에 뜨는 플로팅 반짝이(AI) 버튼 탭 콜백 —
-  /// 규칙 기반 자동 시간표 추천을 실행한다.
-  final VoidCallback onAutoFill;
-
   static const int _hourCount = gridEndHour - gridStartHour;
   static const double _gridHeight = _hourCount * gridHourRowHeight;
-
-  static const double _autoFillButtonSize = 40;
 
   @override
   Widget build(BuildContext context) {
     final layouts = buildBlockLayouts(courses);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _buildGridColumn(layouts),
-        Positioned(
-          // 요일 헤더 줄 바로 아래, 그리드 오른쪽(금요일 열) 위에
-          // 뜨는 플로팅 버튼 — 스크롤돼도 같이 움직이지 않고 늘 같은 자리에
-          // 떠 있어야 해서(사용자 피드백) 스크롤 영역 밖(이 Stack)에 둔다.
-          top: 30,
-          right: 0,
-          child: _AutoFillFloatingButton(
-            size: _autoFillButtonSize,
-            onTap: onAutoFill,
-          ),
-        ),
-      ],
-    );
+    return _buildGridColumn(layouts);
   }
 
   Widget _buildGridColumn(List<CourseBlockLayout> layouts) {
@@ -82,16 +65,12 @@ class TimetableGrid extends StatelessWidget {
         Row(
           children: [
             const SizedBox(width: _hourLabelColumnWidth),
-            for (final label in _weekdayLabels)
+            for (var i = 0; i < gridWeekdays.length; i++)
               Expanded(
                 child: Center(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: TimetableColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: _WeekdayLabel(
+                    label: _weekdayLabels[i],
+                    isToday: gridWeekdays[i] == today,
                   ),
                 ),
               ),
@@ -234,107 +213,41 @@ class TimetableGrid extends StatelessWidget {
   }
 }
 
-/// 자동 시간표 추천을 실행하는 플로팅 버튼. Figma 시안처럼 배경 도형 없이,
-/// 흰색→보라 그라데이션 큰 반짝이(+글리프에 포함된 겹치는 작은 별)와
-/// 파랑/핑크 작은 반짝이 포인트 2개만 띄운다.
-class _AutoFillFloatingButton extends StatelessWidget {
-  const _AutoFillFloatingButton({required this.size, required this.onTap});
+/// 요일 헤더 글자 하나. 오늘이면 잉크색 알약 배경 + 라임색 글자로 강조한다.
+class _WeekdayLabel extends StatelessWidget {
+  const _WeekdayLabel({required this.label, required this.isToday});
 
-  final double size;
-  final VoidCallback onTap;
+  final String label;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Icons.auto_awesome 글리프 자체가 "큰 별 + 겹치는 작은 별"
-            // 묶음이라 하나만 써도 Figma의 주 반짝이 모양과 같다. ShaderMask로
-            // 흰색(왼쪽 위)->보라(오른쪽 아래) 그라데이션을 입힌다.
-            Positioned(
-              right: 0,
-              top: 2,
-              child: ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Colors.white, Color(0xFFB39DDB)],
-                ).createShader(bounds),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-            ),
-            // 작은 포인트 2개는 Icons.auto_awesome(큰별+작은별 묶음) 대신
-            // 직접 그린 단일 4각 별로 — 묶음 글리프는 작게 쓰면 보조 별이
-            // 덧붙어 보여서 원본의 "얇은 별 1개" 느낌과 달라진다.
-            const Positioned(
-              right: 25,
-              top: 0,
-              child: _SparkleStar(size: 10, color: Color(0xFF4FC3F7)),
-            ),
-            const Positioned(
-              right: 11,
-              top: 27,
-              child: _SparkleStar(size: 8, color: Color(0xFFFF5C8A)),
-            ),
-          ],
+    if (!isToday) {
+      return Text(
+        label,
+        style: const TextStyle(
+          color: TimetableColors.textSecondary,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+    return Container(
+      width: 28,
+      height: 28,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: AppColors.ink,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.lime,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
   }
-}
-
-/// 얇고 뾰족한 4각 별(sparkle) 한 개. Icons.auto_awesome은 큰별+작은별
-/// 묶음 글리프라 아주 작게 쓰면 원본과 실루엣이 달라져서, 꼭짓점 4개를
-/// 오목한 곡선으로 잇는 별 하나를 직접 그린다.
-class _SparkleStar extends StatelessWidget {
-  const _SparkleStar({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _SparkleStarPainter(color),
-    );
-  }
-}
-
-class _SparkleStarPainter extends CustomPainter {
-  const _SparkleStarPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    // 중심 쪽으로 오목하게 들어가는 정도 — 작을수록 꼭짓점이 더 얇고 뾰족함.
-    final pinch = size.width * 0.04;
-
-    final path = Path()
-      ..moveTo(cx, 0)
-      ..quadraticBezierTo(cx + pinch, cy - pinch, size.width, cy)
-      ..quadraticBezierTo(cx + pinch, cy + pinch, cx, size.height)
-      ..quadraticBezierTo(cx - pinch, cy + pinch, 0, cy)
-      ..quadraticBezierTo(cx - pinch, cy - pinch, cx, 0)
-      ..close();
-
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SparkleStarPainter oldDelegate) =>
-      oldDelegate.color != color;
 }

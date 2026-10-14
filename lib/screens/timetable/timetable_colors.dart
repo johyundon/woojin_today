@@ -1,34 +1,36 @@
 import 'package:flutter/material.dart';
 
-import '../home/home_colors.dart' show accentOrange;
+import '../../theme/app_colors.dart';
 
-/// 시간표 짜기 화면(다크 전용)의 색상 팔레트.
+/// 시간표 짜기 화면("우진이의 하루" v4 리디자인)의 색상 팔레트.
 ///
-/// Figma 노드가 전부 스크린샷으로 평탄화되어 있어 정확한 hex 값을 뽑을 수
-/// 없었다(디자인 브리프 참고). 홈 화면의 accentOrange(`#FF7A29`)를 그대로
-/// 포인트 컬러로 재사용하고, 나머지는 스크린샷을 눈으로 보고 근사한 값이다.
+/// 상단(배지·제목·버튼)은 [AppColors.cobalt] 배경 위에 직접 그리므로 이
+/// 토큰을 쓰지 않는다. 여기 토큰들은 그 아래 흰색 둥근 패널(그리드·검색·
+/// 결과 리스트)에서 쓰는 값이다 — 기존 다크 테마와 반대로 밝은 배경
+/// 기준이라 textPrimary/textSecondary도 그에 맞춰 바뀌었다.
 class TimetableColors {
   TimetableColors._();
 
-  static const Color background = Color(0xFF0B0B0D);
-  static const Color surface = Color(0xFF1C1C1F);
-  static const Color surfaceElevated = Color(0xFF2A2A2E);
-  static const Color border = Color(0xFF2C2C2F);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF9A9A9E);
-  static const Color accent = accentOrange;
+  static const Color background = AppColors.cobalt;
+  static const Color panelBackground = Colors.white;
+  static const Color surface = Color(0xFFF5F3EF);
+  static const Color surfaceElevated = Color(0xFFECE9E2);
+  static const Color border = Color(0xFFE4E1DA);
+  static const Color textPrimary = AppColors.ink;
+  static const Color textSecondary = Color(0xFF9A978F);
+  static const Color accent = AppColors.cobalt;
   static const Color danger = Color(0xFFFF4D4F);
-  static const Color gridLine = Color(0xFF232326);
+  static const Color gridLine = Color(0xFFECEBF3);
 }
 
-/// 강의 블록 색상 팔레트(과목마다 순환). 스크린샷에서 보이는 민트/주황/
-/// 핑크/파랑 계열 4색 + 보조 1색.
+/// 강의 블록 색상 팔레트(과목마다 순환). standalone.html "05 시간표" 시안의
+/// 블록 5색(코발트·코랄·라임·잉크·연코발트)을 그대로 쓴다.
 const List<Color> timetableBlockPalette = [
-  Color(0xFF1FA98A), // 민트/틸
-  Color(0xFFFF7A29), // 주황 (accentOrange)
-  Color(0xFFE0558F), // 핑크/마젠타
-  Color(0xFF3D6CFF), // 파랑/인디고
-  Color(0xFF8B5CF6), // 보라
+  AppColors.cobalt,
+  AppColors.blushPink,
+  AppColors.lime,
+  AppColors.ink,
+  Color(0xFF5B7FE0), // 연코발트. AppColors에 없는 중간톤이라 별도 정의.
 ];
 
 /// 같은 과목(courseCode-section)은 항상 같은 색을 쓰도록 키 해시로 팔레트
@@ -36,4 +38,11 @@ const List<Color> timetableBlockPalette = [
 Color colorForCourseKey(String key) {
   final index = key.hashCode.abs() % timetableBlockPalette.length;
   return timetableBlockPalette[index];
+}
+
+/// [timetableBlockPalette] 색상 위에 올릴 텍스트 색. 라임·코랄처럼 밝은
+/// 배경에는 어두운 잉크색을, 코발트·잉크처럼 어두운 배경에는 흰색을 써야
+/// 읽힌다 — 밝기(luminance) 기준으로 자동 판단한다.
+Color textColorOnBlock(Color background) {
+  return background.computeLuminance() > 0.5 ? AppColors.ink : Colors.white;
 }

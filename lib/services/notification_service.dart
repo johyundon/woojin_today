@@ -25,6 +25,14 @@ class NotificationService {
   static const _noticeChannelName = '공지사항 알림';
   static const _noticeChannelDescription = '새 공지가 올라오면 울린다.';
 
+  static const _classChannelId = 'class_reminders';
+  static const _classChannelName = '강의시간 알림';
+  static const _classChannelDescription = '수업 시작 전에 울린다.';
+
+  /// 강의시간 알림에만 붙이는 payload. 캘린더/공지 알림은 건드리지 않고
+  /// 강의시간 알림만 골라서 취소하기 위한 표식이다.
+  static const _classPayload = 'class_reminder';
+
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
@@ -133,6 +141,48 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
     );
+  }
+
+  /// [firstAt]을 첫 발화 시각으로 삼아, 이후 매주 같은 요일·시각에 반복해서
+  /// 울리도록 예약한다. 같은 [eventId]로 걸린 예약이 있으면 덮어쓴다.
+  Future<void> scheduleWeeklyClassReminder({
+    required String eventId,
+    required String title,
+    required String body,
+    required DateTime firstAt,
+  }) async {
+    final id = _notificationIdFor(eventId);
+    await _plugin.cancel(id: id);
+
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      payload: _classPayload,
+      scheduledDate: tz.TZDateTime.from(firstAt, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _classChannelId,
+          _classChannelName,
+          channelDescription: _classChannelDescription,
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
+  }
+
+  /// 예약돼 있는 강의시간 알림만 전부 취소한다(캘린더/공지 알림은 그대로).
+  Future<void> cancelAllClassReminders() async {
+    final pending = await _plugin.pendingNotificationRequests();
+    for (final request in pending) {
+      if (request.payload == _classPayload) {
+        await _plugin.cancel(id: request.id);
+      }
+    }
   }
 
   Future<void> cancelReminder(String eventId) {
