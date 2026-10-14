@@ -8,25 +8,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:daejin_app/screens/mileage/mileage_screen.dart';
 
 void main() {
-  testWidgets('현황 탭이 기본으로 보이고 내 순위/TOP5가 렌더링된다', (tester) async {
+  testWidgets('총 마일리지 · 이번 학기 · 장학 기준 · 적립 내역이 렌더링된다', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: MileageScreen()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('마일리지 현황'), findsOneWidget);
-    expect(find.text('장학 대상자 확인'), findsOneWidget);
-    expect(find.text('46'), findsOneWidget);
-    expect(find.text('0점'), findsOneWidget);
-    expect(find.text('전체 TOP 5'), findsOneWidget);
-    expect(find.text('1위'), findsOneWidget);
-    expect(find.text('80'), findsOneWidget);
+    expect(find.text('모은 마일리지'), findsOneWidget);
+    expect(find.text('1,240'), findsOneWidget);
+    expect(find.text('실버까지 260P'), findsOneWidget);
+    expect(find.text('+620P'), findsOneWidget);
+    expect(find.text('2,000P'), findsOneWidget);
+    expect(find.text('신입생 멘토링 참여'), findsOneWidget);
+    expect(find.text('+200'), findsOneWidget);
   });
 
-  testWidgets('장학 대상자 확인 탭으로 바꾸면 공지 3건이 보인다', (tester) async {
+  testWidgets('장학 기준 카드를 누르면 공지 3건이 보인다', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: MileageScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('장학 대상자 확인'));
+    await tester.tap(find.text('장학 기준'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -38,7 +38,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MileageScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('장학 대상자 확인'));
+    await tester.tap(find.text('장학 기준'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('대상자 확인').first);

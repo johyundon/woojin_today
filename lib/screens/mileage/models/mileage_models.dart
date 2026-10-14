@@ -1,9 +1,20 @@
-/// 전체 TOP5 순위 한 줄 — 순위 + 점수.
-class MileageRankEntry {
-  const MileageRankEntry({required this.rank, required this.score});
+import 'package:flutter/widgets.dart';
 
-  final int rank;
-  final int score;
+/// 마일리지 적립 내역 한 건.
+class MileageActivity {
+  const MileageActivity({
+    required this.title,
+    required this.date,
+    required this.points,
+    required this.icon,
+  });
+
+  final String title;
+
+  /// "10.08" 형태의 적립일.
+  final String date;
+  final int points;
+  final IconData icon;
 }
 
 /// 장학 대상자 공지 한 건.

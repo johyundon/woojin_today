@@ -1,60 +1,181 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import 'services/mileage_mock_data.dart';
+import 'widgets/mileage_history_card.dart';
 import 'widgets/mileage_scholarship_tab.dart';
-import 'widgets/mileage_segmented_tabs.dart';
-import 'widgets/mileage_status_tab.dart';
+import 'widgets/mileage_total_card.dart' show MileageTotalCard, formatPoints;
 
-/// "마일리지" 화면 (Figma node 6:105).
-///
-/// 이 노드는 실제 Figma 벡터 레이어가 아니라 다른 앱을 캡처한 스크린샷 4장
-/// (6:106~6:109)이 평탄화된 상태라 `get_design_context`로 쓸만한 코드를 뽑을
-/// 수 없었다(calendar_screen.dart, cafeteria_screen.dart와 같은 상황). 스크린샷을
-/// 눈으로 보고 레이아웃/색상/간격을 근사해 재현했다.
+/// "모은 마일리지" 화면(v4 리디자인). 총 포인트 카드, 이번 학기/장학 기준
+/// 카드, 최근 적립 내역을 보여준다. 시안에는 없지만 기존에 있던 "장학 대상자
+/// 확인" 기능은 "장학 기준" 카드를 누르면 열리는 화면으로 그대로 남겼다.
 ///
 /// 마일리지/장학 대상자 API 연동이 없어(명세서에 대응 엔드포인트 없음) 모든
 /// 데이터는 하드코딩된 목데이터([MileageMockData], [MileageNoticeMockData],
 /// [MileageRosterMockData])로만 조회한다.
-class MileageScreen extends StatefulWidget {
+class MileageScreen extends StatelessWidget {
   const MileageScreen({super.key});
 
-  @override
-  State<MileageScreen> createState() => _MileageScreenState();
-}
-
-class _MileageScreenState extends State<MileageScreen> {
-  int _selectedTab = 0;
+  void _openScholarshipTargets(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            foregroundColor: AppColors.textPrimary,
+            title: const Text(
+              '장학 대상자 확인',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+          ),
+          body: const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: MileageScholarshipTab(),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.cobalt,
       body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: AppColors.cobaltDeep,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.lime,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: const Text(
+                  '비교과 · 활동',
+                  style: TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '모은 마일리지',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.04,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const MileageTotalCard(),
+            const SizedBox(height: 12),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _PointCard(
+                      color: AppColors.lime,
+                      label: '이번 학기',
+                      value: '+${formatPoints(MileageMockData.termPoints)}P',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _PointCard(
+                      color: AppColors.blushPink,
+                      label: '장학 기준',
+                      value:
+                          '${formatPoints(MileageMockData.scholarshipPoints)}P',
+                      onTap: () => _openScholarshipTargets(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const MileageHistoryCard(activities: MileageMockData.activities),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PointCard extends StatelessWidget {
+  const _PointCard({
+    required this.color,
+    required this.label,
+    required this.value,
+    this.onTap,
+  });
+
+  final Color color;
+  final String label;
+  final String value;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(22),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 20, 4),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: AppColors.textPrimary,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: MileageSegmentedTabs(
-                selectedIndex: _selectedTab,
-                onChanged: (index) => setState(() => _selectedTab = index),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
               ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: _selectedTab == 0
-                  ? const MileageStatusTab()
-                  : const MileageScholarshipTab(),
             ),
           ],
         ),

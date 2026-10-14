@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
+
 import '../models/mileage_models.dart';
 
-/// "마일리지 현황" 탭 목데이터.
+/// "모은 마일리지" 화면 목데이터.
 ///
 /// *** 중요: 서버 API 없음 ***
 /// API 명세서(daejin-api-spec-reference)에 마일리지 조회에 대응하는
@@ -10,16 +12,36 @@ import '../models/mileage_models.dart';
 class MileageMockData {
   MileageMockData._();
 
-  // 스크린샷(Figma node 6:106)에서 그대로 읽은 값.
-  static const int myRank = 46;
-  static const int myScore = 0;
+  static const int totalPoints = 1240;
 
-  // 1위 점수(80) 대비 비율로 바 길이를 계산한다. 스크린샷에서 그대로 읽은 값.
-  static const List<MileageRankEntry> top5 = [
-    MileageRankEntry(rank: 1, score: 80),
-    MileageRankEntry(rank: 2, score: 72),
-    MileageRankEntry(rank: 3, score: 64),
-    MileageRankEntry(rank: 4, score: 32),
-    MileageRankEntry(rank: 5, score: 26),
+  /// 다음 등급 이름과 그 등급에 필요한 누적 포인트.
+  static const String nextTierName = '실버';
+  static const int nextTierPoints = 1500;
+
+  /// 이번 학기에 적립한 포인트.
+  static const int termPoints = 620;
+
+  /// 마일리지 장학 기준 포인트.
+  static const int scholarshipPoints = 2000;
+
+  static const List<MileageActivity> activities = [
+    MileageActivity(
+      title: '신입생 멘토링 참여',
+      date: '10.08',
+      points: 200,
+      icon: Icons.groups,
+    ),
+    MileageActivity(
+      title: '진로 특강 출석',
+      date: '10.02',
+      points: 100,
+      icon: Icons.mic,
+    ),
+    MileageActivity(
+      title: '지도교수 상담 완료',
+      date: '09.25',
+      points: 150,
+      icon: Icons.school,
+    ),
   ];
 }
