@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
 /// 체크박스 + 라벨 (+ 선택적 "보기" 링크) 한 줄.
@@ -35,10 +36,12 @@ class AppCheckboxRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: labelStyle ??
+                style:
+                    labelStyle ??
                     const TextStyle(
-                      color: AppColors.textPrimary,
+                      color: AppColors.ink,
                       fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ),
@@ -48,10 +51,11 @@ class AppCheckboxRow extends StatelessWidget {
                 child: const Text(
                   '보기',
                   style: TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 14,
+                    color: AppColors.cobalt,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                     decoration: TextDecoration.underline,
-                    decorationColor: AppColors.accent,
+                    decorationColor: AppColors.cobalt,
                   ),
                 ),
               ),
@@ -71,15 +75,15 @@ class _CheckboxBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      width: 22,
-      height: 22,
+      width: 24,
+      height: 24,
       decoration: BoxDecoration(
-        color: checked ? AppColors.accent : Colors.transparent,
+        color: checked ? AppColors.cobalt : Colors.white,
         border: Border.all(
-          color: checked ? AppColors.accent : AppColors.border,
+          color: checked ? AppColors.cobalt : const Color(0xFFCFCBC3),
           width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(7),
       ),
       child: checked
           ? const Icon(Icons.check, size: 16, color: Colors.white)

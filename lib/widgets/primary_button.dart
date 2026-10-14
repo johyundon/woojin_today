@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
 /// 화면 하단에 고정되는 풀폭 CTA 버튼.
-/// enabled 여부에 따라 오렌지(활성) / 회색(비활성) 스타일로 전환된다.
+/// enabled 여부에 따라 코발트(활성) / 연한 코발트(비활성) 스타일로 전환된다.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -17,24 +18,34 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 52,
+      height: 62,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(31),
+        boxShadow: enabled
+            ? [
+                BoxShadow(
+                  color: AppColors.cobalt.withValues(alpha: 0.4),
+                  offset: const Offset(0, 12),
+                  blurRadius: 26,
+                ),
+              ]
+            : null,
+      ),
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          disabledBackgroundColor: AppColors.disabledButton,
+          backgroundColor: AppColors.cobalt,
+          disabledBackgroundColor: AppColors.cobalt.withValues(alpha: 0.35),
           foregroundColor: Colors.white,
-          disabledForegroundColor: AppColors.disabledButtonText,
+          disabledForegroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: const StadiumBorder(),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
       ),
     );
