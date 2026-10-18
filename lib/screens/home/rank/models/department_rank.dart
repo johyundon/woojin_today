@@ -35,6 +35,8 @@ class SubjectRank {
 class DepartmentRank {
   const DepartmentRank({
     required this.departmentName,
+    required this.shortName,
+    required this.semester,
     required this.grade,
     required this.myGpa,
     required this.departmentAverageGpa,
@@ -45,6 +47,12 @@ class DepartmentRank {
   });
 
   final String departmentName;
+
+  /// 칩에 쓰는 줄임 이름(예: "컴공").
+  final String shortName;
+
+  /// 몇 학기인지(목업).
+  final int semester;
 
   final int grade;
 

@@ -5,14 +5,32 @@ import '../models/department_rank.dart';
 
 const _mutedText = Color(0xFF6B6B70);
 
-/// "과목별 석차" 카드: 과목명 · 등급 배지 · 석차 막대 · "3/84".
-class SubjectRankCard extends StatelessWidget {
+/// 처음에 보여주는 과목 수. 더 있으면 "전체 ›"로 펼친다.
+const _previewCount = 3;
+
+/// "과목별 석차" 카드: 과목명 · 등급 배지 · 석차 막대 · "3/84". 과목이
+/// [_previewCount]개를 넘으면 오른쪽 위 "전체 ›"를 눌러 전부 펼치고 "접기 ‹"로 다시
+/// 줄인다.
+class SubjectRankCard extends StatefulWidget {
   const SubjectRankCard({required this.subjects, super.key});
 
   final List<SubjectRank> subjects;
 
   @override
+  State<SubjectRankCard> createState() => _SubjectRankCardState();
+}
+
+class _SubjectRankCardState extends State<SubjectRankCard> {
+  bool _showAll = false;
+
+  @override
   Widget build(BuildContext context) {
+    final subjects = widget.subjects;
+    final canExpand = subjects.length > _previewCount;
+    final visible = _showAll || !canExpand
+        ? subjects
+        : subjects.take(_previewCount).toList();
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
       decoration: BoxDecoration(
@@ -22,16 +40,37 @@ class SubjectRankCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '과목별 석차',
-            style: TextStyle(
-              color: AppColors.ink,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              const Text(
+                '과목별 석차',
+                style: TextStyle(
+                  color: AppColors.ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              if (canExpand)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _showAll = !_showAll),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      _showAll ? '접기 ‹' : '전체 ›',
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 10),
-          for (final subject in subjects) _SubjectRow(subject: subject),
+          for (final subject in visible) _SubjectRow(subject: subject),
         ],
       ),
     );

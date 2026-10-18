@@ -9,16 +9,24 @@ class _DeptConfig {
   const _DeptConfig({
     required this.totalCount,
     required this.myRank,
-    required this.topGpa,
-    required this.bottomGpa,
-    required this.seed,
+    required this.mean,
+    required this.sd,
+    required this.shortName,
+    this.myGpa,
   });
 
   final int totalCount;
   final int myRank;
-  final double topGpa;
-  final double bottomGpa;
-  final int seed;
+
+  /// 학과 평점의 평균/표준편차 — 이 값으로 종 모양(정규분포) 분포를 만든다.
+  final double mean;
+  final double sd;
+
+  /// 칩에 쓰는 줄임 이름.
+  final String shortName;
+
+  /// 분포에서 나온 값 대신 고정해서 쓸 내 평점(없으면 내 등수 자리의 값).
+  final double? myGpa;
 }
 
 /// ⚠️ 목업 데이터, 실제 성적 API 아님.
@@ -26,8 +34,8 @@ class _DeptConfig {
 /// "학과 전체 성적 분포"를 조회하는 포털/수강신청 API는 존재하지 않는다.
 /// [FakeStudentInfoService](../../../services/fakes/fake_student_info_service.dart)
 /// 처럼 가짜 응답을 돌려주는 서비스로, 학과별 등수/성적 분포를 전부 이 파일
-/// 안에서 지어낸다. 같은 학과를 다시 조회하면 항상 같은 숫자가 나오도록
-/// 고정 시드(seed)로 생성한다.
+/// 안에서 지어낸다. 같은 학과를 다시 조회하면 항상 같은 숫자가 나오도록 난수 없이
+/// 계산만으로 만든다.
 class FakeDepartmentRankService {
   /// 학과 변경 화면에서 고를 수 있는 학과 목록.
   static const List<String> departmentNames = [
@@ -60,82 +68,85 @@ class FakeDepartmentRankService {
   };
 
   static const Map<String, _DeptConfig> _configs = {
+    // 시안("나 몇 등이야?")의 숫자: 84명 중 12등(상위 14%), 평점 4.12, 학과 평균
+    // 3.41(평균보다 0.71 높음).
     '컴퓨터공학전공': _DeptConfig(
-      totalCount: 52,
-      myRank: 7,
-      topGpa: 4.5,
-      bottomGpa: 1.8,
-      seed: 1,
+      totalCount: 84,
+      myRank: 12,
+      mean: 3.41,
+      sd: 0.5,
+      shortName: '컴공',
+      myGpa: 4.12,
     ),
     '대순종학과': _DeptConfig(
       totalCount: 18,
       myRank: 3,
-      topGpa: 4.4,
-      bottomGpa: 2.2,
-      seed: 2,
+      mean: 3.5,
+      sd: 0.45,
+      shortName: '대순',
     ),
     '사학과': _DeptConfig(
       totalCount: 34,
       myRank: 15,
-      topGpa: 4.3,
-      bottomGpa: 1.9,
-      seed: 3,
+      mean: 3.3,
+      sd: 0.5,
+      shortName: '사학',
     ),
     '전기공학과': _DeptConfig(
       totalCount: 61,
       myRank: 22,
-      topGpa: 4.5,
-      bottomGpa: 1.7,
-      seed: 4,
+      mean: 3.35,
+      sd: 0.5,
+      shortName: '전기',
     ),
     'IT기계공학과': _DeptConfig(
       totalCount: 45,
       myRank: 11,
-      topGpa: 4.4,
-      bottomGpa: 1.8,
-      seed: 5,
+      mean: 3.4,
+      sd: 0.5,
+      shortName: 'IT기계',
     ),
     '화학공학과': _DeptConfig(
       totalCount: 39,
       myRank: 9,
-      topGpa: 4.3,
-      bottomGpa: 2.0,
-      seed: 6,
+      mean: 3.3,
+      sd: 0.5,
+      shortName: '화공',
     ),
     '데이터경영산업공학과': _DeptConfig(
       totalCount: 47,
       myRank: 5,
-      topGpa: 4.5,
-      bottomGpa: 1.9,
-      seed: 7,
+      mean: 3.45,
+      sd: 0.5,
+      shortName: '데경',
     ),
     '토목공학전공': _DeptConfig(
       totalCount: 29,
       myRank: 13,
-      topGpa: 4.2,
-      bottomGpa: 2.1,
-      seed: 8,
+      mean: 3.25,
+      sd: 0.5,
+      shortName: '토목',
     ),
     '건축공학과': _DeptConfig(
       totalCount: 36,
       myRank: 18,
-      topGpa: 4.3,
-      bottomGpa: 1.8,
-      seed: 9,
+      mean: 3.3,
+      sd: 0.5,
+      shortName: '건축공',
     ),
     '건축공학전공': _DeptConfig(
       totalCount: 31,
       myRank: 10,
-      topGpa: 4.4,
-      bottomGpa: 2.0,
-      seed: 10,
+      mean: 3.35,
+      sd: 0.5,
+      shortName: '건축',
     ),
     '영어영문학과': _DeptConfig(
       totalCount: 42,
       myRank: 20,
-      topGpa: 4.3,
-      bottomGpa: 1.9,
-      seed: 11,
+      mean: 3.3,
+      sd: 0.5,
+      shortName: '영문',
     ),
   };
 
@@ -149,30 +160,26 @@ class FakeDepartmentRankService {
   }
 
   DepartmentRank _build(String departmentName, _DeptConfig config) {
-    final random = Random(config.seed);
-    final gpas = <double>[];
-    var current = config.topGpa;
+    // 등수마다 "상위 몇 %인 사람의 평점"을 정규분포의 역함수로 구해 채운다 — 그래야
+    // 점수 분포 그래프가 가운데가 불룩한 종 모양이 된다. 1등부터 내림차순.
+    final n = config.totalCount;
+    final gpas = <double>[
+      for (var i = 0; i < n; i++)
+        double.parse(
+          (config.mean + config.sd * _inverseNormalCdf(1 - (i + 0.5) / n))
+              .clamp(1.0, 4.5)
+              .toStringAsFixed(2),
+        ),
+    ];
 
-    for (var i = 0; i < config.totalCount; i++) {
-      // 바로 앞 등수와 같은 평점(동점)이 간간이 나오도록 18% 확률로 내리지
-      // 않고 유지한다.
-      if (i > 0 && random.nextDouble() < 0.18) {
-        gpas.add(gpas.last);
-        continue;
-      }
-      final remaining = config.totalCount - i;
-      final span = current - config.bottomGpa;
-      final step = span / remaining * (0.6 + random.nextDouble() * 0.8);
-      current = (current - step).clamp(config.bottomGpa, config.topGpa);
-      gpas.add(double.parse(current.toStringAsFixed(2)));
-    }
-
-    final myGpa = gpas[config.myRank - 1];
+    final myGpa = config.myGpa ?? gpas[config.myRank - 1];
     final average = gpas.reduce((a, b) => a + b) / gpas.length;
 
     return DepartmentRank(
       departmentName: departmentName,
-      grade: 3,
+      shortName: config.shortName,
+      semester: 1,
+      grade: 1,
       myGpa: myGpa,
       departmentAverageGpa: double.parse(average.toStringAsFixed(2)),
       totalCount: config.totalCount,
@@ -183,25 +190,75 @@ class FakeDepartmentRankService {
       ],
       subjects: [
         // 내 등수에 비례해 과목별 석차를 지어낸다(등급 순서대로 좋은 석차부터).
-        SubjectRank(
-          name: '컴퓨터개론',
-          grade: 'A+',
-          rank: max(1, (config.myRank * 0.25).round()),
-          total: config.totalCount,
-        ),
-        SubjectRank(
-          name: '이산수학',
-          grade: 'A0',
-          rank: max(1, (config.myRank * 0.75).round()),
-          total: config.totalCount,
-        ),
-        SubjectRank(
-          name: '대학영어',
-          grade: 'B+',
-          rank: min(config.totalCount, (config.myRank * 2.6).round()),
-          total: config.totalCount,
-        ),
+        _subject('컴퓨터개론', 'A+', config.myRank * 0.25, n),
+        _subject('이산수학', 'A0', config.myRank * 0.75, n),
+        _subject('대학영어', 'B+', config.myRank * 2.6, n),
+        _subject('자료구조', 'A0', config.myRank * 0.9, n),
+        _subject('선형대수', 'B0', config.myRank * 3.1, n),
+        _subject('운영체제', 'B+', config.myRank * 2.2, n),
       ],
     );
+  }
+
+  SubjectRank _subject(String name, String grade, double rank, int total) {
+    return SubjectRank(
+      name: name,
+      grade: grade,
+      rank: rank.round().clamp(1, total),
+      total: total,
+    );
+  }
+
+  /// 표준정규분포의 누적확률 [p](0~1)에 해당하는 값(z). Acklam 근사식.
+  static double _inverseNormalCdf(double p) {
+    const a = [
+      -3.969683028665376e+01,
+      2.209460984245205e+02,
+      -2.759285104469687e+02,
+      1.383577518672690e+02,
+      -3.066479806614716e+01,
+      2.506628277459239e+00,
+    ];
+    const b = [
+      -5.447609879822406e+01,
+      1.615858368580409e+02,
+      -1.556989798598866e+02,
+      6.680131188771972e+01,
+      -1.328068155288572e+01,
+    ];
+    const c = [
+      -7.784894002430293e-03,
+      -3.223964580411365e-01,
+      -2.400758277161838e+00,
+      -2.549732539343734e+00,
+      4.374664141464968e+00,
+      2.938163982698783e+00,
+    ];
+    const d = [
+      7.784695709041462e-03,
+      3.224671290700398e-01,
+      2.445134137142996e+00,
+      3.754408661907416e+00,
+    ];
+    const low = 0.02425;
+
+    if (p < low) {
+      final q = sqrt(-2 * log(p));
+      return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q +
+              c[5]) /
+          ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+    }
+    if (p > 1 - low) {
+      final q = sqrt(-2 * log(1 - p));
+      return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q +
+              c[5]) /
+          ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+    }
+    final q = p - 0.5;
+    final r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r +
+            a[5]) *
+        q /
+        (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
   }
 }

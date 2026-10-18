@@ -120,7 +120,7 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${data.departmentName} · ${data.grade}학년',
+                              '${data.semester}학기 · ${data.shortName} ${data.grade}학년',
                               style: const TextStyle(
                                 color: AppColors.ink,
                                 fontSize: 13,
