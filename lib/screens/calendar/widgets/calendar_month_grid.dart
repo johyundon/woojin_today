@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../utils/weekday_labels.dart';
 import '../models/calendar_event.dart';
 
-const List<String> _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 const Color _weekendRed = Color(0xFFE5484D);
 const Color _mutedText = Color(0xFF6B6B70);
 
@@ -73,11 +73,11 @@ class CalendarMonthGrid extends StatelessWidget {
       children: [
         Row(
           children: [
-            for (var i = 0; i < _weekdayLabels.length; i++)
+            for (var i = 0; i < weekdayLabelsMonFirst.length; i++)
               Expanded(
                 child: Center(
                   child: Text(
-                    _weekdayLabels[i],
+                    weekdayLabelsMonFirst[i],
                     style: TextStyle(
                       color: i >= 5 ? _weekendRed : _mutedText,
                       fontSize: 12,

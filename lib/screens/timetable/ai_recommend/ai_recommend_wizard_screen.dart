@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/weekday_labels.dart';
 import '../models/ai_recommend_answers.dart';
 
-const List<String> _weekdayLabels = ['월', '화', '수', '목', '금'];
 const List<Weekday> _weekdayValues = [
   Weekday.mon,
   Weekday.tue,
@@ -434,7 +434,7 @@ class _FreeDayStepState extends State<_FreeDayStep> {
                 if (i > 0) const SizedBox(width: 8),
                 Expanded(
                   child: _WeekdayChip(
-                    label: _weekdayLabels[i],
+                    label: weekdayLabelsWeekdaysOnly[i],
                     selected:
                         answers.freeDayMode == FreeDayMode.specificDay &&
                         answers.specificFreeDay == _weekdayValues[i],

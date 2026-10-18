@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/time_format.dart';
 
 /// 홈 화면의 "다음 수업" 흰색 큰 카드 ("우진이의 하루" v4 리디자인).
 /// [next]가 null이면 시간표를 아직 못 불러왔거나(= ![timetableLoaded]) 오늘
@@ -44,10 +45,6 @@ class NextClassCard extends StatelessWidget {
 
   /// [upcoming] 블록의 "시간표 →" 버튼을 눌렀을 때.
   final VoidCallback onTimetableTap;
-
-  static String _hhmm(int minutes) =>
-      '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
-      '${(minutes % 60).toString().padLeft(2, '0')}';
 
   static String _remainingLabel(int minutes) {
     if (minutes < 60) return '$minutes분 남음';
@@ -235,7 +232,7 @@ class NextClassCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${_hhmm(item.slot.startMinutes)} ${item.course.courseName}',
+                      '${formatMinutesAsTime(item.slot.startMinutes)} ${item.course.courseName}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -346,7 +343,7 @@ class NextClassCard extends StatelessWidget {
           textBaseline: TextBaseline.alphabetic,
           children: [
             Text(
-              _hhmm(item.slot.startMinutes),
+              formatMinutesAsTime(item.slot.startMinutes),
               style: const TextStyle(
                 color: AppColors.ink,
                 fontSize: 46,
@@ -357,7 +354,7 @@ class NextClassCard extends StatelessWidget {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                '– ${_hhmm(item.slot.endMinutes)}',
+                '– ${formatMinutesAsTime(item.slot.endMinutes)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../../utils/weekday_labels.dart';
 import '../../widgets/mascot_sticker.dart';
 import 'models/calendar_event.dart';
 import 'widgets/time_pick_sheet.dart';
 
-const List<String> _weekdayKor = ['일', '월', '화', '수', '목', '금', '토'];
 const Color _fieldBackground = Color(0xFFF1F1F5);
 const Color _mutedText = Color(0xFF6B6B70);
 
@@ -391,7 +391,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
   }
 
   static String _dateLabel(DateTime d) =>
-      '${d.month}.${d.day} ${_weekdayKor[d.weekday % 7]}';
+      '${d.month}.${d.day} ${weekdayLabelsSunFirst[d.weekday % 7]}';
 
   static String _timeLabel(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';

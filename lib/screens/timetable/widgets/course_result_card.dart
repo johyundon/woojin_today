@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/course_catalog_service.dart';
+import '../../../utils/credit_format.dart';
 import '../timetable_colors.dart';
 
 /// 과목 추가 패널의 검색 결과 한 줄.
@@ -44,7 +45,7 @@ class CourseResultCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${course.professor} · ${_formatCredit(course.credit)}학점 · ${course.courseType}',
+                    '${course.professor} · ${formatCredit(course.credit)}학점 · ${course.courseType}',
                     style: const TextStyle(
                       color: TimetableColors.textSecondary,
                       fontSize: 12,
@@ -103,8 +104,3 @@ class CourseResultCard extends StatelessWidget {
   }
 }
 
-String _formatCredit(double credit) {
-  return credit == credit.roundToDouble()
-      ? credit.toInt().toString()
-      : credit.toString();
-}

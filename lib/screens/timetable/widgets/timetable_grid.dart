@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/weekday_labels.dart';
 import '../grid_layout.dart';
 import '../models/planned_course.dart';
 import '../timetable_colors.dart';
 import 'course_block.dart';
 
-const List<String> _weekdayLabels = ['월', '화', '수', '목', '금'];
 const double _hourLabelColumnWidth = 28;
 
 /// 빈 셀 탭으로 만든 "미확정" 시간 선택. 탭 하나 = 1시간 블록으로 단순화했다
@@ -69,7 +69,7 @@ class TimetableGrid extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: _WeekdayLabel(
-                    label: _weekdayLabels[i],
+                    label: weekdayLabelsWeekdaysOnly[i],
                     isToday: gridWeekdays[i] == today,
                   ),
                 ),

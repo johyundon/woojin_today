@@ -1,4 +1,5 @@
 import '../../../services/class_schedule_parser.dart';
+import '../../../utils/time_format.dart';
 import '../models/planned_course.dart';
 
 /// 수업 시작 몇 분 전에 알림을 울릴지.
@@ -43,7 +44,7 @@ List<ClassReminder> buildClassReminders(
         ClassReminder(
           id: '${course.key}-${slot.day.index + 1}-${slot.startMinutes}',
           title: '${course.courseName} 수업 $leadMinutes분 전',
-          body: '${_formatTime(slot.startMinutes)} 시작$room',
+          body: '${formatMinutesAsTime(slot.startMinutes)} 시작$room',
           weekday: slot.day.index + 1,
           minutesOfDay: minutes,
         ),
@@ -76,9 +77,4 @@ DateTime nextWeeklyOccurrence(DateTime now, int weekday, int minutesOfDay) {
     );
   }
   return candidate;
-}
-
-String _formatTime(int minutes) {
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(minutes ~/ 60)}:${two(minutes % 60)}';
 }

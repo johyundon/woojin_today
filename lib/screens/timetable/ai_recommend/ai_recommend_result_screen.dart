@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/time_format.dart';
+import '../../../utils/weekday_labels.dart';
 import '../../../widgets/mascot_sticker.dart';
 import '../grid_layout.dart';
 import '../models/ai_recommend_answers.dart';
 import '../models/planned_course.dart';
 import '../timetable_colors.dart';
 
-const List<String> _weekdayLabels = ['월', '화', '수', '목', '금'];
 const List<String> _weekdayFullNames = ['월요일', '화요일', '수요일', '목요일', '금요일'];
 const double _hourLabelColumnWidth = 22;
 
@@ -522,14 +523,14 @@ class _CandidateGrid extends StatelessWidget {
           Row(
             children: [
               const SizedBox(width: _hourLabelColumnWidth),
-              for (var i = 0; i < _weekdayLabels.length; i++)
+              for (var i = 0; i < weekdayLabelsWeekdaysOnly.length; i++)
                 Expanded(
                   child: Center(
                     child: i == freeDayIndex
                         ? Column(
                             children: [
                               Text(
-                                _weekdayLabels[i],
+                                weekdayLabelsWeekdaysOnly[i],
                                 style: const TextStyle(
                                   color: AppColors.cobalt,
                                   fontSize: 13,
@@ -547,7 +548,7 @@ class _CandidateGrid extends StatelessWidget {
                             ],
                           )
                         : Text(
-                            _weekdayLabels[i],
+                            weekdayLabelsWeekdaysOnly[i],
                             style: const TextStyle(
                               color: TimetableColors.textSecondary,
                               fontSize: 13,
@@ -668,10 +669,6 @@ class _LockedCourseBlock extends StatelessWidget {
 
   final CourseBlockLayout layout;
 
-  static String _hhmm(int minutes) =>
-      '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
-      '${(minutes % 60).toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     final color = colorForCourseKey(layout.course.key);
@@ -716,7 +713,8 @@ class _LockedCourseBlock extends StatelessWidget {
           ),
           Flexible(
             child: Text(
-              '${_hhmm(layout.startMinutes)}–${_hhmm(layout.endMinutes)}',
+              '${formatMinutesAsTime(layout.startMinutes)}–'
+              '${formatMinutesAsTime(layout.endMinutes)}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

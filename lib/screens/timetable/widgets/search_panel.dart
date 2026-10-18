@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/class_schedule_parser.dart';
+import '../../../utils/time_format.dart';
+import '../../../utils/weekday_labels.dart';
 import '../course_filters.dart';
 import '../timetable_colors.dart';
 import 'timetable_grid.dart' show PendingSlot;
 
-const List<String> _weekdayChipLabels = ['월', '화', '수', '목', '금'];
 const List<Weekday> _weekdayChipValues = [
   Weekday.mon,
   Weekday.tue,
@@ -13,12 +14,6 @@ const List<Weekday> _weekdayChipValues = [
   Weekday.thu,
   Weekday.fri,
 ];
-
-String _formatMinutes(double minutes) {
-  final h = (minutes ~/ 60).toString().padLeft(2, '0');
-  final m = (minutes % 60).toInt().toString().padLeft(2, '0');
-  return '$h:$m';
-}
 
 /// 검색창 + 필터 토글 + (펼쳤을 때) 필터 패널 + 활성 필터 칩 로우.
 class SearchFilterBar extends StatelessWidget {
@@ -142,19 +137,19 @@ class SearchFilterBar extends StatelessWidget {
 
     if (pendingSlot != null) {
       final label =
-          _weekdayChipLabels[_weekdayChipValues.indexOf(pendingSlot!.day)];
+          weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(pendingSlot!.day)];
       chips.add(
         _ActiveChip(
           label:
-              '$label ${_formatMinutes(pendingSlot!.startMinutes.toDouble())}'
-              '~${_formatMinutes(pendingSlot!.endMinutes.toDouble())}',
+              '$label ${formatMinutesAsTime(pendingSlot!.startMinutes)}'
+              '~${formatMinutesAsTime(pendingSlot!.endMinutes)}',
           onClear: onClearPendingSlot,
         ),
       );
     }
     if (filters.day != null) {
       final label =
-          _weekdayChipLabels[_weekdayChipValues.indexOf(filters.day!)];
+          weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(filters.day!)];
       chips.add(
         _ActiveChip(
           label: '$label요일',
@@ -260,11 +255,11 @@ class SearchFilterBar extends StatelessWidget {
             label: '요일',
             selectedLabel: filters.day == null
                 ? null
-                : _weekdayChipLabels[_weekdayChipValues.indexOf(filters.day!)],
+                : weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(filters.day!)],
             options: [
               const _DropdownOption(null, '전체'),
               for (var i = 0; i < _weekdayChipValues.length; i++)
-                _DropdownOption(_weekdayChipValues[i], _weekdayChipLabels[i]),
+                _DropdownOption(_weekdayChipValues[i], weekdayLabelsWeekdaysOnly[i]),
             ],
             onSelected: (value) {
               filters.day = value;
@@ -329,7 +324,8 @@ class SearchFilterBar extends StatelessWidget {
           ),
         ),
         Text(
-          '${_formatMinutes(filters.timeRange.start)}~${_formatMinutes(filters.timeRange.end)}',
+          '${formatMinutesAsTime(filters.timeRange.start.toInt())}~'
+          '${formatMinutesAsTime(filters.timeRange.end.toInt())}',
           style: const TextStyle(
             color: TimetableColors.textSecondary,
             fontSize: 11,

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../utils/weekday_labels.dart';
 import '../models/calendar_event.dart';
 import 'sheet_header.dart';
 
-const List<String> _weekdayKor = ['일', '월', '화', '수', '목', '금', '토'];
 const Color _mutedText = Color(0xFF6B6B70);
 
 /// 상세 팝업에서 사용자가 고른 동작.
@@ -56,7 +56,7 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
     final e = event.endDate;
     final sameDay = s.year == e.year && s.month == e.month && s.day == e.day;
     return sameDay
-        ? '${md(s)} ${_weekdayKor[s.weekday % 7]}요일'
+        ? '${md(s)} ${weekdayLabelsSunFirst[s.weekday % 7]}요일'
         : '${md(s)} ~ ${md(e)}';
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/course_catalog_service.dart';
+import '../../../utils/credit_format.dart';
 import '../timetable_colors.dart';
 
 /// 과목 상세 다이얼로그(상태 6). "닫기" / "강의계획서 보기" 두 버튼.
@@ -48,7 +49,7 @@ class CourseDetailDialog extends StatelessWidget {
             const SizedBox(height: 16),
             _Row('교수', course.professor),
             _Row('이수구분', course.courseType),
-            _Row('학점', _formatCredit(course.credit)),
+            _Row('학점', formatCredit(course.credit)),
             _Row('학년', course.targetGrade),
             _Row('시간', course.rawSchedule),
             _Row('강의실', course.room),
@@ -97,12 +98,6 @@ class CourseDetailDialog extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatCredit(double credit) {
-  return credit == credit.roundToDouble()
-      ? credit.toInt().toString()
-      : credit.toString();
 }
 
 class _Row extends StatelessWidget {
