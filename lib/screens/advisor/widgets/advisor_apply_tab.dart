@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/credential_storage.dart';
-import '../../../theme/app_colors.dart';
 import '../models/advisor_consultation_models.dart';
 import '../services/advisor_consultation_mock_data.dart';
+import 'advisor_apply_content_step.dart';
+import 'advisor_apply_done_card.dart';
+import 'advisor_apply_email_step.dart';
+import 'advisor_apply_method_step.dart';
+import 'advisor_apply_phone_step.dart';
+import 'advisor_apply_professor_summary_card.dart';
+import 'advisor_apply_search_card.dart';
 
-/// "지도교수 상담 신청" 탭 본문 — 상담교수/상담방식 선택 → 전화번호 → 이메일 →
-/// 상담 내용 4단계 (Figma node 6:123 "지도교수상담 - 온라인 상담", 스크린샷
-/// 8장). "방문 상담"을 골라도 같은 4단계를 그대로 쓴다 — 스크린샷엔 "온라인
-/// 상담" 흐름만 있고 "방문 상담" 전용 흐름은 없어서, 교수와 연락할 방법은
-/// 상담 방식과 무관하게 똑같이 필요하다고 보고 그대로 재사용했다.
+/// "상담 신청" 탭 본문(v4 리디자인). 상담교수는 모든 단계에서 항상 위에
+/// 떠 있고(눌러서 "변경"하면 검색 패널로 교체), 그 아래 단계 카드는 고른
+/// 상담 방식에 따라 갈린다 — 온라인 상담은 교수/방식→전화번호→이메일→
+/// 상담 내용 4단계, 방문 상담은 교수/방식+시간 선택→상담 내용 2단계로
+/// 끝난다(방문은 전화/이메일을 안 받는다). 마지막에 신청하면 같은 자리에
+/// 완료 카드가 뜬다.
 class AdvisorApplyTab extends StatefulWidget {
   const AdvisorApplyTab({
     super.key,
     required this.advisorName,
     required this.advisorLoading,
+    required this.onViewStatus,
   });
 
   /// 본인의 실제 지도교수 성함. 기본 선택은 항상 이 값이다.
@@ -22,6 +30,9 @@ class AdvisorApplyTab extends StatefulWidget {
 
   /// 지도교수 성함을 아직 불러오는 중인지.
   final bool advisorLoading;
+
+  /// 신청 완료 후 "상담 현황 보기"를 눌렀을 때 — 상담 현황 탭으로 전환.
+  final VoidCallback onViewStatus;
 
   @override
   State<AdvisorApplyTab> createState() => _AdvisorApplyTabState();
@@ -37,10 +48,17 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
   final _contentController = TextEditingController();
   final _phoneFirstController = TextEditingController(text: '010');
 
+  final _phoneFirstFocus = FocusNode();
+  final _phoneMiddleFocus = FocusNode();
+  final _phoneLastFocus = FocusNode();
+
   int _step = 0;
   bool _searching = false;
+  bool _submitted = false;
   ProfessorOption? _selectedProfessor;
-  ConsultationMethod? _selectedMethod;
+  ConsultationMethod _selectedMethod = ConsultationMethod.online;
+  DateTime? _selectedVisitDate;
+  String? _selectedVisitTime;
 
   @override
   void initState() {
@@ -65,8 +83,8 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
   }
 
   /// 저장된 로그인 학번(CredentialStorage)으로 학교 이메일을 미리 채워준다
-  /// (Figma 스크린샷의 "20211476@daejin.ac.kr"처럼 학번+"@daejin.ac.kr"
-  /// 형식). 자격증명이 없으면(세션 없이 들어온 경우 등) 빈 채로 둔다.
+  /// (v4 시안의 "20211476@daejin.ac.kr"처럼 학번+"@daejin.ac.kr" 형식).
+  /// 자격증명이 없으면(세션 없이 들어온 경우 등) 빈 채로 둔다.
   Future<void> _prefillEmail() async {
     final credentials = await CredentialStorage().read();
     if (!mounted || credentials == null) return;
@@ -100,6 +118,9 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
     _phoneFirstController.dispose();
     _phoneMiddleController.dispose();
     _phoneLastController.dispose();
+    _phoneFirstFocus.dispose();
+    _phoneMiddleFocus.dispose();
+    _phoneLastFocus.dispose();
     _emailController.dispose();
     _contentController.dispose();
     super.dispose();
@@ -120,6 +141,12 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
     return _allProfessors.where((p) => p.name.contains(query)).toList();
   }
 
+  bool get _isVisit => _selectedMethod == ConsultationMethod.visit;
+
+  /// 방문 상담이면 교수/방식+시간 선택 → 상담 내용 2단계, 온라인이면
+  /// 교수/방식 → 전화번호 → 이메일 → 상담 내용 4단계.
+  int get _totalSteps => _isVisit ? 2 : 4;
+
   bool get _phoneValid =>
       _phoneFirstController.text.trim().length >= 3 &&
       _phoneMiddleController.text.trim().length == 4 &&
@@ -130,481 +157,147 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
   bool get _contentValid =>
       _contentController.text.trim().length >= _minContentLength;
 
-  void _goNext() => setState(() => _step++);
+  bool get _methodStepValid {
+    if (_selectedProfessor == null) return false;
+    if (!_isVisit) return true;
+    return _selectedVisitDate != null && _selectedVisitTime != null;
+  }
+
+  void _goNext() {
+    if (_step == _totalSteps - 1) {
+      _submit();
+    } else {
+      setState(() => _step++);
+    }
+  }
 
   void _goBack() => setState(() => _step--);
 
   void _submit() {
     // 상담 신청 API가 없는 목데이터 화면이라 실제 서버로 전송되지 않는다 —
-    // 신청 흐름만 흉내내고 스낵바로 확인만 보여준다.
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('상담을 신청했어요')));
+    // 신청 흐름만 흉내내고 완료 카드로 넘어간다.
+    setState(() => _submitted = true);
+  }
+
+  void _selectMethod(ConsultationMethod method) {
+    setState(() {
+      _selectedMethod = method;
+      _selectedVisitDate = null;
+      _selectedVisitTime = null;
+    });
+  }
+
+  /// 날짜를 바꾸면 그 전 날짜 기준으로 골랐던 시간은 비운다 — 날짜마다
+  /// 상담 가능 시간이 다를 수 있다는 전제를 지키기 위함(지금은 목데이터라
+  /// 모든 날짜가 같은 시간 목록을 쓰지만, 실제 API가 생기면 날짜별로
+  /// 달라질 수 있다).
+  void _selectVisitDate(DateTime date) {
+    setState(() {
+      _selectedVisitDate = date;
+      _selectedVisitTime = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final steps = [
-      _buildProfessorAndMethodStep(),
-      _buildPhoneStep(),
-      _buildEmailStep(),
-      _buildContentStep(),
-    ];
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: steps[_step],
-    );
-  }
-
-  // ── 1단계: 상담교수 + 상담방식 ────────────────────────────────────────
-
-  Widget _buildProfessorAndMethodStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildProfessorCard(),
-        const SizedBox(height: 24),
-        const Text(
-          '무슨 상담을 원하세요?',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildMethodButtons(),
-        const SizedBox(height: 20),
-        _buildPrimaryButton(
-          label: '다음',
-          enabled: _selectedProfessor != null && _selectedMethod != null,
-          onTap: _goNext,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfessorCard() {
-    if (_searching) return _buildSearchPanel();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '상담교수',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                _buildSelectedProfessorLabel(),
-              ],
-            ),
-          ),
-          if (_selectedProfessor != null)
-            TextButton(
-              onPressed: () => setState(() => _searching = true),
-              child: const Text(
-                '변경',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectedProfessorLabel() {
-    if (widget.advisorLoading && _selectedProfessor == null) {
-      return const Row(
-        children: [
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.accent,
-            ),
-          ),
-          SizedBox(width: 8),
-          Text(
-            '불러오는 중...',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          ),
-        ],
-      );
-    }
-
-    final professor = _selectedProfessor;
-    if (professor == null) {
-      return const Text(
-        '지도교수 정보를 불러올 수 없어요',
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-      );
-    }
-
-    return Text(
-      professor.isAdvisor
-          ? '${professor.name} (지도교수)'
-          : '${professor.name} (${professor.department})',
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 16,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-
-  Widget _buildSearchPanel() {
-    final professors = _filteredProfessors;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '상담교수',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => setState(() {
-                  _searching = false;
-                  _searchController.clear();
-                }),
-                child: const Text(
-                  '닫기',
-                  style: TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+          AdvisorProfessorSummaryCard(
+            advisorLoading: widget.advisorLoading,
+            selectedProfessor: _selectedProfessor,
+            searching: _searching,
+            onToggleSearching: () => setState(() => _searching = !_searching),
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _searchController,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: '교수님 이름으로 검색',
-              hintStyle: const TextStyle(color: AppColors.textSecondary),
-              filled: true,
-              fillColor: AppColors.disabledButton,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (professors.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                '검색 결과가 없어요',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-              ),
+          const SizedBox(height: 12),
+          if (_submitted)
+            AdvisorDoneCard(onViewStatus: widget.onViewStatus)
+          else if (_searching)
+            AdvisorProfessorSearchCard(
+              searchController: _searchController,
+              professors: _filteredProfessors,
+              selectedProfessor: _selectedProfessor,
+              onQueryChanged: () => setState(() {}),
+              onSelectProfessor: (professor) => setState(() {
+                _selectedProfessor = professor;
+                _searching = false;
+                _searchController.clear();
+              }),
             )
           else
-            for (final professor in professors) _buildProfessorRow(professor),
+            _buildCurrentStepCard(),
         ],
       ),
     );
   }
 
-  Widget _buildProfessorRow(ProfessorOption professor) {
-    final isSelected = _selectedProfessor?.name == professor.name;
-    return InkWell(
-      onTap: () => setState(() {
-        _selectedProfessor = professor;
-        _searching = false;
-        _searchController.clear();
-      }),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Text(
-          professor.isAdvisor
-              ? '${professor.name} (지도교수)'
-              : '${professor.name}    ${professor.department}',
-          style: TextStyle(
-            color: isSelected ? AppColors.accent : AppColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+  Widget _buildCurrentStepCard() {
+    if (_isVisit) {
+      return _step == 0
+          ? AdvisorMethodAndScheduleStep(
+              step: _step,
+              totalSteps: _totalSteps,
+              selectedMethod: _selectedMethod,
+              methodStepValid: _methodStepValid,
+              onSelectMethod: _selectMethod,
+              onNext: _goNext,
+              selectedVisitDate: _selectedVisitDate,
+              selectedVisitTime: _selectedVisitTime,
+              onSelectVisitDate: _selectVisitDate,
+              onSelectVisitTime: (time) =>
+                  setState(() => _selectedVisitTime = time),
+            )
+          : AdvisorContentStep(
+              step: _step,
+              totalSteps: _totalSteps,
+              controller: _contentController,
+              minContentLength: _minContentLength,
+              contentValid: _contentValid,
+              onBack: _goBack,
+              onNext: _goNext,
+            );
+    }
+    return switch (_step) {
+      0 => AdvisorMethodStep(
+        step: _step,
+        totalSteps: _totalSteps,
+        selectedMethod: _selectedMethod,
+        methodStepValid: _methodStepValid,
+        onSelectMethod: _selectMethod,
+        onNext: _goNext,
       ),
-    );
-  }
-
-  Widget _buildMethodButtons() {
-    return Row(
-      children: [
-        Expanded(child: _buildMethodButton(ConsultationMethod.online)),
-        const SizedBox(width: 10),
-        Expanded(child: _buildMethodButton(ConsultationMethod.visit)),
-      ],
-    );
-  }
-
-  Widget _buildMethodButton(ConsultationMethod method) {
-    final selected = _selectedMethod == method;
-    return OutlinedButton(
-      onPressed: () => setState(() => _selectedMethod = method),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: selected ? AppColors.accent : Colors.transparent,
-        foregroundColor: selected ? Colors.white : AppColors.textSecondary,
-        side: BorderSide(color: selected ? AppColors.accent : AppColors.border),
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        shape: const StadiumBorder(),
+      1 => AdvisorPhoneStep(
+        step: _step,
+        totalSteps: _totalSteps,
+        firstController: _phoneFirstController,
+        middleController: _phoneMiddleController,
+        lastController: _phoneLastController,
+        firstFocus: _phoneFirstFocus,
+        middleFocus: _phoneMiddleFocus,
+        lastFocus: _phoneLastFocus,
+        phoneValid: _phoneValid,
+        onBack: _goBack,
+        onNext: _goNext,
       ),
-      child: Text(
-        method.label,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  // ── 2단계: 전화번호 ──────────────────────────────────────────────────
-
-  Widget _buildPhoneStep() {
-    return _buildStepCard(
-      title: '전화번호를 입력해주세요',
-      content: Row(
-        children: [
-          Expanded(child: _buildPhoneBox(_phoneFirstController, maxLength: 3)),
-          const SizedBox(width: 8),
-          Expanded(child: _buildPhoneBox(_phoneMiddleController, maxLength: 4)),
-          const SizedBox(width: 8),
-          Expanded(child: _buildPhoneBox(_phoneLastController, maxLength: 4)),
-        ],
-      ),
-      onBack: _goBack,
-      onNext: _goNext,
-      nextEnabled: _phoneValid,
-    );
-  }
-
-  Widget _buildPhoneBox(TextEditingController controller, {int? maxLength}) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      maxLength: maxLength,
-      textAlign: TextAlign.center,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-      decoration: InputDecoration(
-        counterText: '',
-        filled: true,
-        fillColor: AppColors.disabledButton,
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accent),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  // ── 3단계: 이메일 ────────────────────────────────────────────────────
-
-  Widget _buildEmailStep() {
-    return _buildStepCard(
-      title: '이메일을 입력해주세요',
-      content: TextField(
+      2 => AdvisorEmailStep(
+        step: _step,
+        totalSteps: _totalSteps,
         controller: _emailController,
-        keyboardType: TextInputType.emailAddress,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: AppColors.disabledButton,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 14,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.accent),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
+        emailValid: _emailValid,
+        onBack: _goBack,
+        onNext: _goNext,
       ),
-      onBack: _goBack,
-      onNext: _goNext,
-      nextEnabled: _emailValid,
-    );
-  }
-
-  // ── 4단계: 상담 내용 ─────────────────────────────────────────────────
-
-  Widget _buildContentStep() {
-    return _buildStepCard(
-      title: '어떤 이야기를 나누고 싶어요?',
-      content: TextField(
+      _ => AdvisorContentStep(
+        step: _step,
+        totalSteps: _totalSteps,
         controller: _contentController,
-        minLines: 5,
-        maxLines: 8,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: '$_minContentLength자 이상 적어주세요',
-          hintStyle: const TextStyle(color: AppColors.textSecondary),
-          filled: true,
-          fillColor: AppColors.disabledButton,
-          contentPadding: const EdgeInsets.all(14),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
+        minContentLength: _minContentLength,
+        contentValid: _contentValid,
+        onBack: _goBack,
+        onNext: _goNext,
       ),
-      onBack: _goBack,
-      onNext: _submit,
-      nextLabel: '상담 신청하기',
-      nextEnabled: _contentValid,
-    );
-  }
-
-  // ── 공통 ────────────────────────────────────────────────────────────
-
-  /// 2~4단계가 공유하는 뼈대: 어두운 카드 안에 제목 + 입력 영역, 그 아래
-  /// "이전"(테두리만) + 다음/제출(주황, 조건 안 맞으면 비활성) 버튼.
-  Widget _buildStepCard({
-    required String title,
-    required Widget content,
-    required VoidCallback onBack,
-    required VoidCallback onNext,
-    required bool nextEnabled,
-    String nextLabel = '다음',
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 14),
-              content,
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: onBack,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.border),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 13,
-                      ),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      '이전',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildPrimaryButton(
-                      label: nextLabel,
-                      enabled: nextEnabled,
-                      onTap: onNext,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPrimaryButton({
-    required String label,
-    required bool enabled,
-    required VoidCallback onTap,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: enabled ? onTap : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.disabledButton,
-          disabledForegroundColor: AppColors.disabledButtonText,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: const StadiumBorder(),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
+    };
   }
 }

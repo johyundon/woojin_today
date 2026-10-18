@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 
-/// "지도교수 상담 현황" / "지도교수 상담 신청" 세그먼트 탭.
-/// mileage_segmented_tabs.dart와 같은 스타일(알약 안에 선택된 탭만 주황
-/// 배경 + 흰 글씨 pill로 강조)을 그대로 재현했다.
+/// "상담 현황" / "상담 신청" 세그먼트 탭(v4 리디자인). 진한 남색(cobaltDeep)
+/// 알약 안에서 선택된 쪽만 라임 배경 + 잉크 글씨로 떠오른다.
 class AdvisorSegmentedTabs extends StatelessWidget {
   const AdvisorSegmentedTabs({
     super.key,
@@ -12,7 +11,7 @@ class AdvisorSegmentedTabs extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const List<String> _labels = ['지도교수 상담 현황', '지도교수 상담 신청'];
+  static const List<String> _labels = ['상담 현황', '상담 신청'];
 
   final int selectedIndex;
   final ValueChanged<int> onChanged;
@@ -22,8 +21,8 @@ class AdvisorSegmentedTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: AppColors.cobaltDeep,
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         children: [
@@ -32,22 +31,23 @@ class AdvisorSegmentedTabs extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => onChanged(i),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  height: 40,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: i == selectedIndex
-                        ? AppColors.accent
+                        ? AppColors.lime
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
                     _labels[i],
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: i == selectedIndex
-                          ? Colors.white
-                          : AppColors.textSecondary,
+                          ? AppColors.ink
+                          : Colors.white.withValues(alpha: 0.7),
                       fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
