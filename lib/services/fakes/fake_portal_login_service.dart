@@ -4,7 +4,7 @@ import '../portal_login_service.dart';
 
 /// 실제 포털 로그인 API(`login.do`)를 호출하지 않고 항상 로그인 성공으로
 /// 처리하는 가짜 서비스. `kUseMockApi`가 true인 동안만 쓰인다.
-class FakePortalLoginService extends PortalLoginService {
+class FakePortalLoginService implements PortalLoginServiceBase {
   @override
   Future<PortalLoginResult> login({
     required String userId,

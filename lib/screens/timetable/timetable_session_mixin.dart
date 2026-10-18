@@ -9,8 +9,8 @@ part of 'timetable_screen.dart';
 /// 생기므로, 공용 베이스 믹스인으로 분리했다. 실제 동작(메서드)은 각
 /// 책임별 믹스인(TimetableDataLoadingMixin 등)에 둔다.
 mixin TimetableSessionMixin on State<TimetableScreen> {
-  late final CourseCatalogService _courseCatalogService;
-  late final MyTimetableService _myTimetableService;
+  late final CourseCatalogServiceBase _courseCatalogService;
+  late final MyTimetableServiceBase _myTimetableService;
   late final SavedTimetableStorage _savedTimetableStorage;
   late final DateTime Function() _now;
 

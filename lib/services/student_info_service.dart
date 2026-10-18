@@ -64,6 +64,14 @@ class StudentInfoParseException extends StudentInfoException {
   const StudentInfoParseException(super.message);
 }
 
+/// [StudentInfoService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
+/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
+/// ([lib/services/fakes/fake_student_info_service.dart]의
+/// `FakeStudentInfoService`)을 교체 가능하게 한다.
+abstract class StudentInfoServiceBase {
+  Future<StudentInfoResponse> fetchStudentInfo({required String userId2});
+}
+
 /// 포털 로그인으로 얻은 **본인** userId2로 수강신청 시스템의 "내 지도교수
 /// 이름 조회" (`GET /sugang/center/Bshr020101.jsp`)를 호출해, 같은 응답에서
 /// 지도교수/이름/학과/학년을 한 번에 파싱한다.
@@ -71,7 +79,7 @@ class StudentInfoParseException extends StudentInfoException {
 /// SUGANG_SIMPLE_COOKIE 패턴(패턴 S) 사용 — `userId`/`orgCd` 2필드만 필요하고
 /// (다른 dreams2 서비스들이 쓰는 SUGANG_FULL_COOKIE 패턴 F와 달리)
 /// JSESSIONID/WMONID는 쓰지 않는다.
-class StudentInfoService {
+class StudentInfoService implements StudentInfoServiceBase {
   static const _endpoint =
       'https://dreams2.daejin.ac.kr/sugang/center/Bshr020101.jsp';
   static const _userAgent =
@@ -96,6 +104,7 @@ class StudentInfoService {
 
   /// [userId2]: 포털 로그인으로 얻은 **본인** SSO uid. 개인 데이터 조회라
   /// 고정값/기본값을 두지 않는다 — 반드시 호출자가 실제 값을 넘겨야 한다.
+  @override
   Future<StudentInfoResponse> fetchStudentInfo({
     required String userId2,
   }) async {

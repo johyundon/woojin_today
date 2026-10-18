@@ -72,6 +72,22 @@ class CourseCatalogParseException extends CourseCatalogException {
   const CourseCatalogParseException(super.message);
 }
 
+/// [CourseCatalogService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
+/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
+/// ([lib/services/fakes/fake_course_catalog_service.dart]의
+/// `FakeCourseCatalogService`)을 교체 가능하게 한다.
+abstract class CourseCatalogServiceBase {
+  Future<List<CourseCatalogItem>> fetchCourseCatalog({
+    required int year,
+    required int semester,
+    required String jsessionId,
+    required String wmonid,
+    String icKwa = '%',
+    String? icKwa1,
+    String? userId,
+  });
+}
+
 /// 포털 로그인으로 얻은 세션 쿠키(JSESSIONID/WMONID)를 이용해 수강신청
 /// 시스템의 "개설과목 조회"(`GET /sugang/center/ProLsnAply06.jsp`)를
 /// 호출한다.
@@ -79,7 +95,7 @@ class CourseCatalogParseException extends CourseCatalogException {
 /// 공개 데이터 조회라 user_id/userId는 고정값(기본 "guest")을 넣어도 동작한다고
 /// 명세에 적혀 있다. nm/userFlag/userMjCd/resd1/resd2/orgCd/seq/wkkdCd/
 /// passwd/cookWebUser는 SUGANG_FULL_COOKIE 패턴(패턴 F)의 고정 상수값이다.
-class CourseCatalogService {
+class CourseCatalogService implements CourseCatalogServiceBase {
   static const _endpoint =
       'https://dreams2.daejin.ac.kr/sugang/center/ProLsnAply06.jsp';
   static const _userAgent =
@@ -114,6 +130,7 @@ class CourseCatalogService {
   /// [icKwa1]: 쿼리 파라미터 ic_kwa_1. [icKwa]가 "%"가 아닐 때만 필요한 학과코드.
   /// [jsessionId]/[wmonid]: 포털 로그인으로 얻은 세션 쿠키 값.
   /// [userId]: user_id/userId 쿠키 값. 공개 데이터라 생략 시 고정값("guest")을 쓴다.
+  @override
   Future<List<CourseCatalogItem>> fetchCourseCatalog({
     required int year,
     required int semester,

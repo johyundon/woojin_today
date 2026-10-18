@@ -29,8 +29,22 @@ class StudentIdSearchError extends StudentIdSearchResult {
   final String message;
 }
 
+/// [StudentIdService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
+/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
+/// ([lib/services/fakes/fake_student_id_service.dart]의
+/// `FakeStudentIdService`)을 교체 가능하게 한다.
+abstract class StudentIdServiceBase {
+  Future<StudentIdSearchResult> findStudentId({
+    required String name,
+    required String birthday6,
+    required String mobile1,
+    required String mobile2,
+    required String mobile3,
+  });
+}
+
 /// 대진대 포털의 "학번 찾기" 공개 API(비로그인, 세션/쿠키 불필요)를 호출한다.
-class StudentIdService {
+class StudentIdService implements StudentIdServiceBase {
   static const _endpoint =
       'https://www.daejin.ac.kr/userInfoSearch/daejin/1/idSearch.do';
 
@@ -45,6 +59,7 @@ class StudentIdService {
 
   /// [name]: 이름, [birthday6]: "YYMMDD" 6자리,
   /// [mobile1]/[mobile2]/[mobile3]: 휴대폰 앞/중/뒤자리.
+  @override
   Future<StudentIdSearchResult> findStudentId({
     required String name,
     required String birthday6,

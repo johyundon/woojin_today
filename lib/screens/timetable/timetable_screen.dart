@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../config/mock_mode.dart';
 import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
-import '../../services/fakes/fake_course_catalog_service.dart';
-import '../../services/fakes/fake_my_timetable_service.dart';
 import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
+import '../../services/service_factory.dart';
+import '../../services/session_cache.dart';
 import '../../widgets/top_banner.dart';
 import '../home/widgets/home_bottom_nav.dart';
 import 'ai_recommend/ai_recommend_result_screen.dart';
@@ -52,6 +51,7 @@ class TimetableScreen extends StatefulWidget {
     this.myTimetableService,
     this.savedTimetableStorage,
     this.now,
+    this.onTabTap,
   });
 
   final String? jsessionId;
@@ -59,10 +59,14 @@ class TimetableScreen extends StatefulWidget {
   final String? userId2;
 
   /// 테스트에서 mock 주입용. [HomeScreen]과 동일한 패턴.
-  final CourseCatalogService? courseCatalogService;
-  final MyTimetableService? myTimetableService;
+  final CourseCatalogServiceBase? courseCatalogService;
+  final MyTimetableServiceBase? myTimetableService;
   final SavedTimetableStorage? savedTimetableStorage;
   final DateTime Function()? now;
+
+  /// 하단 탭 바를 눌렀을 때 호출된다(홈이 그 탭 화면으로 바꿔 준다). 없으면 이전
+  /// 화면으로 돌아가기만 한다.
+  final ValueChanged<int>? onTabTap;
 
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
@@ -85,11 +89,9 @@ class _TimetableScreenState extends State<TimetableScreen>
   void initState() {
     super.initState();
     _courseCatalogService =
-        widget.courseCatalogService ??
-        (kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService());
+        widget.courseCatalogService ?? ServiceFactory.courseCatalog();
     _myTimetableService =
-        widget.myTimetableService ??
-        (kUseMockApi ? FakeMyTimetableService() : MyTimetableService());
+        widget.myTimetableService ?? ServiceFactory.myTimetable();
     _savedTimetableStorage =
         widget.savedTimetableStorage ?? SavedTimetableStorage();
     _now = widget.now ?? DateTime.now;
@@ -348,7 +350,10 @@ class _TimetableScreenState extends State<TimetableScreen>
               style: const TextStyle(color: TimetableColors.textSecondary),
             ),
             const SizedBox(height: 8),
-            TextButton(onPressed: _loadCatalog, child: const Text('다시 시도')),
+            TextButton(
+              onPressed: () => _loadCatalog(forceRefresh: true),
+              child: const Text('다시 시도'),
+            ),
           ],
         ),
       );
@@ -378,12 +383,16 @@ class _TimetableScreenState extends State<TimetableScreen>
     );
   }
 
-  /// 하단 탭 바를 눌렀을 때. 0(시간표)은 이미 이 화면이라 아무것도 하지
-  /// 않는다. 이 화면은 홈에서 push된 하위 화면이라, 다른 탭은 세션/콜백을
-  /// 다시 꾸릴 필요 없이 홈으로 돌아가는 것으로 충분하다 — 홈 화면이 그
-  /// 탭들의 실제 진입점이다.
+  /// 하단 탭 바를 눌렀을 때. 0(시간표)은 이미 이 화면이라 아무것도 하지 않는다.
+  /// 다른 탭은 홈이 넘겨준 [TimetableScreen.onTabTap]으로 그 탭 화면으로 바꾼다
+  /// (세션/콜백을 가진 쪽이 홈이라서). 콜백이 없으면 이전 화면으로 돌아간다.
   void _onTabTap(int index) {
     if (index == 0) return;
-    Navigator.of(context).pop();
+    final onTabTap = widget.onTabTap;
+    if (onTabTap != null) {
+      onTabTap(index);
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 }

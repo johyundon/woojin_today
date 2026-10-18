@@ -4,7 +4,7 @@ import '../student_info_service.dart';
 
 /// 실제 지도교수/학생 정보 조회 API(`Bshr020101.jsp`)를 호출하지 않고 가짜
 /// 학생 정보를 돌려주는 서비스. `kUseMockApi`가 true인 동안만 쓰인다.
-class FakeStudentInfoService extends StudentInfoService {
+class FakeStudentInfoService implements StudentInfoServiceBase {
   @override
   Future<StudentInfoResponse> fetchStudentInfo({
     required String userId2,

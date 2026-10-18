@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../config/mock_mode.dart';
-import '../services/fakes/fake_student_id_service.dart';
+import '../services/service_factory.dart';
 import '../services/student_id_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
@@ -52,9 +51,7 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
     });
   }
 
-  final _studentIdService = kUseMockApi
-      ? FakeStudentIdService()
-      : StudentIdService();
+  final _studentIdService = ServiceFactory.studentId();
   bool _isLoading = false;
 
   late final _yearController = FixedExtentScrollController(

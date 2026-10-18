@@ -44,6 +44,20 @@ class MyTimetableParseException extends MyTimetableException {
   const MyTimetableParseException(super.message);
 }
 
+/// [MyTimetableService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
+/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
+/// ([lib/services/fakes/fake_my_timetable_service.dart]의
+/// `FakeMyTimetableService`)을 교체 가능하게 한다.
+abstract class MyTimetableServiceBase {
+  Future<MyTimetableResponse> fetchMyTimetable({
+    required int year,
+    required int semester,
+    required String jsessionId,
+    required String wmonid,
+    required String userId2,
+  });
+}
+
 /// 포털 로그인으로 얻은 세션 쿠키(JSESSIONID/WMONID)와 **본인 userId2**를
 /// 이용해 수강신청 시스템의 "내 시간표 불러오기"
 /// (`POST /sugang/center/BlsnTotalTimeTableLst.jsp`)를 호출한다.
@@ -53,7 +67,7 @@ class MyTimetableParseException extends MyTimetableException {
 /// 본인의 userId2를 넘겨야 하며, 이 서비스는 그 값을 기본값 없이 필수
 /// 파라미터로만 받는다. nm/userFlag/userMjCd/resd1/resd2/orgCd/seq/wkkdCd/
 /// passwd/cookWebUser는 SUGANG_FULL_COOKIE 패턴(패턴 F)의 고정 상수값이다.
-class MyTimetableService {
+class MyTimetableService implements MyTimetableServiceBase {
   static const _endpoint =
       'https://dreams2.daejin.ac.kr/sugang/center/BlsnTotalTimeTableLst.jsp';
   static const _userAgent =
@@ -85,6 +99,7 @@ class MyTimetableService {
   /// [jsessionId]/[wmonid]: 포털 로그인으로 얻은 세션 쿠키 값.
   /// [userId2]: 포털 로그인으로 얻은 **본인** SSO uid. 개인 데이터 조회라
   /// 고정값/기본값을 두지 않는다 — 반드시 호출자가 실제 값을 넘겨야 한다.
+  @override
   Future<MyTimetableResponse> fetchMyTimetable({
     required int year,
     required int semester,

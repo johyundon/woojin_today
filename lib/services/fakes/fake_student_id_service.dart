@@ -4,7 +4,7 @@ import '../student_id_service.dart';
 
 /// 실제 학번 찾기 API(`idSearch.do`)를 호출하지 않고 항상 같은 학번을
 /// 찾은 것으로 처리하는 가짜 서비스. `kUseMockApi`가 true인 동안만 쓰인다.
-class FakeStudentIdService extends StudentIdService {
+class FakeStudentIdService implements StudentIdServiceBase {
   @override
   Future<StudentIdSearchResult> findStudentId({
     required String name,

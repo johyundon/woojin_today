@@ -8,20 +8,22 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
     setState(() => _savedCount = items.length);
   }
 
-  Future<void> _loadCatalog() async {
+  Future<void> _loadCatalog({bool forceRefresh = false}) async {
     if (!_hasSession) return;
     setState(() {
       _catalogLoading = true;
       _catalogError = null;
     });
     try {
-      final catalog = await _courseCatalogService.fetchCourseCatalog(
+      final catalog = await SessionCache.getCourseCatalog(
+        _courseCatalogService,
         year: _year,
         semester: _semester,
         jsessionId: widget.jsessionId!,
         wmonid: widget.wmonid!,
         icKwa: '%',
         userId: widget.userId2,
+        forceRefresh: forceRefresh,
       );
       if (!mounted) return;
       setState(() {
@@ -49,7 +51,8 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
     try {
       final catalog = _catalog.isNotEmpty
           ? _catalog
-          : await _courseCatalogService.fetchCourseCatalog(
+          : await SessionCache.getCourseCatalog(
+              _courseCatalogService,
               year: _year,
               semester: _semester,
               jsessionId: widget.jsessionId!,
@@ -57,7 +60,8 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
               icKwa: '%',
               userId: widget.userId2,
             );
-      final myTimetable = await _myTimetableService.fetchMyTimetable(
+      final myTimetable = await SessionCache.getMyTimetable(
+        _myTimetableService,
         year: _year,
         semester: _semester,
         jsessionId: widget.jsessionId!,

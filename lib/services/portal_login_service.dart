@@ -62,9 +62,20 @@ class _RedirectChainResult {
   final int finalStatusCode;
 }
 
+/// [PortalLoginService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
+/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
+/// ([lib/services/fakes/fake_portal_login_service.dart]의
+/// `FakePortalLoginService`)을 교체 가능하게 한다.
+abstract class PortalLoginServiceBase {
+  Future<PortalLoginResult> login({
+    required String userId,
+    required String userPwd,
+  });
+}
+
 /// 대진대 포털 로그인(1단계 `login.do`, 필요시 2단계 `LinkPortal.jsp` 폴백)을
 /// 호출한다.
-class PortalLoginService {
+class PortalLoginService implements PortalLoginServiceBase {
   static const _loginUrl = 'https://www.daejin.ac.kr/subLogin/daejin/login.do';
   static const _fallbackUrl =
       'https://dreams2.daejin.ac.kr/sugang/LinkPortal.jsp?dvd=P';
@@ -101,6 +112,7 @@ class PortalLoginService {
   PortalLoginService({http.Client Function()? clientFactory})
     : _clientFactory = clientFactory ?? http.Client.new;
 
+  @override
   Future<PortalLoginResult> login({
     required String userId,
     required String userPwd,

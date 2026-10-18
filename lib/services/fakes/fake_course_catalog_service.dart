@@ -7,7 +7,7 @@ import '../course_catalog_service.dart';
 ///
 /// 연도/학기/필터 값과 무관하게 항상 같은 목록을 돌려준다 — 학기별 실제
 /// 개설과목 차이는 반영하지 않는다(화면 레이아웃 확인용 데이터이기 때문).
-class FakeCourseCatalogService extends CourseCatalogService {
+class FakeCourseCatalogService implements CourseCatalogServiceBase {
   /// CS101-01과 GE150-01이 월 09:00-10:30로 겹치게 일부러 넣어둔 건, 시간
   /// 충돌 UI를 눈으로 확인할 수 있게 하기 위함이다.
   static const List<CourseCatalogItem> fakeCatalog = [

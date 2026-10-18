@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../config/mock_mode.dart';
 import '../services/credential_storage.dart';
-import '../services/fakes/fake_portal_login_service.dart';
 import '../services/portal_login_service.dart';
+import '../services/service_factory.dart';
 import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
@@ -30,9 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _autoLogin = true;
 
-  final _portalLoginService = kUseMockApi
-      ? FakePortalLoginService()
-      : PortalLoginService();
+  final _portalLoginService = ServiceFactory.portalLogin();
 
   @override
   void dispose() {
