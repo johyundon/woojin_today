@@ -14,7 +14,7 @@ class HomeBottomNav extends StatelessWidget {
   final ValueChanged<int>? onTap;
 
   static const _items = [
-    (icon: Icons.calendar_view_month_rounded, label: '시간표'),
+    (icon: Icons.schedule_rounded, label: '시간표'),
     (icon: Icons.apps_rounded, label: '모아보기'),
     null, // 가운데 라임색 홈 버튼 자리
     (icon: Icons.event_rounded, label: '캘린더'),

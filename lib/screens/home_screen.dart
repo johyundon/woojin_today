@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../config/mock_mode.dart';
 import '../services/class_schedule_parser.dart';
 import '../services/course_catalog_service.dart';
-import '../services/fakes/fake_course_catalog_service.dart';
-import '../services/fakes/fake_my_timetable_service.dart';
-import '../services/fakes/fake_student_info_service.dart';
 import '../services/my_enrolled_courses.dart';
 import '../services/my_timetable_service.dart';
+import '../services/service_factory.dart';
+import '../services/session_cache.dart';
 import '../services/student_info_service.dart';
 import '../services/weather_service.dart';
+import '../utils/weekday_labels.dart';
 import 'cafeteria/cafeteria_screen.dart';
-import 'cafeteria/services/cafeteria_menu_mock_data.dart';
 import 'calendar/calendar_screen.dart';
 import 'collection_screen.dart';
 import 'home/home_colors.dart';
+import 'home/home_enums.dart';
 import 'home/rank/department_rank_screen.dart';
+import 'home/widgets/cafeteria_menu_card.dart';
 import 'home/widgets/home_bottom_nav.dart';
 import 'home/widgets/home_mini_card.dart';
-import 'home/widgets/my_info_row.dart';
+import 'home/widgets/home_top_icon_button.dart';
+import 'home/widgets/my_info_dialog.dart';
+import 'home/widgets/my_menu_sheet.dart';
 import 'home/widgets/next_class_card.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
@@ -27,14 +29,6 @@ import 'login_screen.dart';
 import 'notice/notice_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
-
-/// 좌상단 아바타를 눌렀을 때 뜨는 드롭다운 메뉴 항목 (Figma node 6:16).
-enum _AvatarMenuAction { myInfo, terms, logout }
-
-/// "내 정보" 조회 실패 원인. 원인마다 사용자에게 보여줄 안내/행동이 다르므로
-/// (세션 만료 → 재로그인 유도, 네트워크/서버 오류 → 재시도, 파싱 실패 →
-/// 알 수 없는 오류) 하나의 뭉뚱그린 에러 상태로 합치지 않는다.
-enum _StudentInfoErrorKind { sessionExpired, network, server, parse }
 
 /// "우진이의 하루" 홈 화면(메인 대시보드) (Figma node 6:14 다크 / 6:20 라이트).
 ///
@@ -68,12 +62,12 @@ class HomeScreen extends StatefulWidget {
 
   /// 테스트에서 [CourseCatalogService]/[MyTimetableService]를 mock으로
   /// 주입하기 위한 옵션. [weatherService]와 동일한 패턴.
-  final CourseCatalogService? courseCatalogService;
-  final MyTimetableService? myTimetableService;
+  final CourseCatalogServiceBase? courseCatalogService;
+  final MyTimetableServiceBase? myTimetableService;
 
   /// 테스트에서 [StudentInfoService]를 mock으로 주입하기 위한 옵션.
   /// [weatherService]와 동일한 패턴.
-  final StudentInfoService? studentInfoService;
+  final StudentInfoServiceBase? studentInfoService;
 
   /// 테스트에서 "지금 시각"을 고정하기 위한 옵션. 기본값은 `null`이며, 이
   /// 경우 실제 [DateTime.now]를 쓴다. "지금이 수업 시간인지" 판단은 실제
@@ -106,17 +100,17 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _weatherLoading = true;
   bool _weatherHasError = false;
 
-  late final CourseCatalogService _courseCatalogService;
-  late final MyTimetableService _myTimetableService;
+  late final CourseCatalogServiceBase _courseCatalogService;
+  late final MyTimetableServiceBase _myTimetableService;
   late final DateTime Function() _now;
   List<TodayClass> _todayClasses = const [];
   List<CourseCatalogItem> _enrolledCourses = const [];
   bool _timetableLoaded = false;
 
-  late final StudentInfoService _studentInfoService;
+  late final StudentInfoServiceBase _studentInfoService;
   StudentInfoResponse? _studentInfoData;
   bool _studentInfoLoading = true;
-  _StudentInfoErrorKind? _studentInfoError;
+  StudentInfoErrorKind? _studentInfoError;
 
   /// "내 정보" 다이얼로그가 열려 있는 동안 [_loadStudentInfo]가 상태를 바꾸면
   /// 이 콜백으로 다이얼로그도 함께 새로고침한다. `showDialog`로 띄운
@@ -130,14 +124,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _weatherService = widget.weatherService ?? WeatherService();
     _courseCatalogService =
-        widget.courseCatalogService ??
-        (kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService());
+        widget.courseCatalogService ?? ServiceFactory.courseCatalog();
     _myTimetableService =
-        widget.myTimetableService ??
-        (kUseMockApi ? FakeMyTimetableService() : MyTimetableService());
+        widget.myTimetableService ?? ServiceFactory.myTimetable();
     _studentInfoService =
-        widget.studentInfoService ??
-        (kUseMockApi ? FakeStudentInfoService() : StudentInfoService());
+        widget.studentInfoService ?? ServiceFactory.studentInfo();
     _now = widget.now ?? DateTime.now;
     _loadWeather();
     _loadTodayClasses();
@@ -153,13 +144,13 @@ class _HomeScreenState extends State<HomeScreen> {
   /// userId2가 없으면(세션 정보 없음) 네트워크 호출 자체를 하지 않고 바로
   /// "세션 만료" 에러로 처리한다. 호출 중 발생하는 예외는 원인별로 구분해
   /// 저장한다 — 네트워크/서버/파싱 실패는 서로 다른 사용자 안내가 필요하다.
-  Future<void> _loadStudentInfo() async {
+  Future<void> _loadStudentInfo({bool forceRefresh = false}) async {
     final userId2 = widget.userId2;
     if (userId2 == null) {
       _updateStudentInfoState(() {
         _studentInfoLoading = false;
         _studentInfoData = null;
-        _studentInfoError = _StudentInfoErrorKind.sessionExpired;
+        _studentInfoError = StudentInfoErrorKind.sessionExpired;
       });
       return;
     }
@@ -170,7 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final info = await _studentInfoService.fetchStudentInfo(userId2: userId2);
+      final info = await SessionCache.getStudentInfo(
+        _studentInfoService,
+        userId2: userId2,
+        forceRefresh: forceRefresh,
+      );
       _updateStudentInfoState(() {
         _studentInfoData = info;
         _studentInfoLoading = false;
@@ -180,25 +175,25 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[Home] 내 정보 조회 실패(네트워크): $e');
       _updateStudentInfoState(() {
         _studentInfoLoading = false;
-        _studentInfoError = _StudentInfoErrorKind.network;
+        _studentInfoError = StudentInfoErrorKind.network;
       });
     } on StudentInfoServerException catch (e) {
       debugPrint('[Home] 내 정보 조회 실패(서버): $e');
       _updateStudentInfoState(() {
         _studentInfoLoading = false;
-        _studentInfoError = _StudentInfoErrorKind.server;
+        _studentInfoError = StudentInfoErrorKind.server;
       });
     } on StudentInfoParseException catch (e) {
       debugPrint('[Home] 내 정보 조회 실패(파싱): $e');
       _updateStudentInfoState(() {
         _studentInfoLoading = false;
-        _studentInfoError = _StudentInfoErrorKind.parse;
+        _studentInfoError = StudentInfoErrorKind.parse;
       });
     } catch (e) {
       debugPrint('[Home] 내 정보 조회 실패(알 수 없음): $e');
       _updateStudentInfoState(() {
         _studentInfoLoading = false;
-        _studentInfoError = _StudentInfoErrorKind.parse;
+        _studentInfoError = StudentInfoErrorKind.parse;
       });
     }
   }
@@ -229,14 +224,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final semester = _estimateCurrentSemester(_now());
-      final catalog = await _courseCatalogService.fetchCourseCatalog(
+      final catalog = await SessionCache.getCourseCatalog(
+        _courseCatalogService,
         year: semester.year,
         semester: semester.semester,
         jsessionId: jsessionId,
         wmonid: wmonid,
         icKwa: '%',
       );
-      final myTimetable = await _myTimetableService.fetchMyTimetable(
+      final myTimetable = await SessionCache.getMyTimetable(
+        _myTimetableService,
         year: semester.year,
         semester: semester.semester,
         jsessionId: jsessionId,
@@ -287,16 +284,27 @@ class _HomeScreenState extends State<HomeScreen> {
         .push(MaterialPageRoute(builder: (_) => const CafeteriaScreen()));
   }
 
+  // 탭 화면(시간표/모아보기/캘린더)으로 가는 경로. 하단 탭 바에서 서로 오갈 때도
+  // 같은 경로를 쓰려고 따로 만들어 둔다.
+  Route<void> _timetableRoute() => MaterialPageRoute(
+    builder: (_) => TimetableScreen(
+      jsessionId: widget.jsessionId,
+      wmonid: widget.wmonid,
+      userId2: widget.userId2,
+      onTabTap: _goToTab,
+    ),
+  );
+
+  Route<void> _collectionRoute() => MaterialPageRoute(
+    builder: (_) =>
+        CollectionScreen(userId2: widget.userId2, onTabTap: _goToTab),
+  );
+
+  Route<void> _calendarRoute() =>
+      MaterialPageRoute(builder: (_) => CalendarScreen(onTabTap: _goToTab));
+
   void _openTimetable() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TimetableScreen(
-          jsessionId: widget.jsessionId,
-          wmonid: widget.wmonid,
-          userId2: widget.userId2,
-        ),
-      ),
-    );
+    Navigator.of(context).push(_timetableRoute());
   }
 
   void _openDepartmentRank() {
@@ -306,12 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openCollection() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            CollectionScreen(userId2: widget.userId2, onTabTap: _onTabTap),
-      ),
-    );
+    Navigator.of(context).push(_collectionRoute());
   }
 
   void _openNotice() {
@@ -325,15 +328,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openCalendar() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
+    Navigator.of(context).push(_calendarRoute());
   }
 
-  void _handleMenuAction(_AvatarMenuAction action) {
+  void _handleMenuAction(AvatarMenuAction action) {
     switch (action) {
-      case _AvatarMenuAction.myInfo:
+      case AvatarMenuAction.myInfo:
         _showMyInfoDialog();
-      case _AvatarMenuAction.terms:
+      case AvatarMenuAction.terms:
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => const TermsDetailScreen(
@@ -342,11 +344,37 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
-      case _AvatarMenuAction.logout:
+      case AvatarMenuAction.logout:
+        // 로그아웃하면 다른 학생이 같은 기기로 재로그인할 수 있으므로, 이전
+        // 세션의 캐시(학생정보/시간표/개설과목)가 다음 로그인에 잘못
+        // 재사용되지 않도록 반드시 비운다.
+        SessionCache.clear();
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
         );
+    }
+  }
+
+  /// 홈 위에 열린 탭 화면(시간표/모아보기/캘린더)의 하단 탭 바를 눌렀을 때. 지금
+  /// 화면을 닫고 홈으로 돌아가는 게 아니라, 누른 탭의 화면으로 바로 바꿔 준다 —
+  /// 홈 위의 화면들을 걷어내고 그 탭 화면 하나만 올리므로 뒤로가기는 홈으로 간다.
+  /// 홈 탭은 홈으로 돌아가고, MY 탭은 지금 화면 위에 메뉴를 띄운다.
+  void _goToTab(int index) {
+    switch (index) {
+      case 0:
+        Navigator.of(context)
+            .pushAndRemoveUntil(_timetableRoute(), (route) => route.isFirst);
+      case 1:
+        Navigator.of(context)
+            .pushAndRemoveUntil(_collectionRoute(), (route) => route.isFirst);
+      case 2:
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      case 3:
+        Navigator.of(context)
+            .pushAndRemoveUntil(_calendarRoute(), (route) => route.isFirst);
+      case 4:
+        _showMyMenu();
     }
   }
 
@@ -366,36 +394,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// MY 탭: 아바타 메뉴와 같은 항목(내 정보/이용약관/로그아웃)을 바텀시트로 보여준다.
   Future<void> _showMyMenu() async {
-    final selected = await showModalBottomSheet<_AvatarMenuAction>(
+    final selected = await showModalBottomSheet<AvatarMenuAction>(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            ListTile(
-              title: const Text('내 정보'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_AvatarMenuAction.myInfo),
-            ),
-            ListTile(
-              title: const Text('이용약관'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_AvatarMenuAction.terms),
-            ),
-            ListTile(
-              title: const Text('로그아웃', style: TextStyle(color: _accentRed)),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_AvatarMenuAction.logout),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+      builder: (sheetContext) => const MyMenuSheet(),
     );
     if (!mounted || selected == null) return;
     _handleMenuAction(selected);
@@ -416,148 +421,21 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) {
           _myInfoDialogRefresh = setDialogState;
-          return AlertDialog(
-            backgroundColor: colors.cardSurface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '내 정보',
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ..._buildMyInfoContent(colors, dialogContext),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.cobalt,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      '확인',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          return MyInfoDialog(
+            colors: colors,
+            loading: _studentInfoLoading,
+            data: _studentInfoData,
+            error: _studentInfoError,
+            onRetry: () => _loadStudentInfo(forceRefresh: true),
+            onGoToLogin: () => Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
             ),
           );
         },
       ),
     );
     _myInfoDialogRefresh = null;
-  }
-
-  /// 로딩/에러/성공 상태에 따른 "내 정보" 본문을 만든다.
-  List<Widget> _buildMyInfoContent(
-    HomeColors colors,
-    BuildContext dialogContext,
-  ) {
-    if (_studentInfoLoading) {
-      return const [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ),
-          ),
-        ),
-      ];
-    }
-
-    final error = _studentInfoError;
-    if (error != null) {
-      return _buildMyInfoError(colors, dialogContext, error);
-    }
-
-    final info = _studentInfoData;
-    return [
-      MyInfoRow(colors: colors, label: '이름', value: info?.name ?? '정보 없음'),
-      const SizedBox(height: 14),
-      MyInfoRow(
-        colors: colors,
-        label: '학과',
-        value: info?.department ?? '정보 없음',
-      ),
-      const SizedBox(height: 14),
-      MyInfoRow(colors: colors, label: '학년', value: info?.grade ?? '정보 없음'),
-    ];
-  }
-
-  /// 에러 원인별 안내 문구 + 복구 행동(재로그인 유도/재시도)을 구성한다.
-  List<Widget> _buildMyInfoError(
-    HomeColors colors,
-    BuildContext dialogContext,
-    _StudentInfoErrorKind error,
-  ) {
-    void goToLogin() {
-      Navigator.of(dialogContext).pop();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
-
-    final (icon, message) = switch (error) {
-      _StudentInfoErrorKind.sessionExpired => (
-        Icons.login,
-        '로그인 정보를 찾을 수 없어요.\n다시 로그인해주세요.',
-      ),
-      _StudentInfoErrorKind.network => (Icons.wifi_off, '네트워크 연결을 확인해주세요.'),
-      _StudentInfoErrorKind.server => (
-        Icons.error_outline,
-        '서버에 문제가 발생했어요.\n잠시 후 다시 시도해주세요.',
-      ),
-      _StudentInfoErrorKind.parse => (
-        Icons.error_outline,
-        '정보를 불러오지 못했어요.\n(알 수 없는 오류)',
-      ),
-    };
-
-    return [
-      Row(
-        children: [
-          Icon(icon, color: colors.textSecondary, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colors.textSecondary, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-      if (error == _StudentInfoErrorKind.sessionExpired) ...[
-        const SizedBox(height: 12),
-        TextButton(onPressed: goToLogin, child: const Text('로그인 화면으로 이동')),
-      ] else if (error == _StudentInfoErrorKind.network ||
-          error == _StudentInfoErrorKind.server) ...[
-        const SizedBox(height: 12),
-        TextButton(onPressed: _loadStudentInfo, child: const Text('다시 시도')),
-      ],
-    ];
   }
 
   /// 이름("홍길동")에서 성을 뗀 호칭("길동아")을 만든다. 받침이 있으면 "아",
@@ -570,103 +448,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasBatchim =
         last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 != 0;
     return '$given${hasBatchim ? '아' : '야'}';
-  }
-
-  static const _weekdayNames = ['월', '화', '수', '목', '금', '토', '일'];
-
-  Widget _topIconButton(IconData icon, VoidCallback onTap, {bool dot = false}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: const BoxDecoration(
-          color: AppColors.cobaltDeep,
-          shape: BoxShape.circle,
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            if (dot)
-              Positioned(
-                top: 9,
-                right: 10,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.blushPink,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 분홍색 "오늘 학식" 카드. 학식 데이터는 목데이터([CafeteriaMenuMockData])라
-  /// 오늘 점심 메뉴가 등록돼 있으면 첫 번째 식당의 메뉴 두 가지와 가격을, 없으면
-  /// 안내 문구를 보여준다.
-  Widget _buildMenuCard(DateTime now) {
-    final lunch = CafeteriaMenuMockData.menuFor(now)?.lunch ?? const [];
-    final item = lunch.isEmpty ? null : lunch.first;
-    final title = item == null
-        ? '오늘의 메뉴는\n무엇일까?'
-        : item.dishes.take(2).join('\n');
-    return HomeMiniCard(
-      icon: Icons.restaurant,
-      iconBackground: Colors.white,
-      iconColor: AppColors.ink,
-      label: '오늘 점심',
-      title: title,
-      footer: item == null
-          ? Text(
-              '학식을 조회할 수 있어요',
-              style: TextStyle(
-                color: AppColors.ink.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            )
-          : Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    item.restaurant,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.ink.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    item.priceText,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-      backgroundColor: AppColors.blushPink,
-      textColor: AppColors.ink,
-      onTap: _openCafeteria,
-    );
   }
 
   @override
@@ -688,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final dateBadge =
         '${now.month.toString().padLeft(2, '0')}.'
         '${now.day.toString().padLeft(2, '0')} '
-        '${_weekdayNames[now.weekday - 1]}요일';
+        '${weekdayLabelsMonFirst[now.weekday - 1]}요일';
     final upcoming = next == null
         ? nextClassAfterToday(courses: _enrolledCourses, now: now)
         : null;
@@ -696,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ? ''
         : Weekday.values.indexOf(upcoming.day) == now.weekday % 7
         ? '내일'
-        : '${_weekdayNames[Weekday.values.indexOf(upcoming.day)]}요일';
+        : '${weekdayLabelsMonFirst[Weekday.values.indexOf(upcoming.day)]}요일';
 
     return Scaffold(
       backgroundColor: AppColors.cobalt,
@@ -714,11 +495,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Row(
                       children: [
                         const Spacer(),
-                        _topIconButton(Icons.search, _openTimetable),
+                        HomeTopIconButton(
+                          icon: Icons.search,
+                          onTap: _openTimetable,
+                        ),
                         const SizedBox(width: 8),
-                        _topIconButton(
-                          Icons.notifications_none,
-                          _openNotice,
+                        HomeTopIconButton(
+                          icon: Icons.notifications_none,
+                          onTap: _openNotice,
                           dot: true,
                         ),
                       ],
@@ -814,7 +598,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(child: _buildMenuCard(now)),
+                        Expanded(
+                          child: CafeteriaMenuCard(
+                            now: now,
+                            onTap: _openCafeteria,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -828,6 +617,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-// Figma 스크린샷(node 6:16)의 "로그아웃" 텍스트를 스포이드로 찍어 확인한 값.
-const Color _accentRed = Color(0xFFFF4D4F);

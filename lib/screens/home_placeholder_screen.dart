@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
 /// 약관 동의 완료 후 이동할 다음 화면이 아직 없어서 임시로 띄우는 placeholder.

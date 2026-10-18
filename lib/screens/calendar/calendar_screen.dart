@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/notification_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/weekday_labels.dart';
 import 'event_edit_screen.dart';
 import 'models/calendar_event.dart';
 import 'services/calendar_event_storage.dart';
@@ -16,8 +17,6 @@ import 'widgets/reminder_set_dialog.dart';
 /// [_CalendarScreenState._syncReminder]의 결과.
 enum _ReminderResult { ok, denied, past }
 
-const List<String> _weekdayKorLabels = ['일', '월', '화', '수', '목', '금', '토'];
-
 /// "캘린더" 화면(v4 리디자인). 코발트 헤더에서 달을 넘기고, 흰 패널의 월간
 /// 격자에서 날짜를 고르면 그날의 일정이 시간순 카드로 아래에 나온다.
 ///
@@ -27,7 +26,11 @@ const List<String> _weekdayKorLabels = ['일', '월', '화', '수', '목', '금'
 /// 켰을 때 "화면상 꺼진 토글인데 전에 걸어둔 알림은 그대로 울리는" 불일치가
 /// 생긴다.
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  const CalendarScreen({this.onTabTap, super.key});
+
+  /// 하단 탭 바를 눌렀을 때 호출된다(홈이 그 탭 화면으로 바꿔 준다). 없으면 이전
+  /// 화면으로 돌아가기만 한다.
+  final ValueChanged<int>? onTabTap;
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -307,12 +310,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       backgroundColor: AppColors.cobalt,
       extendBody: true,
-      // 다른 탭은 이 화면을 닫고 이전 화면(홈/모아보기)으로 돌아간다 — 시간표
-      // 화면과 같은 방식.
+      // 다른 탭은 홈이 그 탭 화면으로 바꿔 준다(콜백이 없으면 이전 화면으로 돌아감).
       bottomNavigationBar: HomeBottomNav(
         selectedIndex: 3,
         onTap: (index) {
-          if (index != 3) Navigator.of(context).pop();
+          if (index == 3) return;
+          final onTabTap = widget.onTabTap;
+          if (onTabTap != null) {
+            onTabTap(index);
+          } else {
+            Navigator.of(context).pop();
+          }
         },
       ),
       body: SafeArea(
@@ -389,7 +397,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             children: [
                               Text(
                                 '${selectedDate.month}월 ${selectedDate.day}일 '
-                                '${_weekdayKorLabels[selectedDate.weekday % 7]}요일',
+                                '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
                                 style: const TextStyle(
                                   color: AppColors.ink,
                                   fontSize: 16,

@@ -15,6 +15,7 @@ import 'package:http/testing.dart';
 import 'package:daejin_app/screens/home_screen.dart';
 import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
+import 'package:daejin_app/services/session_cache.dart';
 import 'package:daejin_app/services/student_info_service.dart';
 import 'package:daejin_app/services/weather_service.dart';
 
@@ -47,6 +48,11 @@ const _fixtureJson = '''
 ''';
 
 void main() {
+  // 여러 테스트가 같은 jsessionId/wmonid/userId2 값을 재사용하면서 서로 다른
+  // mock 응답을 기대한다 — SessionCache는 이 식별자로 캐싱하므로, 테스트마다
+  // 비워주지 않으면 앞 테스트의 캐시가 뒤 테스트로 새어 들어간다.
+  setUp(SessionCache.clear);
+
   group('인사말(오늘 수업 N개 남았어/오늘 하루도 화이팅!)', () {
     // 날씨 조회는 이 그룹의 관심사가 아니므로, 전부 같은 성공 응답으로 고정해
     // 실제 네트워크 호출 없이 끝내고 greeting 로직만 분리해서 본다.

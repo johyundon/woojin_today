@@ -31,9 +31,10 @@ class CollectionScreen extends StatelessWidget {
   /// 조회에 써야 해서 홈 화면에서 그대로 전달받는다.
   final String? userId2;
 
-  static void _openCalendar(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
+  void _openCalendar(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => CalendarScreen(onTabTap: onTabTap)),
+    );
   }
 
   static void _openCampusMap(BuildContext context) {
@@ -112,7 +113,7 @@ class CollectionScreen extends StatelessWidget {
       icon: Icons.wb_cloudy_rounded,
       onTap: _openWeather,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       label: '캘린더',
       icon: Icons.event_rounded,
       onTap: _openCalendar,
@@ -140,11 +141,16 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()));
   }
 
+  /// 하단 탭 바. 1(모아보기)은 이미 이 화면이라 아무것도 하지 않는다. 다른 탭은 홈이
+  /// 넘겨준 [onTabTap]이 그 탭 화면으로 바꿔 준다(홈 탭은 홈으로 돌아감). 콜백이
+  /// 없으면 홈 탭만 이전 화면으로 돌아간다.
   void _onTabTap(BuildContext context, int index) {
-    if (index == 2) {
+    if (index == 1) return;
+    final callback = onTabTap;
+    if (callback != null) {
+      callback(index);
+    } else if (index == 2) {
       Navigator.of(context).pop();
-    } else if (index != 1) {
-      onTabTap?.call(index);
     }
   }
 
