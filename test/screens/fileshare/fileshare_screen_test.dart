@@ -1,9 +1,13 @@
-// FileShareScreen이 꺼짐/켜짐 상태를 오버플로우 없이 보여주고, "저장위치
-// 열기"는 실제 파일 탐색기 대신 스낵바로 안내하는지 확인한다.
+// FileShareScreen이 꺼짐/켜짐/받은 파일 있음 세 상태를 오버플로우 없이
+// 보여주는지 확인한다.
 //
-// 켜짐 상태는 계속 도는 회전 애니메이션(RotationTransition)이 있어
-// pumpAndSettle()을 쓰면 타임아웃난다 — pump(duration)으로 몇 프레임만
-// 진행시킨다.
+// "받은 파일"/"주변 사람" 데모는 둘 다 꺼져 있다(_FileShareScreenState의
+// TEMP _kShowReceivedFilesDemo/_kShowNearbyPeersDemo 스위치) — 가짜 사람
+// 없이 실제 mDNS 탐색 결과만 보여주기로 함.
+//
+// 토글을 켜면 실제 mDNS 플러그인(nsd)을 호출하는데 테스트 환경엔 플랫폼
+// 채널 목이 없어 완료되지 않는 Future가 남는다 — pumpAndSettle() 대신
+// pump(duration)으로 몇 프레임만 진행시킨다.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,24 +16,24 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:daejin_app/screens/fileshare/fileshare_screen.dart';
 
 void main() {
-  testWidgets('기본은 "사용 안 함" 상태로 열린다', (tester) async {
+  testWidgets('기본은 "사용 안 함" 상태로 열리고, 받은 파일이 없다', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: FileShareScreen()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.text('사용 안 함'), findsOneWidget);
-    expect(find.text('파일공유 기능을 활성화하면 발견된 사람이 여기 떠요.'), findsOneWidget);
-    expect(find.text('아직 받은 파일이 없어요.'), findsOneWidget);
+    expect(find.text('아직 받은 파일이 없어요'), findsOneWidget);
   });
 
-  testWidgets('토글을 켜면 "사용중"과 고정 안내 문구로 바뀐다', (tester) async {
+  testWidgets('토글을 켜면 "사용 중"으로 바뀌고, 실제로 찾은 사람이 없으면 빈 안내가 보인다', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: FileShareScreen()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch));
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('사용중'), findsOneWidget);
+    expect(find.text('사용 중'), findsOneWidget);
+    expect(find.text('주변 사람 0명이 발견됐어요.'), findsOneWidget);
     expect(
       find.text('아직 발견된 사람이 없어요.\n상대방도 파일공유 기능을 활성화해야 보여요!'),
       findsOneWidget,
@@ -40,17 +44,6 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('사용 안 함'), findsOneWidget);
-  });
-
-  testWidgets('"저장위치 열기"는 스낵바로 안내한다', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: FileShareScreen()));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('저장위치 열기'));
-    await tester.pump();
-
-    expect(find.text('저장위치 열기는 지원하지 않아요'), findsOneWidget);
-    expect(tester.takeException(), isNull);
   });
 
   // ReceiveSharingIntent.setMockValues는 instance를 전역으로 바꿔치기해서
@@ -69,7 +62,6 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: FileShareScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('아직 받은 파일이 없어요.'), findsNothing);
     expect(find.text('report.pdf'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
