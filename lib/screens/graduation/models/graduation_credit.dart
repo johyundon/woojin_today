@@ -11,8 +11,8 @@ class GraduationCreditCategory {
   final String label;
   final int earned;
 
-  /// null이면 이 영역엔 비교할 기준 학점을 보여주지 않는다(예: "주전공"은
-  /// 칩에 "54학점"처럼 총량만 보여주고 기준치와 비교하지 않음).
+  /// null이면 이 영역엔 비교할 기준 학점을 보여주지 않는다(칩에 "54학점"처럼
+  /// 총량만 보여주고 기준치와 비교하지 않음).
   final int? required;
   final List<GraduationCourseRecord> courses;
 

@@ -21,6 +21,11 @@ void main() {
       findsOneWidget,
     );
 
+    final remaining =
+        GraduationCreditMockData.totalRequired -
+        GraduationCreditMockData.totalEarned;
+    expect(find.text('졸업까지\n$remaining학점 남았어요'), findsOneWidget);
+
     // 가로 스크롤 칩 줄은 뷰포트 밖 항목을 지연 생성하므로, 끝까지
     // 스크롤해 마지막 카테고리("전공선택")까지 실제로 렌더링되는지 본다.
     final chipRow = find.byType(ListView).at(1);
@@ -71,7 +76,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('총 이수학점'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
     await tester.pumpAndSettle();
     expect(find.text('총 이수학점'), findsNothing);
     expect(tester.takeException(), isNull);

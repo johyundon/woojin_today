@@ -23,6 +23,7 @@ class GraduationCreditMockData {
     GraduationCreditCategory(
       label: '주전공',
       earned: 27,
+      required: 60,
       courses: [
         GraduationCourseRecord(
           name: '자료구조',
