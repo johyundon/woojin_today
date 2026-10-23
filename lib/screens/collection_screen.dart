@@ -12,6 +12,7 @@ import 'home/widgets/home_bottom_nav.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
 import 'notice/notice_screen.dart';
+import 'shuttle/shuttle_screen.dart';
 import 'weather/weather_page.dart';
 
 /// "모아보기" 화면 ("우진이의 하루" v4 리디자인).
@@ -74,6 +75,11 @@ class CollectionScreen extends StatelessWidget {
     ).push(MaterialPageRoute(builder: (_) => const GraduationCreditScreen()));
   }
 
+  static void _openShuttle(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ShuttleScreen()));
+  }
+
   void _openAdvisorConsultation(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -128,7 +134,11 @@ class CollectionScreen extends StatelessWidget {
       icon: Icons.map_rounded,
       onTap: _openCampusMap,
     ),
-    const _CollectionItem(label: '셔틀버스', icon: Icons.directions_bus_rounded),
+    const _CollectionItem(
+      label: '셔틀버스',
+      icon: Icons.directions_bus_rounded,
+      onTap: _openShuttle,
+    ),
     const _CollectionItem(
       label: '졸업학점',
       icon: Icons.fact_check_rounded,
