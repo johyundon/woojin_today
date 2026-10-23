@@ -40,13 +40,7 @@ class _BuildingPickerPanelState extends State<BuildingPickerPanel> {
       decoration: BoxDecoration(
         color: CampusMapColors.surface,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: CampusMapColors.cardShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

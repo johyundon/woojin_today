@@ -18,15 +18,15 @@ class RouteInfoBanner extends StatelessWidget {
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: CampusMapColors.accent,
+        color: CampusMapColors.highlight,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         '도보 $walkMinutes분 · 약 ${distanceMeters.round()}m',
         style: const TextStyle(
-          color: Colors.white,
+          color: CampusMapColors.textPrimary,
           fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

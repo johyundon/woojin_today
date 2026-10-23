@@ -25,13 +25,7 @@ class BuildingDetailCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: CampusMapColors.surface,
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: CampusMapColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
