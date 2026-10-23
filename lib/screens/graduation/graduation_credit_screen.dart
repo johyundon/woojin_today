@@ -3,26 +3,35 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/mascot_sticker.dart';
+import '../home/widgets/home_top_icon_button.dart';
 import 'models/graduation_credit.dart';
 import 'services/graduation_credit_mock_data.dart';
 
-/// 파란 헤더 아래 깔리는 밝은 라벤더 배경(스크린샷 측정값).
-const Color _panelBackground = Color(0xFFEDEDF8);
-
-/// 보조 텍스트 회색과, 비활성 원/칸·도넛 트랙에 쓰는 연한 색.
-const Color _mutedText = Color(0xFF8E8E9A);
-const Color _softFill = Color(0xFFF0F0F8);
+/// 보조 텍스트(잉크 60%)와 도넛 트랙에 쓰는 연한 파랑. 홈 화면 흰 카드의
+/// 보조 글자(ink 0.6)와 같은 규칙이다.
+const Color _mutedText = Color(0x99121212);
 const Color _donutTrack = Color(0xFFE3EBFF);
 
 /// "N개 남음" 경고 빨강.
 const Color _remainingRed = Color(0xFFE5484D);
 
+/// 홈 화면 카드(next_class_card.dart 등)와 같은 남색 그림자.
+final List<BoxShadow> _cardShadow = [
+  BoxShadow(
+    color: const Color(0xFF030A7F).withValues(alpha: 0.22),
+    offset: const Offset(0, 10),
+    blurRadius: 24,
+  ),
+];
+
 /// "졸업학점" 화면.
 ///
-/// 파란 헤더("졸업까지 N학점 남았어요") 아래에 흰 카드들이 올라오는 디자인이다.
-/// 과목별 성적까지 보여주는 화면인데 그에 대응하는 서버 API가 없어서
-/// ([GraduationCreditMockData] 참고) 과목명/학점/성적은 전부 가상으로 지어낸
-/// 예시다.
+/// 홈 화면과 같은 톤이다 — 화면 전체가 코발트 배경이고, 라임 배지 + 흰 큰
+/// 제목 + 마스코트 스티커 아래에 흰 카드(남색 그림자), 잉크색 강조 카드가
+/// 쌓인다. 과목별 성적까지 보여주는 화면인데 그에 대응하는 서버 API가
+/// 없어서([GraduationCreditMockData] 참고) 과목명/학점/성적은 전부 가상으로
+/// 지어낸 예시다.
 class GraduationCreditScreen extends StatefulWidget {
   const GraduationCreditScreen({super.key});
 
@@ -54,66 +63,54 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
       backgroundColor: AppColors.cobalt,
       body: Stack(
         children: [
-          Column(
-            children: [
-              _Header(remaining: remaining),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
+          SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                _Header(remaining: remaining),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: _SummaryCard(
+                    totalRequired: totalRequired,
+                    totalEarned: totalEarned,
+                    categories: categories,
                   ),
-                  child: ColoredBox(
-                    color: _panelBackground,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 32),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _SummaryCard(
-                            totalRequired: totalRequired,
-                            totalEarned: totalEarned,
-                            categories: categories,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 104,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: categories.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) => _CategoryChip(
-                              category: categories[index],
-                              onTap: _openDetail,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Column(
-                            children: [
-                              _AreaProgressCard(
-                                title: '영역별 이수현황',
-                                items: GraduationCreditMockData.areas,
-                              ),
-                              const SizedBox(height: 16),
-                              const _GraduationRuleNotice(),
-                              const SizedBox(height: 16),
-                              _AreaProgressCard(
-                                items: GraduationCreditMockData.detailAreas,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 112,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: categories.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) => _CategoryChip(
+                      category: categories[index],
+                      onTap: _openDetail,
                     ),
                   ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Column(
+                    children: [
+                      _AreaProgressCard(
+                        title: '영역별 이수현황',
+                        items: GraduationCreditMockData.areas,
+                      ),
+                      const SizedBox(height: 12),
+                      const _GraduationRuleNotice(),
+                      const SizedBox(height: 12),
+                      _AreaProgressCard(
+                        items: GraduationCreditMockData.detailAreas,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           if (selected != null) ...[
             Positioned.fill(
@@ -140,7 +137,8 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
   }
 }
 
-/// 파란 헤더: 뒤로가기 원형 버튼, "졸업학점" 라임 배지, 남은 학점 문구, 마스코트.
+/// 홈 화면과 같은 헤더: 뒤로가기 원형 버튼, 라임 배지, 큰 흰 제목, 마스코트
+/// 스티커. 코발트 배경 위에 바로 올라간다.
 class _Header extends StatelessWidget {
   const _Header({required this.remaining});
 
@@ -150,77 +148,69 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = remaining == 0 ? '졸업학점을\n모두 채웠어요' : '졸업까지\n$remaining학점 남았어요';
 
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        child: SizedBox(
-          width: double.infinity,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: HomeTopIconButton(
+            icon: Icons.arrow_back_ios_new,
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Material(
-                    color: AppColors.cobaltDeep,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.white,
-                          size: 16,
+              SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.lime,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        '졸업학점',
+                        style: TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.lime,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Text(
-                      '졸업학점',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                    const SizedBox(height: 14),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 70),
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          height: 1.22,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
-                    ),
-                  ),
-                ],
-              ),
-              Positioned(
-                right: 4,
-                top: 24,
-                child: Image.asset(
-                  'assets/images/graduation_mascot.png',
-                  height: 96,
+                  ],
                 ),
+              ),
+              const Positioned(
+                right: -20,
+                top: 10,
+                child: MascotSticker(width: 100, angle: 0.1),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -262,6 +252,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
+        boxShadow: _cardShadow,
       ),
       child: Column(
         children: [
@@ -531,7 +522,8 @@ class _CreditBadge extends StatelessWidget {
 
 /// 가로 스크롤 줄의 카테고리 칩 하나. 누르면 그 영역에서 들은 과목 상세
 /// 목록을 화면 위에 오버레이 카드로 보여준다(과목이 없으면 — 예: 복수전공
-/// 0과목 — 열지 않는다). 주전공 칩만 코발트로 채워 강조한다.
+/// 0과목 — 열지 않는다). 주전공 칩만 홈의 "학과 등수" 카드처럼 잉크색
+/// 바탕 + 라임 숫자로 강조한다(코발트 배경 위라 코발트로는 안 보인다).
 class _CategoryChip extends StatelessWidget {
   const _CategoryChip({required this.category, required this.onTap});
 
@@ -544,55 +536,61 @@ class _CategoryChip extends StatelessWidget {
     final valueColor = isMajor ? AppColors.lime : _categoryValueColor(category);
     final subColor = isMajor ? Colors.white.withValues(alpha: 0.7) : _mutedText;
 
-    return Material(
-      color: isMajor ? AppColors.cobalt : Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: category.courses.isEmpty ? null : () => onTap(category),
-        child: Container(
-          width: 140,
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                category.label,
-                style: TextStyle(
-                  color: isMajor ? Colors.white : _mutedText,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+    return Container(
+      decoration: BoxDecoration(
+        color: isMajor ? AppColors.ink : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: _cardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: category.courses.isEmpty ? null : () => onTap(category),
+          child: Container(
+            width: 140,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  category.label,
+                  style: TextStyle(
+                    color: isMajor ? Colors.white : _mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${category.earned}',
-                      style: TextStyle(
-                        color: valueColor,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (category.required != null)
+                Text.rich(
+                  TextSpan(
+                    children: [
                       TextSpan(
-                        text: '/${category.required}',
+                        text: '${category.earned}',
                         style: TextStyle(
-                          color: subColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          color: valueColor,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                  ],
+                      if (category.required != null)
+                        TextSpan(
+                          text: '/${category.required}',
+                          style: TextStyle(
+                            color: subColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                '${category.courseCount}과목',
-                style: TextStyle(color: subColor, fontSize: 11),
-              ),
-            ],
+                Text(
+                  '${category.courseCount}과목',
+                  style: TextStyle(color: subColor, fontSize: 11),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -726,6 +724,7 @@ class _AreaProgressCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        boxShadow: _cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,7 +781,7 @@ class _AreaTile extends StatelessWidget {
           height: 48,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: done ? AppColors.cobalt : _softFill,
+            color: done ? AppColors.cobalt : AppColors.blushPink,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Text(
@@ -819,6 +818,7 @@ class _GraduationRuleNotice extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        boxShadow: _cardShadow,
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
