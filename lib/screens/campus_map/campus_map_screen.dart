@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
+import '../../theme/app_colors.dart';
 import 'campus_map_colors.dart';
 import 'models/campus_building.dart';
 import 'models/geo_point.dart';
@@ -223,10 +224,23 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     // 자기 줄을 차지한다(Figma 6:100 — 검색바는 그 아래
                     // 독립된 카드로 떨어져 있다).
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 4, 0, 0),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.black),
-                        onPressed: () => Navigator.of(context).pop(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 0, 0),
+                      child: Material(
+                        color: AppColors.cobaltDeep,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: const SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     Padding(

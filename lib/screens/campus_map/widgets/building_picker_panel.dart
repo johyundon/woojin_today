@@ -39,7 +39,7 @@ class _BuildingPickerPanelState extends State<BuildingPickerPanel> {
       constraints: const BoxConstraints(maxHeight: 520),
       decoration: BoxDecoration(
         color: CampusMapColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
