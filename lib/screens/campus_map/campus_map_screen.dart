@@ -216,16 +216,12 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               child: SafeArea(
                 key: _headerKey,
                 bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 뒤로가기는 검색바와 한 줄에 나란히 두지 않고 따로
-                    // 자기 줄을 차지한다(Figma 6:100 — 검색바는 그 아래
-                    // 독립된 카드로 떨어져 있다).
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 0, 0),
-                      child: Material(
+                // 뒤로가기 버튼과 출발지/목적지 검색바를 한 줄에 나란히 둔다.
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Row(
+                    children: [
+                      Material(
                         color: AppColors.cobaltDeep,
                         shape: const CircleBorder(),
                         child: InkWell(
@@ -242,18 +238,18 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                           ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: CampusSearchBar(
-                        originName: _origin?.name,
-                        destinationName: _destination?.name,
-                        onTapOrigin: _openOriginPicker,
-                        onTapDestination: _openDestinationPicker,
-                        onReset: _reset,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: CampusSearchBar(
+                          originName: _origin?.name,
+                          destinationName: _destination?.name,
+                          onTapOrigin: _openOriginPicker,
+                          onTapDestination: _openDestinationPicker,
+                          onReset: _reset,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
