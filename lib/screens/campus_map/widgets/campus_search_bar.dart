@@ -57,14 +57,16 @@ class CampusSearchBar extends StatelessWidget {
               onTap: onTapDestination,
             ),
           ),
-          IconButton(
-            onPressed: onReset,
-            icon: const Icon(
-              Icons.close,
-              color: CampusMapColors.danger,
-              size: 20,
+          // 초기화할 게 있을 때(출발지/목적지 중 하나라도 선택됨)만 보인다.
+          if (originName != null || destinationName != null)
+            IconButton(
+              onPressed: onReset,
+              icon: const Icon(
+                Icons.close,
+                color: CampusMapColors.danger,
+                size: 20,
+              ),
             ),
-          ),
         ],
       ),
     );
