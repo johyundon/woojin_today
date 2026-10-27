@@ -9,6 +9,7 @@ import '../home_colors.dart';
 /// 상태는 보여줄 데이터가 없으므로 누를 수 없다.
 class WeatherIndicator extends StatelessWidget {
   const WeatherIndicator({
+    super.key,
     required this.colors,
     required this.weatherLoading,
     required this.weatherHasError,

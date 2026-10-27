@@ -5,6 +5,7 @@ import '../home_colors.dart';
 /// "내 정보" 모달의 한 줄(라벨+값).
 class MyInfoRow extends StatelessWidget {
   const MyInfoRow({
+    super.key,
     required this.colors,
     required this.label,
     required this.value,

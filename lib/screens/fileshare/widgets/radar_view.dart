@@ -8,7 +8,7 @@ import '../fileshare_colors.dart';
 
 /// 발견된 사람들을 원 둘레에 배치한 레이더 시각화. 가운데는 내 마스코트.
 class RadarView extends StatelessWidget {
-  const RadarView({required this.peers});
+  const RadarView({super.key, required this.peers});
 
   final List<nsd.Service> peers;
 

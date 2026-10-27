@@ -9,6 +9,7 @@ import '../timetable_colors.dart';
 /// 내역을 바꾸는 API는 명세서에 없어 호출하지 않는다.
 class CourseBlock extends StatelessWidget {
   const CourseBlock({
+    super.key,
     required this.layout,
     required this.onRemove,
     required this.onTap,
@@ -99,7 +100,7 @@ class CourseBlock extends StatelessWidget {
 /// 미리보기를 만들고, 검색 결과에서 "시간표에 추가"를 눌러야 실제 블록으로
 /// 확정된다.
 class CourseBlockPreview extends StatelessWidget {
-  const CourseBlockPreview();
+  const CourseBlockPreview({super.key});
 
   @override
   Widget build(BuildContext context) {

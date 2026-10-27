@@ -7,7 +7,7 @@ import '../received_file_format.dart';
 
 /// 받은 파일 한 줄 — 형식별 색 배지 + 파일명 + "용량 · 받은 시각" + 다운로드.
 class ReceivedFileRow extends StatelessWidget {
-  const ReceivedFileRow({required this.entry, required this.onDownload});
+  const ReceivedFileRow({super.key, required this.entry, required this.onDownload});
 
   final ReceivedFile entry;
   final VoidCallback onDownload;

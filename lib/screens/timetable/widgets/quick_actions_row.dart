@@ -5,6 +5,7 @@ import '../timetable_colors.dart';
 /// 헤더 바로 아래 줄: "내 시간표 불러오기" 아웃라인 버튼 + "강의시간 알림" 토글.
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({
+    super.key,
     required this.loading,
     required this.onLoadMyTimetable,
     required this.notificationsEnabled,

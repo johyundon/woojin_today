@@ -6,6 +6,7 @@ import '../campus_map_colors.dart';
 /// 오른쪽 X로 둘 다 초기화한다.
 class CampusSearchBar extends StatelessWidget {
   const CampusSearchBar({
+    super.key,
     required this.originName,
     required this.destinationName,
     required this.onTapOrigin,

@@ -25,6 +25,7 @@ class PendingSlot {
 /// 월~금 × 8~22시 주간 시간표 그리드.
 class TimetableGrid extends StatelessWidget {
   const TimetableGrid({
+    super.key,
     required this.courses,
     required this.pendingSlot,
     required this.onEmptyCellTap,

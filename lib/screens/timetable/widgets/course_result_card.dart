@@ -10,6 +10,7 @@ import '../timetable_colors.dart';
 /// 상세 정보([onViewDetail])가 열린다.
 class CourseResultCard extends StatelessWidget {
   const CourseResultCard({
+    super.key,
     required this.course,
     required this.onAdd,
     required this.onViewDetail,

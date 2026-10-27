@@ -5,6 +5,7 @@ import '../campus_map_colors.dart';
 /// 경로가 그려졌을 때 지도 위에 뜨는 "도보 N분 · 약 Mm" 알약 배너.
 class RouteInfoBanner extends StatelessWidget {
   const RouteInfoBanner({
+    super.key,
     required this.walkMinutes,
     required this.distanceMeters,
   });

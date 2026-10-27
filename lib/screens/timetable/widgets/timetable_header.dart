@@ -9,6 +9,7 @@ import '../../../widgets/mascot_sticker.dart';
 /// 선택·저장·저장목록 기능은 위치만 재배치하고 그대로 유지한다.
 class TimetableHeader extends StatelessWidget {
   const TimetableHeader({
+    super.key,
     required this.semesterLabel,
     required this.totalCredits,
     required this.savedCount,

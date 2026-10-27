@@ -14,7 +14,7 @@ import '../../widgets/mascot_sticker.dart';
 /// 이메일/면담시간 등)은 지어내지 않고 아예 보여주지 않는다. 아래 아코디언 섹션들도 실제 강의계획서 본문 데이터가 없어
 /// placeholder로만 남겨둔다.
 class SyllabusScreen extends StatefulWidget {
-  const SyllabusScreen({required this.course});
+  const SyllabusScreen({super.key, required this.course});
 
   final CourseCatalogItem course;
 

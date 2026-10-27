@@ -5,7 +5,7 @@ import '../timetable_colors.dart';
 /// "시간표 저장" 다이얼로그(상태 8). 이름을 입력받아 확인 시 그 이름을
 /// [Navigator.pop]으로 돌려준다(취소/바깥 탭이면 null).
 class SaveTimetableDialog extends StatefulWidget {
-  const SaveTimetableDialog();
+  const SaveTimetableDialog({super.key});
 
   @override
   State<SaveTimetableDialog> createState() => _SaveTimetableDialogState();

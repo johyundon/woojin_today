@@ -18,6 +18,7 @@ const List<Weekday> _weekdayChipValues = [
 /// 검색창 + 필터 토글 + (펼쳤을 때) 필터 패널 + 활성 필터 칩 로우.
 class SearchFilterBar extends StatelessWidget {
   const SearchFilterBar({
+    super.key,
     required this.controller,
     this.focusNode,
     required this.onQueryChanged,

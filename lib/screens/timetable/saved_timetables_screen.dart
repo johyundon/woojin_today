@@ -10,7 +10,7 @@ import '../../widgets/mascot_sticker.dart';
 /// 항목의 "시간표로 보기"를 누르면 그 저장분을 [Navigator.pop]으로 돌려줘서
 /// 호출한 쪽(TimetableScreen)이 현재 그리드에 반영하게 한다.
 class SavedTimetablesScreen extends StatefulWidget {
-  const SavedTimetablesScreen({required this.storage});
+  const SavedTimetablesScreen({super.key, required this.storage});
 
   final SavedTimetableStorage storage;
 

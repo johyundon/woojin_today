@@ -11,6 +11,7 @@ import '../timetable_colors.dart';
 /// 지어내지 않기 위함.
 class CourseDetailDialog extends StatelessWidget {
   const CourseDetailDialog({
+    super.key,
     required this.course,
     required this.onViewSyllabus,
   });

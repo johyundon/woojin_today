@@ -9,6 +9,7 @@ import '../timetable_colors.dart';
 /// 해서 호출부가 만들어 넘긴다.
 class CourseAddPanel extends StatelessWidget {
   const CourseAddPanel({
+    super.key,
     required this.searchFilterBar,
     required this.results,
     required this.onClose,

@@ -6,6 +6,7 @@ import '../../../theme/app_colors.dart';
 /// "주변 사람" 목록 한 줄 — 아바타 이니셜 + 광고된 이름 + "보내기".
 class PeerRow extends StatelessWidget {
   const PeerRow({
+    super.key,
     required this.peer,
     required this.color,
     required this.onSend,
