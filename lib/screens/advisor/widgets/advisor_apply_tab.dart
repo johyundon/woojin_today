@@ -60,6 +60,10 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
   DateTime? _selectedVisitDate;
   String? _selectedVisitTime;
 
+  /// 10자 미만인 채로 신청을 눌러 본 적이 있는지 — 그 뒤로 10자가 채워질
+  /// 때까지 입력창에 안내를 보여준다.
+  bool _showContentError = false;
+
   @override
   void initState() {
     super.initState();
@@ -155,7 +159,7 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
   bool get _emailValid => _emailController.text.trim().contains('@');
 
   bool get _contentValid =>
-      _contentController.text.trim().length >= _minContentLength;
+      advisorContentLength(_contentController.text) >= _minContentLength;
 
   bool get _methodStepValid {
     if (_selectedProfessor == null) return false;
@@ -165,6 +169,10 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
 
   void _goNext() {
     if (_step == _totalSteps - 1) {
+      if (!_contentValid) {
+        setState(() => _showContentError = true);
+        return;
+      }
       _submit();
     } else {
       setState(() => _step++);
@@ -254,7 +262,7 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
               totalSteps: _totalSteps,
               controller: _contentController,
               minContentLength: _minContentLength,
-              contentValid: _contentValid,
+              showError: _showContentError && !_contentValid,
               onBack: _goBack,
               onNext: _goNext,
             );
@@ -294,7 +302,7 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
         totalSteps: _totalSteps,
         controller: _contentController,
         minContentLength: _minContentLength,
-        contentValid: _contentValid,
+        showError: _showContentError && !_contentValid,
         onBack: _goBack,
         onNext: _goNext,
       ),

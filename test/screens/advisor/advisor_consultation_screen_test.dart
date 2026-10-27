@@ -126,15 +126,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('어떤 이야기를 나누고 싶어요?'), findsOneWidget);
 
-    // 10자 미만이면 "상담 신청하기"가 비활성 상태라 탭해도 진행되지 않는다.
-    await tester.enterText(find.byType(TextField).first, '짧음');
-    await tester.pumpAndSettle();
+    // 아무것도 입력하지 않으면 "상담 신청하기"가 눌리지 않는다.
     await tester.tap(find.text('상담 신청하기'), warnIfMissed: false);
     await tester.pump();
+    expect(find.textContaining('자 이상 적어주세요 (현재'), findsNothing);
+
+    // 글자를 입력하면 눌리지만, 10자 미만이면 신청되지 않고 안내가 뜬다.
+    await tester.enterText(find.byType(TextField).first, '짧음');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('상담 신청하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('상담 신청하기'));
+    await tester.pumpAndSettle();
     expect(find.text('상담 신청이 완료됐어요'), findsNothing);
+    expect(find.text('10자 이상 적어주세요 (현재 2자)'), findsOneWidget);
+
+    // 자음·모음만으로는 12자를 채워도 글자 수에 포함되지 않아 신청되지 않는다.
+    await tester.enterText(find.byType(TextField).first, 'ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('상담 신청하기'));
+    await tester.pumpAndSettle();
+    expect(find.text('상담 신청이 완료됐어요'), findsNothing);
+    expect(find.textContaining('자음·모음만으로는'), findsOneWidget);
+    expect(find.textContaining('(현재 0자)'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, '테스트 상담 내용입니다');
     await tester.pumpAndSettle();
+    expect(find.textContaining('자 이상 적어주세요 (현재'), findsNothing);
     final submitFinder = find.text('상담 신청하기');
     await tester.ensureVisible(submitFinder);
     await tester.pumpAndSettle();
