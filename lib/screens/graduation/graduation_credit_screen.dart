@@ -78,17 +78,25 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 112,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: categories.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) => _CategoryChip(
-                      category: categories[index],
-                      onTap: _openDetail,
+                // 칩 줄도 위 카드와 같은 좌우 20 폭 안에서만 보이게 하고, 그 선에서
+                // 칩이 잘리게 한다(오른쪽 교양필수 칩이 화면 끝까지 번지지 않게).
+                // 그림자가 위아래로는 잘리면 안 돼서 가로만 자른다.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    height: 112,
+                    child: ClipRect(
+                      clipper: _HorizontalOnlyClipper(),
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        itemCount: categories.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) => _CategoryChip(
+                          category: categories[index],
+                          onTap: _openDetail,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -135,6 +143,16 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
       ),
     );
   }
+}
+
+/// 좌우만 자르고 위아래는 넉넉히 열어 두는 클리퍼 — 칩 그림자가 잘리지 않게.
+class _HorizontalOnlyClipper extends CustomClipper<Rect> {
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(0, -48, size.width, size.height + 48);
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Rect> oldClipper) => false;
 }
 
 /// 홈 화면과 같은 헤더: 뒤로가기 원형 버튼, 라임 배지, 큰 흰 제목, 마스코트
