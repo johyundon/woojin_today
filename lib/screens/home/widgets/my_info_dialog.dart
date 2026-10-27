@@ -35,44 +35,59 @@ class MyInfoDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return Dialog(
       backgroundColor: colors.cardSurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '내 정보',
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ..._buildContent(context),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.cobalt,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.lime,
+                borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
-                '확인',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                '내 정보',
+                style: TextStyle(
+                  color: AppColors.ink,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            ..._buildContent(context),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: AppColors.ink,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    child: Text(
+                      '확인',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -100,16 +115,59 @@ class MyInfoDialog extends StatelessWidget {
     }
 
     final info = data;
+    final name = info?.name?.trim();
+    final hasName = name != null && name.isNotEmpty;
     return [
-      MyInfoRow(colors: colors, label: '이름', value: info?.name ?? '정보 없음'),
-      const SizedBox(height: 14),
+      Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.cobalt,
+              shape: BoxShape.circle,
+            ),
+            child: hasName
+                ? Text(
+                    String.fromCharCode(name.runes.first),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  )
+                : const Icon(Icons.person, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              hasName ? name : '정보 없음',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 18),
       MyInfoRow(
         colors: colors,
+        icon: Icons.school_rounded,
         label: '학과',
         value: info?.department ?? '정보 없음',
       ),
-      const SizedBox(height: 14),
-      MyInfoRow(colors: colors, label: '학년', value: info?.grade ?? '정보 없음'),
+      const SizedBox(height: 10),
+      MyInfoRow(
+        colors: colors,
+        icon: Icons.badge_rounded,
+        label: '학년',
+        value: info?.grade ?? '정보 없음',
+      ),
     ];
   }
 
@@ -132,32 +190,87 @@ class MyInfoDialog extends StatelessWidget {
     };
 
     return [
-      Row(
-        children: [
-          Icon(icon, color: colors.textSecondary, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colors.textSecondary, fontSize: 13),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F0F8),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.blushPink,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppColors.ink, size: 22),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       if (error == StudentInfoErrorKind.sessionExpired) ...[
         const SizedBox(height: 12),
-        TextButton(
-          onPressed: () {
+        _ActionButton(
+          label: '로그인 화면으로 이동',
+          onTap: () {
             Navigator.of(context).pop();
             onGoToLogin();
           },
-          child: const Text('로그인 화면으로 이동'),
         ),
       ] else if (error == StudentInfoErrorKind.network ||
           error == StudentInfoErrorKind.server) ...[
         const SizedBox(height: 12),
-        TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+        _ActionButton(label: '다시 시도', onTap: onRetry),
       ],
     ];
+  }
+}
+
+/// 오류 안내 아래의 복구 버튼(라임). 텍스트 버튼 대신 눈에 띄게 보여준다.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: AppColors.lime,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
