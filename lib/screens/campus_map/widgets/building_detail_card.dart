@@ -7,6 +7,7 @@ import '../campus_map_colors.dart';
 /// TODO: 실제 건물 사진/설명 데이터가 없어(명세서 밖) placeholder만 보여준다.
 class BuildingDetailCard extends StatelessWidget {
   const BuildingDetailCard({
+    super.key,
     required this.buildingName,
     required this.onClose,
     required this.onSetOrigin,
@@ -85,37 +86,49 @@ class BuildingDetailCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: onSetOrigin,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: CampusMapColors.textPrimary,
-                    side: const BorderSide(color: CampusMapColors.border),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                child: _ShadowedButton(
+                  child: OutlinedButton(
+                    onPressed: onSetOrigin,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: CampusMapColors.surface,
+                      foregroundColor: CampusMapColors.textPrimary,
+                      side: const BorderSide(color: CampusMapColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    '출발지로 선택',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    child: const Text(
+                      '출발지로 선택',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: onSetDestination,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: CampusMapColors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                child: _ShadowedButton(
+                  child: ElevatedButton(
+                    onPressed: onSetDestination,
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: CampusMapColors.accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    '도착지로 선택',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    child: const Text(
+                      '도착지로 선택',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -123,6 +136,31 @@ class BuildingDetailCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 버튼 아래에 은은한 남색 그림자를 깔아 주는 래퍼. 버튼 모서리(10)와 같은
+/// 둥글기로 그려야 그림자가 버튼 모양을 따라간다.
+class _ShadowedButton extends StatelessWidget {
+  const _ShadowedButton({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF030A7F).withValues(alpha: 0.18),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
