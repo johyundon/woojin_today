@@ -130,7 +130,8 @@ void main() {
     expect(find.text('왕방축제'), findsOneWidget);
     expect(find.text('일정 1개'), findsOneWidget);
     expect(find.text('학사일정'), findsOneWidget);
-    expect(find.text('종일'), findsOneWidget);
+    // 시간이 없는 학사일정은 "종일" 글자 없이 보인다.
+    expect(find.text('종일'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -191,11 +192,71 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('날짜'), findsOneWidget);
-    expect(find.text('시간'), findsOneWidget);
-    expect(find.text('종일'), findsNWidgets(2)); // 카드 + 팝업
+    // 시간이 없는 일정은 카드와 팝업 모두 "종일"·"시간" 줄 없이 보인다.
+    expect(find.text('시간'), findsNothing);
+    expect(find.text('종일'), findsNothing);
     expect(find.text('알림 없음'), findsOneWidget);
     expect(find.text('삭제하기'), findsNothing);
     expect(find.text('수정하기'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('일정 카드를 누르는 동안 살짝 작아졌다가 떼면 돌아온다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    await tester.tap(find.text('14').first);
+    await tester.pumpAndSettle();
+
+    double scale() => tester
+        .widget<AnimatedScale>(
+          find.ancestor(
+            of: find.text('왕방축제'),
+            matching: find.byType(AnimatedScale),
+          ),
+        )
+        .scale;
+    expect(scale(), 1);
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('왕방축제')),
+    );
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(scale(), lessThan(1));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(scale(), 1);
+    // 손을 떼면 상세 팝업이 열린다.
+    expect(find.text('날짜'), findsOneWidget);
+  });
+
+  testWidgets('일정 추가 화면의 날짜 칸은 앱 스타일 달력 시트로 고른다', (tester) async {
+    await _pump(tester);
+    final now = DateTime.now();
+    const sunFirst = ['일', '월', '화', '수', '목', '금', '토'];
+    String pill(DateTime d) => '${d.month}.${d.day} ${sunFirst[d.weekday % 7]}';
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(pill(now)).first);
+    await tester.pumpAndSettle();
+
+    // 영어 기본 창이 아니라 한국어 제목·연월·월요일 시작 요일이 보인다.
+    expect(find.text('시작 날짜'), findsOneWidget);
+    expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
+    expect(find.text('OK'), findsNothing);
+
+    // 다음 달 1일을 골라 저장하면 시작·끝 날짜가 그 날로 바뀐다.
+    await tester.tap(find.byIcon(Icons.chevron_right).last);
+    await tester.pumpAndSettle();
+    final next = DateTime(now.year, now.month + 1, 1);
+    expect(find.text('${next.year}년 ${next.month}월'), findsOneWidget);
+    await tester.tap(find.text('1').last);
+    await tester.pump();
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('시작 날짜'), findsNothing);
+    expect(find.text(pill(next)), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 

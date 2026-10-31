@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../theme/app_colors.dart';
 import '../models/calendar_event.dart';
@@ -6,8 +7,8 @@ import 'ringing_bell.dart';
 
 const Color _mutedText = Color(0xFF6B6B70);
 
-/// 선택한 날짜의 일정 한 줄 — 왼쪽 시간(시작 시간과 끝 시간, 시간이 없으면
-/// "종일"), 일정 색 세로 막대, 라벨 칩/제목/장소(없으면 기간)가 든 카드, 오른쪽의
+/// 선택한 날짜의 일정 한 줄 — 왼쪽 시간(시작 시간과 끝 시간. 시간이 없는 일정은
+/// 이 칸 없이 바로 막대부터), 일정 색 세로 막대, 라벨 칩/제목/장소(없으면 기간)가 든 카드, 오른쪽의
 /// 원형 알림 종 버튼. 카드를 누르면 상세 팝업이 열리고, 종 버튼으로는 알림을 바로
 /// 켜고 끈다.
 class EventRow extends StatelessWidget {
@@ -50,44 +51,35 @@ class EventRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 48,
-            // 카드 높이의 세로 가운데, 칸의 가로 가운데에 놓는다.
-            child: Center(
-              child: event.startTime == null
-                  ? const Text(
-                      '종일',
-                      style: TextStyle(
-                        color: _mutedText,
-                        fontSize: 12,
+          // 시간이 없는 일정(학사일정 등)은 "종일" 글자와 그 칸을 빼서 카드를 왼쪽으로
+          // 붙인다(사용자 요청, 2026-10-31).
+          if (event.startTime != null)
+            SizedBox(
+              width: 48,
+              // 카드 높이의 세로 가운데, 칸의 가로 가운데에 놓는다.
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(event.startTime!),
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _formatTime(event.startTime!),
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        if (event.endTime != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatTime(event.endTime!),
-                            style: const TextStyle(
-                              color: _mutedText,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ],
                     ),
+                    if (event.endTime != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatTime(event.endTime!),
+                        style: const TextStyle(color: _mutedText, fontSize: 11),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
           Container(
             width: 4,
             margin: const EdgeInsets.only(right: 10),
@@ -97,8 +89,7 @@ class EventRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            child: _PressableCard(
               onTap: onTap,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
@@ -192,4 +183,57 @@ String _formatTime(TimeOfDay time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
+}
+
+/// 누르는 동안 카드가 살짝 작아지고 옅어졌다가 손을 떼면 돌아오는 효과, 그리고
+/// 가벼운 진동으로 "눌렀다"는 느낌을 준다. 아주 짧게 톡 쳐도 효과가 보이도록
+/// 손을 뗀 뒤 잠깐 눌린 모양을 유지한다.
+class _PressableCard extends StatefulWidget {
+  const _PressableCard({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  State<_PressableCard> createState() => _PressableCardState();
+}
+
+class _PressableCardState extends State<_PressableCard> {
+  static const _duration = Duration(milliseconds: 110);
+
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value && mounted) setState(() => _pressed = value);
+  }
+
+  Future<void> _release() async {
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    _setPressed(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _release(),
+      onTapCancel: () => _setPressed(false),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1,
+        duration: _duration,
+        curve: Curves.easeOut,
+        child: AnimatedOpacity(
+          opacity: _pressed ? 0.75 : 1,
+          duration: _duration,
+          curve: Curves.easeOut,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
 }

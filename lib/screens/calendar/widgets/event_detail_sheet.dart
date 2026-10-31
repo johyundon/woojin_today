@@ -129,7 +129,9 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
             ),
             const SizedBox(height: 18),
             _InfoRow(icon: Icons.calendar_today, label: '날짜', value: _dateText),
-            _InfoRow(icon: Icons.access_time, label: '시간', value: _timeText),
+            // 시간이 없는 일정은 "시간: 종일" 줄을 빼서 보여준다(사용자 요청, 2026-10-31).
+            if (!event.isAllDay)
+              _InfoRow(icon: Icons.access_time, label: '시간', value: _timeText),
             if (event.location != null && event.location!.isNotEmpty)
               _InfoRow(
                 icon: Icons.location_on,
