@@ -263,8 +263,15 @@ class NoticeService implements NoticeServiceBase {
     return lines.join('\n');
   }
 
+  /// 첨부파일을 받아 바이트 그대로 돌려준다(xlsx처럼 글자가 아닌 파일용).
+  /// [url]은 [NoticeAttachment.url] 같은 전체 주소.
+  Future<Uint8List> downloadBytes(String url) => _getBytes(url);
+
+  Future<String> _get(String url) async =>
+      utf8.decode(await _getBytes(url), allowMalformed: true);
+
   /// GET을 보내고 리다이렉트를 직접 따라가며 홉마다 쿠키를 주고받는다.
-  Future<String> _get(String url) async {
+  Future<Uint8List> _getBytes(String url) async {
     final cookies = HostCookieJar();
     var uri = Uri.parse(url);
     for (var hop = 0; hop <= _maxRedirects; hop++) {
@@ -294,7 +301,7 @@ class NoticeService implements NoticeServiceBase {
       if (response.statusCode != 200) {
         throw NoticeException('서버 오류 (${response.statusCode})');
       }
-      return utf8.decode(response.bodyBytes, allowMalformed: true);
+      return response.bodyBytes;
     }
     throw const NoticeException('리다이렉트가 너무 많아요');
   }

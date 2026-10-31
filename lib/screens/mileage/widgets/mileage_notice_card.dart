@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../models/mileage_models.dart';
-import 'mileage_target_confirm_dialog.dart';
 
 /// 장학 대상자 공지 카드 하나 — 제목/작성자·날짜·조회수 + "대상자 확인" 버튼.
 class MileageNoticeCard extends StatelessWidget {
-  const MileageNoticeCard({super.key, required this.notice});
+  const MileageNoticeCard({
+    super.key,
+    required this.notice,
+    required this.onCheck,
+  });
 
   final MileageNotice notice;
+
+  /// "대상자 확인" 버튼을 눌렀을 때.
+  final VoidCallback onCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +54,7 @@ class MileageNoticeCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           OutlinedButton(
-            onPressed: () =>
-                showMileageTargetConfirmDialog(context, notice: notice),
+            onPressed: onCheck,
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.accent,
               side: const BorderSide(color: AppColors.accent),

@@ -2,11 +2,9 @@ import '../models/mileage_models.dart';
 
 /// "장학 대상자 확인" 탭 목데이터.
 ///
-/// *** 중요: 서버 API 없음 ***
-/// API 명세서(daejin-api-spec-reference)에 장학 대상자 공지 조회에
-/// 대응하는 엔드포인트가 없다. 그래서 이 기능은 전부 하드코딩된 목데이터로만
-/// 동작한다 — 추측으로 서버 API를 만들어 호출하지 않는다. 나중에 실제 API가
-/// 생기면 이 파일만 교체하면 된다.
+/// 마일리지 화면의 장학 탭은 이제 학교 홈페이지의 실제 "대상자" 공지
+/// (`MileageService.fetchTargetNotices`)를 쓴다. 이 목데이터는 공지 목데이터
+/// (`notice_mock_data.dart`)가 아직 참조해서 남겨 두었다.
 class MileageNoticeMockData {
   MileageNoticeMockData._();
 

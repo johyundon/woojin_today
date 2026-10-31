@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -6,29 +5,12 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'host_cookie_jar.dart';
+import 'twin_client.dart';
 
-/// T-WIN 성적 조회가 어디서 실패했는지.
-enum TwinRankFailure {
-  /// T-WIN 로그인이 안 됨(학번·비밀번호 오류, 서버 점검 등).
-  loginFailed,
-
-  /// 로그인은 됐지만 응답에서 평점을 못 찾음(세션 만료, 학과·학년코드 오류 등).
-  noData,
-
-  /// 타임아웃 등 통신 자체가 실패함.
-  network,
-}
-
-class TwinRankException implements Exception {
-  const TwinRankException(this.failure, this.message);
-
-  final TwinRankFailure failure;
-  final String message;
-
-  @override
-  String toString() => message;
-}
+/// T-WIN 성적 조회가 어디서 실패했는지. 로그인 코드를 [TwinClient]로 옮기면서
+/// 공용 타입의 다른 이름으로 남겼다(화면·테스트가 이 이름을 쓴다).
+typedef TwinRankFailure = TwinFailure;
+typedef TwinRankException = TwinException;
 
 /// T-WIN에서 받아온 학과·학년 성적 정보. 등수는 여기서 계산하지 않는다.
 class TwinGradeStats {
@@ -94,26 +76,19 @@ abstract class TwinRankServiceBase {
 /// 바뀌는데, 한 번 받는 데 요청이 15번 안팎 나가기 때문이다. 실패한 결과는
 /// 저장하지 않는다. 로그아웃하면 `logout_cleaner`가 기기 저장소를 통째로 지운다.
 ///
-/// 쿠키는 서버별로 나눠 보관한다. 로그인이 together → nsso → together로 오가는데,
-/// 한곳에 섞으면 nsso의 JSESSIONID가 together의 것을 덮어써 성적 조회가 "로그인이
-/// 필요"로 실패한다(2026-10-30 시뮬레이터에서 확인).
+/// 로그인과 요청 보내기는 [TwinClient]가 맡는다(서버별 쿠키 보관 포함).
 class TwinRankService implements TwinRankServiceBase {
   TwinRankService({http.Client? client, DateTime Function()? now})
     : _client = client ?? http.Client(),
       _now = now ?? DateTime.now;
 
-  static const _base = 'https://together.daejin.ac.kr';
-  static const _userAgent =
-      'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 '
-      '(KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
-  static const _referer = '$_base/myFuture/a/m/myFutureView.do';
+  static const _referer = '${TwinClient.base}/myFuture/a/m/myFutureView.do';
 
   static const cacheDuration = Duration(days: 7);
   static const _prefsKeyPrefix = 'twin_rank_';
 
   /// 동기 목록 한 페이지 인원(명세: 실제 호출로 확인된 고정값).
   static const _pageSize = 5;
-  static const _maxRedirects = 10;
 
   static final _totalCntPattern = RegExp(r"var\s+totalCnt\s*=\s*'(\d+)'");
 
@@ -137,10 +112,10 @@ class TwinRankService implements TwinRankServiceBase {
       }
     }
 
-    final cookies = HostCookieJar();
-    await _login(cookies, userId, userPwd);
-    final (myGpa, sameGradeAvg) = await _fetchMyGpa(cookies, sustCd, shyrCd);
-    final (peers, total) = await _fetchPeers(cookies, sustCd, shyrCd);
+    final twin = TwinClient(_client);
+    await twin.login(userId, userPwd);
+    final (myGpa, sameGradeAvg) = await _fetchMyGpa(twin, sustCd, shyrCd);
+    final (peers, total) = await _fetchPeers(twin, sustCd, shyrCd);
 
     final stats = TwinGradeStats(
       myGpa: myGpa,
@@ -153,51 +128,18 @@ class TwinRankService implements TwinRankServiceBase {
     return stats;
   }
 
-  /// 명세 1번. 첫 화면을 먼저 열어 세션 쿠키를 받은 뒤 로그인한다(시뮬레이터에서
-  /// 성공한 순서 그대로). 리다이렉트를 끝까지 따라가 최종 응답이 2xx이고 주소에
-  /// `/login/`이 없으면 성공이다.
-  Future<void> _login(
-    HostCookieJar cookies,
-    String userId,
-    String userPwd,
-  ) async {
-    await _send(
-      cookies,
-      http.Request('GET', Uri.parse('$_base/clientMain/a/t/main.do')),
-    );
-    final (status, finalUrl, _) = await _send(
-      cookies,
-      http.Request('POST', Uri.parse('$_base/login/a/n/loginProc.do'))
-        ..headers.addAll({
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          'Origin': _base,
-          'Referer': '$_base/clientMain/a/t/main.do',
-        })
-        ..body =
-            'targetUrl=%2FclientMain%2Fa%2Ft%2Fmain.do'
-            '&userId=${Uri.encodeQueryComponent(userId)}'
-            '&userPw=${Uri.encodeQueryComponent(userPwd)}',
-    );
-    if (status < 200 || status >= 300 || finalUrl.path.contains('/login/')) {
-      throw const TwinRankException(
-        TwinRankFailure.loginFailed,
-        'T-WIN 로그인에 실패했어요',
-      );
-    }
-  }
-
   /// 명세 2번. `li.grade_my strong`이 내 평점, `li.grade_same strong`이 같은 학년 평균.
   Future<(double, double?)> _fetchMyGpa(
-    HostCookieJar cookies,
+    TwinClient twin,
     String sustCd,
     String shyrCd,
   ) async {
-    final (status, _, body) = await _send(
-      cookies,
-      _ajaxPost(
+    final (status, _, body) = await twin.send(
+      twin.ajaxPost(
         '/myFuture/a/n/getResultDivInfoPage.do',
         'sustCd=$sustCd&shyrCd=$shyrCd&pageIndex=1'
             '&searchType=STD_GROUP&roadMapType=SAMEGRADE',
+        referer: _referer,
       ),
       followRedirects: false,
     );
@@ -217,17 +159,17 @@ class TwinRankService implements TwinRankServiceBase {
   /// 명세 3번. 1페이지에서 전체 인원수를 읽고, 나머지 페이지는 한꺼번에 요청한 뒤
   /// 페이지 순서대로 이어 붙인다.
   Future<(List<double>, int)> _fetchPeers(
-    HostCookieJar cookies,
+    TwinClient twin,
     String sustCd,
     String shyrCd,
   ) async {
     Future<String> page(int index) async {
-      final (status, _, body) = await _send(
-        cookies,
-        _ajaxPost(
+      final (status, _, body) = await twin.send(
+        twin.ajaxPost(
           '/myFuture/r/n/getGrStdCompareListAjax.do',
           'sustCd=$sustCd&shyrCd=$shyrCd&searchType=STD_GROUP'
               '&pageIndex=$index',
+          referer: _referer,
         ),
         followRedirects: false,
       );
@@ -261,65 +203,6 @@ class TwinRankService implements TwinRankServiceBase {
       if (row.querySelectorAll('td') case final cells when cells.length > 1)
         ?double.tryParse(cells[1].text.trim()),
   ];
-
-  http.Request _ajaxPost(String path, String body) =>
-      http.Request('POST', Uri.parse('$_base$path'))
-        ..headers.addAll({
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          'IS_AJAX': 'isAjax',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Origin': _base,
-          'Referer': _referer,
-        })
-        ..body = body;
-
-  /// 요청을 보내고 (최종 상태 코드, 최종 주소, 본문)을 돌려준다.
-  /// [followRedirects]면 3xx를 직접 따라가며 각 서버의 쿠키를 주고받는다.
-  Future<(int, Uri, String)> _send(
-    HostCookieJar cookies,
-    http.Request request, {
-    bool followRedirects = true,
-  }) async {
-    var current = request;
-    for (var hop = 0; hop <= _maxRedirects; hop++) {
-      current
-        ..followRedirects = false
-        ..headers['User-Agent'] = _userAgent;
-      final cookieHeader = cookies.headerFor(current.url);
-      if (cookieHeader.isNotEmpty) current.headers['Cookie'] = cookieHeader;
-
-      final http.Response response;
-      try {
-        response = await http.Response.fromStream(
-          await _client.send(current).timeout(const Duration(seconds: 15)),
-        );
-      } catch (e) {
-        throw TwinRankException(TwinRankFailure.network, '네트워크 오류: $e');
-      }
-      cookies.store(
-        current.url,
-        response.headersSplitValues['set-cookie'] ?? const [],
-      );
-
-      final location = response.headers['location'];
-      final isRedirect =
-          response.statusCode >= 300 &&
-          response.statusCode < 400 &&
-          location != null;
-      if (!followRedirects || !isRedirect) {
-        return (
-          response.statusCode,
-          current.url,
-          utf8.decode(response.bodyBytes, allowMalformed: true),
-        );
-      }
-      current = http.Request('GET', current.url.resolve(location));
-    }
-    throw const TwinRankException(
-      TwinRankFailure.loginFailed,
-      'T-WIN 로그인 중 리다이렉트가 너무 많아요',
-    );
-  }
 
   Future<TwinGradeStats?> _readStored(String key) async {
     try {
