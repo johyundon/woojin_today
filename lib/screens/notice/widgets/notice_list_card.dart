@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/notice_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../../mileage/widgets/mileage_target_confirm_dialog.dart';
 import '../models/notice_item.dart';
 import '../notice_detail_screen.dart';
@@ -62,9 +63,10 @@ class NoticeListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Pressable(
       onTap: () => _open(context),
+      pressedScale: 0.97,
+      pressedOpacity: 0.85,
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
         decoration: BoxDecoration(
@@ -111,13 +113,24 @@ class NoticeListCard extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                color: bookmarked ? AppColors.cobalt : const Color(0xFFB5B5BC),
+            Pressable.icon(
+              onTap: onBookmarkTap,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, animation) =>
+                      ScaleTransition(scale: animation, child: child),
+                  child: Icon(
+                    bookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    key: ValueKey(bookmarked),
+                    color: bookmarked
+                        ? AppColors.cobalt
+                        : const Color(0xFFB5B5BC),
+                  ),
+                ),
               ),
-              onPressed: onBookmarkTap,
             ),
           ],
         ),

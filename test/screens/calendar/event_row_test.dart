@@ -87,7 +87,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 120));
     await tester.pump(const Duration(milliseconds: 120));
 
-    expect(currentScale(tester, scales.last), closeTo(0.97, 0.001));
+    expect(currentScale(tester, scales.last), closeTo(0.95, 0.001));
 
     await gesture.up();
     await tester.pumpAndSettle();

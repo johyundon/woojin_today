@@ -206,6 +206,11 @@ void main() {
     await tester.tap(find.byIcon(Icons.notifications_active));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+    // 안내는 맨 위 배너로 뜨고 잠시 뒤 사라진다.
+    expect(find.text('새 공지 알림을 껐어요'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('새 공지 알림을 껐어요'), findsNothing);
     expect(await prefs.getBool('notice_watch_enabled'), isFalse);
     expect(tester.takeException(), isNull);
   });

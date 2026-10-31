@@ -6,6 +6,7 @@ import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/top_banner.dart';
 import '../calendar/widgets/ringing_bell.dart';
 import '../../widgets/mascot_sticker.dart';
 import 'models/notice_item.dart';
@@ -309,28 +310,39 @@ class _NoticeScreenState extends State<NoticeScreen> {
   }
 
   Future<void> _onNotifyToggled(bool turnOn) async {
-    final messenger = ScaffoldMessenger.of(context);
+    // 안내는 화면 아래 SnackBar 대신 맨 위에서 내려오는 배너로 보여준다.
     if (!turnOn) {
       setState(() => _notifyEnabled = false);
+      showTopBanner(
+        context,
+        icon: Icons.notifications_off_rounded,
+        title: '새 공지 알림을 껐어요',
+        message: '다시 켜려면 종 버튼을 눌러주세요.',
+      );
       await _watcher.setEnabled(false);
-      messenger.showSnackBar(const SnackBar(content: Text('새 공지 알림을 껐어요')));
       return;
     }
 
     final granted = await _notifications.requestPermission();
     if (!mounted) return;
     if (!granted) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('알림을 받으려면 설정에서 알림 권한을 허용해주세요')),
+      showTopBanner(
+        context,
+        icon: Icons.notifications_paused_rounded,
+        title: '알림 권한이 꺼져 있어요',
+        message: '설정에서 알림 권한을 허용해주세요.',
       );
       return;
     }
 
     setState(() => _notifyEnabled = true);
-    await _watcher.setEnabled(true);
-    messenger.showSnackBar(
-      const SnackBar(content: Text('앱을 열 때 새 공지가 있으면 알려드릴게요')),
+    showTopBanner(
+      context,
+      icon: Icons.notifications_active_rounded,
+      title: '새 공지 알림을 켰어요',
+      message: '앱을 열 때 새 공지가 있으면 알려드릴게요.',
     );
+    await _watcher.setEnabled(true);
   }
 }
 
