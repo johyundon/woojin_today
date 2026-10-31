@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
-import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
@@ -24,6 +23,7 @@ import 'timetable_colors.dart';
 import 'widgets/course_add_panel.dart';
 import 'widgets/course_detail_dialog.dart';
 import 'widgets/course_result_card.dart';
+import 'widgets/my_timetable_status_bar.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/save_timetable_dialog.dart';
 import 'widgets/search_panel.dart';
@@ -234,6 +234,15 @@ class _TimetableScreenState extends State<TimetableScreen>
                                     onNotificationsChanged: (v) => setState(
                                       () => _notificationsEnabled = v,
                                     ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: MyTimetableStatusBar(
+                                    status: _myTimetableStatus,
+                                    onRetry: _loadMyTimetable,
                                   ),
                                 ),
                                 const SizedBox(height: 12),

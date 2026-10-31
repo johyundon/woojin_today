@@ -45,21 +45,16 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
     }
   }
 
+  /// 내 시간표 응답에 과목 정보가 다 들어 있어 개설과목 조회 없이 그리드를
+  /// 채운다. 결과는 [_myTimetableStatus]로 화면 아래 안내(빈 상태/실패+다시
+  /// 시도)에 쓰인다.
   Future<void> _loadMyTimetable() async {
     if (!_hasFullSession) return;
-    setState(() => _myTimetableLoading = true);
+    setState(() {
+      _myTimetableLoading = true;
+      _myTimetableStatus = MyTimetableStatus.idle;
+    });
     try {
-      final catalog = _catalog.isNotEmpty
-          ? _catalog
-          : await SessionCache.getCourseCatalog(
-              _courseCatalogService,
-              year: _year,
-              semester: _semester,
-              jsessionId: widget.jsessionId!,
-              wmonid: widget.wmonid!,
-              icKwa: '%',
-              userId: widget.userId2,
-            );
       final myTimetable = await SessionCache.getMyTimetable(
         _myTimetableService,
         year: _year,
@@ -68,23 +63,23 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
         wmonid: widget.wmonid!,
         userId2: widget.userId2!,
       );
-      final matched = matchEnrolledCourses(
-        catalog: catalog,
-        myTimetable: myTimetable,
-      );
       if (!mounted) return;
       setState(() {
-        _catalog = catalog;
-        _confirmedCourses = matched.courses
+        _confirmedCourses = myTimetable.courses
             .map(PlannedCourse.fromCatalogItem)
             .toList();
         _myTimetableLoading = false;
+        _myTimetableStatus = myTimetable.courses.isEmpty
+            ? MyTimetableStatus.empty
+            : MyTimetableStatus.idle;
       });
     } catch (e) {
+      debugPrint('[Timetable] 내 시간표 조회 실패: $e');
       if (!mounted) return;
-      setState(() => _myTimetableLoading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('내 시간표를 불러오지 못했어요.')));
+      setState(() {
+        _myTimetableLoading = false;
+        _myTimetableStatus = MyTimetableStatus.failed;
+      });
     }
   }
 }

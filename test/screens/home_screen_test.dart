@@ -1,7 +1,6 @@
 // 홈 화면의 날씨 표시 상태(로딩/성공/에러)와, 인사말/다음 수업 카드가
 // 오늘 남은 수업 여부에 따라 바뀌는 로직을 검증한다.
-// 실제 네트워크 호출 없이 WeatherService/CourseCatalogService/
-// MyTimetableService에 http.testing.MockClient를 주입해서 각 상태로 분기시킨다.
+// 실제 네트워크 호출 없이 WeatherService/MyTimetableService에 http.testing.MockClient를 주입해서 각 상태로 분기시킨다.
 
 import 'dart:async';
 import 'dart:io';
@@ -20,7 +19,6 @@ import 'package:daejin_app/services/notice_watcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:daejin_app/services/session_cache.dart';
 import 'package:daejin_app/services/student_info_service.dart';
@@ -82,33 +80,17 @@ void main() {
     // "현재 수업 없음" 상황을 고정하기 위한 값.
     final gapNow = DateTime(2026, 10, 6, 10, 55);
 
-    List<int> catalogFixtureBytes() {
-      final tds = [
-        '1', // 일련번호
-        'CSE301-01', // 과목코드-분반
-        '자료구조', // 과목명
-        '전공필수', // 이수구분
-        '3.0', // 학점
-        '2', // 학년
-        '홍길동', // 교수
-        '화10:00-10:50', // 시간표(요일+시각)
-        '공학관201', // 강의실
-        '', // 폐강
-        '40', // 정원
-        '0', // 대기
-        '30/40', // 신청비율
-        '', // 비고
-      ].map((c) => '<td>$c</td>').join();
-      final html =
-          '<html><body><table>'
-          '<tr class="tr_a0_chrm">$tds</tr>'
-          '</table></body></html>';
-      return cp949.encode(html);
-    }
-
     List<int> timetableFixtureBytes() {
-      final headerRow = '<tr><td>과목코드</td><td>과목명</td><td>분반</td></tr>';
-      final dataRow = '<tr><td>CSE301</td><td>자료구조</td><td>01</td></tr>';
+      // 실제 응답(table#tTbl)과 같은 10칸: 교과번호/교과목명/분반/이수구분/
+      // 학점/담당교수/강의시간/강의실/개설학과/비고.
+      final headerRow =
+          '<tr><td>교과번호</td><td>교과목명</td><td>분반</td><td>이수구분</td>'
+          '<td>학점</td><td>담당교수</td><td>강의시간</td><td>강의실</td>'
+          '<td>개설학과</td><td>비고</td></tr>';
+      final dataRow =
+          '<tr><td>CSE301</td><td>자료구조</td><td>01</td><td>전필</td>'
+          '<td>3</td><td>홍길동</td><td>화10:00-10:50</td><td>공학관201</td>'
+          '<td>컴퓨터공학과</td><td></td></tr>';
       final html =
           '<html><body><table id="tTbl">$headerRow$dataRow</table>'
           '</body></html>';
@@ -118,9 +100,6 @@ void main() {
     testWidgets('세션이 있고 오늘 남은 수업이 있으면 "오늘 수업 N개 남았어"와 다음 수업 카드를 보여준다', (
       tester,
     ) async {
-      final catalogClient = MockClient(
-        (request) async => http.Response.bytes(catalogFixtureBytes(), 200),
-      );
       final timetableClient = MockClient(
         (request) async => http.Response.bytes(timetableFixtureBytes(), 200),
       );
@@ -132,7 +111,6 @@ void main() {
             jsessionId: 'JSESSION123',
             wmonid: 'WMONID123',
             userId2: 'REAL_USER_UID',
-            courseCatalogService: CourseCatalogService(client: catalogClient),
             myTimetableService: MyTimetableService(client: timetableClient),
             studentInfoService: fakeStudentInfoService(),
             now: () => matchingNow,
@@ -158,9 +136,6 @@ void main() {
     });
 
     testWidgets('세션은 있지만 오늘 수업이 모두 끝났으면 그 안내 문구를 보여준다', (tester) async {
-      final catalogClient = MockClient(
-        (request) async => http.Response.bytes(catalogFixtureBytes(), 200),
-      );
       final timetableClient = MockClient(
         (request) async => http.Response.bytes(timetableFixtureBytes(), 200),
       );
@@ -172,7 +147,6 @@ void main() {
             jsessionId: 'JSESSION123',
             wmonid: 'WMONID123',
             userId2: 'REAL_USER_UID',
-            courseCatalogService: CourseCatalogService(client: catalogClient),
             myTimetableService: MyTimetableService(client: timetableClient),
             studentInfoService: fakeStudentInfoService(),
             now: () => gapNow,
@@ -185,11 +159,8 @@ void main() {
     });
 
     testWidgets('서비스 호출 중 예외가 발생해도 앱이 죽지 않고 원래 문구로 폴백한다', (tester) async {
-      final catalogClient = MockClient(
-        (request) async => http.Response('Internal Server Error', 500),
-      );
       final timetableClient = MockClient(
-        (request) async => http.Response.bytes(timetableFixtureBytes(), 200),
+        (request) async => http.Response('Internal Server Error', 500),
       );
 
       await tester.pumpWidget(
@@ -199,7 +170,6 @@ void main() {
             jsessionId: 'JSESSION123',
             wmonid: 'WMONID123',
             userId2: 'REAL_USER_UID',
-            courseCatalogService: CourseCatalogService(client: catalogClient),
             myTimetableService: MyTimetableService(client: timetableClient),
             studentInfoService: fakeStudentInfoService(),
             now: () => matchingNow,

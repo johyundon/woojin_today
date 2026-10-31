@@ -3,7 +3,6 @@ import 'academic_schedule_service.dart';
 import 'cafeteria_menu_service.dart';
 import 'course_catalog_service.dart';
 import 'fakes/fake_course_catalog_service.dart';
-import 'fakes/fake_my_timetable_service.dart';
 import 'mileage_service.dart';
 import 'my_timetable_service.dart';
 import 'notice_service.dart';
@@ -13,7 +12,7 @@ import 'student_info_service.dart';
 import 'twin_rank_service.dart';
 
 /// `kUseMockApi`에 따라 실제 서비스 또는 `services/fakes/`의 가짜 서비스를
-/// 돌려주는 생성 지점을 한 곳으로 모은 팩토리. 로그인, 학번 찾기, 학생 정보, 학식, 학과 등수, 마일리지, 공지, 학사일정은
+/// 돌려주는 생성 지점을 한 곳으로 모은 팩토리. 로그인, 학번 찾기, 학생 정보, 내 시간표, 학식, 학과 등수, 마일리지, 공지, 학사일정은
 /// `kUseMockApi`와 상관없이 항상 실제 서비스를 쓴다.
 ///
 /// 캐싱/싱글톤화는 하지 않는다 — 호출할 때마다 새 인스턴스를 만들어, 기존
@@ -24,8 +23,10 @@ class ServiceFactory {
   static CourseCatalogServiceBase courseCatalog() =>
       kUseMockApi ? FakeCourseCatalogService() : CourseCatalogService();
 
-  static MyTimetableServiceBase myTimetable() =>
-      kUseMockApi ? FakeMyTimetableService() : MyTimetableService();
+  /// 내 시간표는 로그인한 본인의 실제 수강 과목을 보여줘야 하므로
+  /// `kUseMockApi`와 상관없이 항상 실제 서버를 부른다(세션 캐시로 같은 학기
+  /// 반복 요청을 줄인다).
+  static MyTimetableServiceBase myTimetable() => MyTimetableService();
 
   /// 학생 정보(이름/학과/학년/지도교수)는 로그인한 본인의 실제 데이터를 홈 인사말과
   /// "내 정보"에 쓰므로, 로그인처럼 `kUseMockApi`와 상관없이 항상 실제 서버를 부른다.

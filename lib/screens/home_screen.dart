@@ -4,7 +4,6 @@ import '../services/cafeteria_menu_service.dart';
 import '../services/class_schedule_parser.dart';
 import '../services/course_catalog_service.dart';
 import '../services/logout_cleaner.dart';
-import '../services/my_enrolled_courses.dart';
 import '../services/my_timetable_service.dart';
 import '../services/notice_watcher.dart';
 import '../services/service_factory.dart';
@@ -45,7 +44,6 @@ class HomeScreen extends StatefulWidget {
     this.jsessionId,
     this.wmonid,
     this.userId2,
-    this.courseCatalogService,
     this.myTimetableService,
     this.studentInfoService,
     this.cafeteriaMenuService,
@@ -65,9 +63,8 @@ class HomeScreen extends StatefulWidget {
   final String? wmonid;
   final String? userId2;
 
-  /// 테스트에서 [CourseCatalogService]/[MyTimetableService]를 mock으로
-  /// 주입하기 위한 옵션. [weatherService]와 동일한 패턴.
-  final CourseCatalogServiceBase? courseCatalogService;
+  /// 테스트에서 [MyTimetableService]를 mock으로 주입하기 위한 옵션.
+  /// [weatherService]와 동일한 패턴.
   final MyTimetableServiceBase? myTimetableService;
 
   /// 테스트에서 [StudentInfoService]를 mock으로 주입하기 위한 옵션.
@@ -117,7 +114,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _weatherLoading = true;
   bool _weatherHasError = false;
 
-  late final CourseCatalogServiceBase _courseCatalogService;
   late final MyTimetableServiceBase _myTimetableService;
   late final DateTime Function() _now;
   List<TodayClass> _todayClasses = const [];
@@ -140,8 +136,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _weatherService = widget.weatherService ?? WeatherService();
-    _courseCatalogService =
-        widget.courseCatalogService ?? ServiceFactory.courseCatalog();
     _myTimetableService =
         widget.myTimetableService ?? ServiceFactory.myTimetable();
     _studentInfoService =
@@ -266,14 +260,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     try {
       final semester = _estimateCurrentSemester(_now());
-      final catalog = await SessionCache.getCourseCatalog(
-        _courseCatalogService,
-        year: semester.year,
-        semester: semester.semester,
-        jsessionId: jsessionId,
-        wmonid: wmonid,
-        icKwa: '%',
-      );
       final myTimetable = await SessionCache.getMyTimetable(
         _myTimetableService,
         year: semester.year,
@@ -282,14 +268,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         wmonid: wmonid,
         userId2: userId2,
       );
-      final matched = matchEnrolledCourses(
-        catalog: catalog,
-        myTimetable: myTimetable,
-      );
       if (!mounted) return;
       setState(() {
-        _todayClasses = todayClasses(courses: matched.courses, now: _now());
-        _enrolledCourses = matched.courses;
+        _todayClasses = todayClasses(courses: myTimetable.courses, now: _now());
+        _enrolledCourses = myTimetable.courses;
         _timetableLoaded = true;
       });
     } catch (e) {

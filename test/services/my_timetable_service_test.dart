@@ -15,17 +15,25 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'dart:io';
+
+import 'package:daejin_app/services/class_schedule_parser.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 
-/// <td>들을 조립해 `table#tTbl`의 한 행을 만드는 헬퍼.
+/// <td>들을 조립해 `table#tTbl`의 한 행을 만드는 헬퍼. 실제 응답처럼 10칸
+/// (교과번호/교과목명/분반/이수구분/학점/담당교수/강의시간/강의실/개설학과/
+/// 비고)이 되도록 [cells] 뒤를 빈 칸으로 채운다.
 String _row(List<String> cells) {
-  final tds = cells.map((c) => '<td>$c</td>').join();
+  final full = [...cells, ...List.filled(10 - cells.length, '')];
+  final tds = full.map((c) => '<td>$c</td>').join();
   return '<tr>$tds</tr>';
 }
 
 String _fixtureHtml(List<String> rowsHtml) =>
     '<html><body><table id="tTbl">'
-    '<tr><td>과목코드</td><td>과목명</td><td>분반</td></tr>'
+    '<tr><td>교과번호</td><td>교과목명</td><td>분반</td><td>이수구분</td>'
+    '<td>학점</td><td>담당교수</td><td>강의시간</td><td>강의실</td>'
+    '<td>개설학과</td><td>비고</td></tr>'
     '${rowsHtml.join()}'
     '</table></body></html>';
 
@@ -40,7 +48,88 @@ List<int> _fixtureBytes(List<String> rowsHtml) =>
 List<int> _fixtureBytesUtf8(List<String> rowsHtml) =>
     utf8.encode(_fixtureHtml(rowsHtml));
 
+Future<MyTimetableResponse> _fetchWith(http.Response response) {
+  final service = MyTimetableService(
+    client: MockClient((request) async => response),
+  );
+  return service.fetchMyTimetable(
+    year: 2026,
+    semester: 2,
+    jsessionId: 'J',
+    wmonid: 'W',
+    userId2: 'U',
+  );
+}
+
 void main() {
+  group('실제 응답 구조(익명 fixture)', () {
+    // 2026-10-31 실제 응답의 table#tTbl 모양(태그·속성·<P> 감싸기·공백)을
+    // 그대로 두고 값만 가짜로 바꾼 EUC-KR 파일. 서버가 실제로 보낸 헤더도
+    // `text/html; charset=euc-kr`였다.
+    late http.Response response;
+    setUp(() {
+      final bytes = File(
+        'test/services/fixtures/my_timetable/my_timetable_anonymized.html',
+      ).readAsBytesSync();
+      response = http.Response.bytes(
+        bytes,
+        200,
+        headers: {'content-type': 'text/html; charset=euc-kr'},
+      );
+    });
+
+    test('과목 5개를 표 순서대로 읽는다', () async {
+      final result = await _fetchWith(response);
+
+      expect(result.courses.map((c) => '${c.courseCode}-${c.section}'), [
+        '900101-01',
+        '900102-02',
+        '900103-03',
+        '900104-01',
+        '900105-04',
+      ]);
+    });
+
+    test('한 과목의 칸을 제자리에 담는다', () async {
+      final first = (await _fetchWith(response)).courses.first;
+
+      expect(first.courseName, '가상자료구조와알고리즘');
+      expect(first.courseType, '전필');
+      expect(first.credit, 3);
+      expect(first.professor, '김가상');
+      expect(first.rawSchedule, '월09:00-10:15,수09:00-10:15');
+      expect(first.room, '가상관 101 - 일반강의실/가상관 102 - 실습실');
+      expect(first.note, '원격(1주차)포함/가상비고01번째');
+    });
+
+    test('비고가 비어 있으면 null이다', () async {
+      final second = (await _fetchWith(response)).courses[1];
+
+      expect(second.note, isNull);
+    });
+
+    test('강의시간은 기존 시간 해석 코드로 요일·시각이 모두 읽힌다', () async {
+      final courses = (await _fetchWith(response)).courses;
+
+      expect(parseRawSchedule(courses[0].rawSchedule), const [
+        ClassTimeSlot(day: Weekday.mon, startMinutes: 540, endMinutes: 615),
+        ClassTimeSlot(day: Weekday.wed, startMinutes: 540, endMinutes: 615),
+      ]);
+      expect(parseRawSchedule(courses[2].rawSchedule), const [
+        ClassTimeSlot(day: Weekday.fri, startMinutes: 780, endMinutes: 945),
+      ]);
+      for (final c in courses) {
+        expect(parseRawSchedule(c.rawSchedule), isNotEmpty);
+      }
+    });
+
+    test('다른 표(nTbl)의 내용은 섞여 들어오지 않는다', () async {
+      final courses = (await _fetchWith(response)).courses;
+
+      expect(courses, hasLength(5));
+    });
+  });
+
   group('MyTimetableService.fetchMyTimetable', () {
     test('정상 행을 과목코드-분반 문자열로 파싱한다', () async {
       final bytes = _fixtureBytes([
@@ -176,8 +265,8 @@ void main() {
       expect(result.courseSectionCodes, isEmpty);
     });
 
-    test('직계 자식 td가 3개 미만인 행은 폐기한다', () async {
-      final shortRow = '<tr><td>CSE301</td><td>자료구조</td></tr>';
+    test('직계 자식 td가 10개 미만인 행은 과목 행이 아니므로 폐기한다', () async {
+      final shortRow = '<tr><td>CSE301</td><td>자료구조</td><td>01</td></tr>';
       final bytes = _fixtureBytes([shortRow]);
       final mockClient = MockClient((request) async {
         return http.Response.bytes(bytes, 200);

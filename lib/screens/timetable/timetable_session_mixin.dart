@@ -23,6 +23,7 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
   bool _catalogLoading = false;
   String? _catalogError;
   bool _myTimetableLoading = false;
+  MyTimetableStatus _myTimetableStatus = MyTimetableStatus.idle;
 
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();

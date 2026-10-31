@@ -5,15 +5,24 @@ import 'package:cp949_codec/cp949_codec.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 
+import 'course_catalog_service.dart';
+
 /// `POST /sugang/center/BlsnTotalTimeTableLst.jsp` 응답(내 시간표).
 ///
-/// 중복 제거를 위해 "과목코드-분반" 문자열 집합으로만 표현한다. 시간 문자열
-/// 파싱 등 추가 가공은 이후 단계에서 다룬다(이번 단계에서는 가공하지 않음).
+/// 명세서는 "과목코드-분반"만 뽑아 개설과목 조회 결과와 대조하라고 했지만,
+/// 실제 응답(2026-10-31 확인)의 `table#tTbl`에는 과목명·학점·교수·강의시간·
+/// 강의실까지 10칸이 다 들어 있다. 그래서 개설과목 조회 없이 이 응답만으로
+/// 과목 정보를 만든다. 화면/홈의 기존 코드를 그대로 쓰려고 [CourseCatalogItem]
+/// 형태로 담는다(응답에 없는 정원·대상학년 등은 빈 값).
 class MyTimetableResponse {
-  const MyTimetableResponse({required this.courseSectionCodes});
+  const MyTimetableResponse({required this.courses});
 
-  /// "과목코드-분반" 형태의 문자열 집합(중복 제거됨).
-  final Set<String> courseSectionCodes;
+  /// 내가 수강하는 과목들. 응답 표 순서 그대로, "과목코드-분반" 중복은 제거됨.
+  final List<CourseCatalogItem> courses;
+
+  /// "과목코드-분반" 문자열 집합.
+  Set<String> get courseSectionCodes =>
+      {for (final c in courses) '${c.courseCode}-${c.section}'};
 }
 
 /// "네트워크 연결 실패"와 "서버는 응답했지만 비정상(status != 200)"과
@@ -87,8 +96,9 @@ class MyTimetableService implements MyTimetableServiceBase {
       'passwd=AFkB9N2kRhFOtBPWa6nzxg%3D%3D; '
       'cookWebUser=btH3g7sAv6imoh3YAJBUEA%3D%3D';
 
-  // 명세: "각 행의 직계 자식 td가 3개 미만이면 폐기".
-  static const _minColumnCount = 3;
+  // 실제 응답의 열 개수: 교과번호/교과목명/분반/이수구분/학점/담당교수/
+  // 강의시간/강의실/개설학과/비고. 이보다 적은 행은 과목 행이 아니므로 버린다.
+  static const _minColumnCount = 10;
 
   final http.Client _client;
 
@@ -207,18 +217,42 @@ class MyTimetableService implements MyTimetableServiceBase {
     final document = html_parser.parse(body);
     final rows = document.querySelectorAll('table#tTbl tr');
 
-    final codes = <String>{};
+    final seen = <String>{};
+    final courses = <CourseCatalogItem>[];
     for (var i = 0; i < rows.length; i++) {
       if (i == 0) continue; // 헤더 행 스킵.
 
-      final cells = rows[i].children.where((e) => e.localName == 'td').toList();
+      final cells = rows[i].children
+          .where((e) => e.localName == 'td')
+          .map((e) => e.text.replaceAll(RegExp(r'\s+'), ' ').trim())
+          .toList();
       if (cells.length < _minColumnCount) continue;
 
-      final courseCode = cells[0].text.trim();
-      final section = cells[2].text.trim();
-      codes.add('$courseCode-$section');
+      final courseCode = cells[0];
+      final section = cells[2];
+      if (courseCode.isEmpty || !seen.add('$courseCode-$section')) continue;
+
+      courses.add(
+        CourseCatalogItem(
+          seq: courses.length + 1,
+          courseCode: courseCode,
+          section: section,
+          courseName: cells[1],
+          courseType: cells[3],
+          credit: double.tryParse(cells[4]) ?? 0,
+          targetGrade: '',
+          professor: cells[5],
+          rawSchedule: cells[6],
+          room: cells[7],
+          isClosed: false,
+          capacity: 0,
+          waitlistCount: 0,
+          enrollmentRatio: '',
+          note: cells[9].isEmpty ? null : cells[9],
+        ),
+      );
     }
 
-    return MyTimetableResponse(courseSectionCodes: codes);
+    return MyTimetableResponse(courses: courses);
   }
 }
