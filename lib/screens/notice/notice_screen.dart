@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/notice_service.dart';
+import '../../services/notice_watcher.dart';
 import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
@@ -18,17 +19,18 @@ import 'widgets/notice_list_card.dart';
 /// ([NoticeMockData](services/notice_mock_data.dart))는 코드를 남겨 두고 화면에서만
 /// 숨겼다([_visibleTags]).
 ///
-/// "새 글 알림 받기" 토글은 서버가 없어 "새 공지가 올라왔는지" 실시간으로
-/// 구독할 방법은 없지만([NotificationService]와 같은 이유, 캘린더 알림
-/// 참고), 토글을 켤 때 지금 목데이터에서 `isNew`로 표시된 공지들에 대해
-/// 실제 로컬 알림을 즉시 띄워준다([NotificationService.showNoticeAlert]).
-/// 켜짐/꺼짐 상태 자체는 저장하지 않는다(화면을 나갔다 들어오면 기본값
-/// true로 초기화됨).
+/// "새 글 알림 받기" 토글(작은 종 버튼)은 기기에 저장된다. 켜 두면 앱을 열거나
+/// 다시 돌아올 때 새 공지가 있으면 알림을 띄운다([NoticeWatcher]). 서버가 없어
+/// 앱이 꺼져 있을 때는 확인하지 못한다. 켤 때 알림 권한을 묻고, 기본은 꺼짐이다.
+/// 이 화면을 열면 홈 종 아이콘의 "새 공지" 점을 지운다.
 class NoticeScreen extends StatefulWidget {
-  const NoticeScreen({this.service, super.key});
+  const NoticeScreen({this.service, this.watcher, super.key});
 
   /// 테스트용 주입 지점.
   final NoticeServiceBase? service;
+
+  /// 알림 켜짐 저장·새 공지 표시 지우기. 없으면 새로 만든다.
+  final NoticeWatcher? watcher;
 
   @override
   State<NoticeScreen> createState() => _NoticeScreenState();
@@ -42,6 +44,8 @@ class _NoticeScreenState extends State<NoticeScreen> {
   final _readStorage = NoticeReadStorage();
   late final NoticeServiceBase _service =
       widget.service ?? ServiceFactory.notice();
+  late final NoticeWatcher _watcher =
+      widget.watcher ?? NoticeWatcher(service: _service);
 
   List<NoticeItem> _notices = const [];
   bool _loading = true;
@@ -51,7 +55,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
   /// null이면 "전체".
   NoticeTag? _filter;
-  bool _notifyEnabled = true;
+  bool _notifyEnabled = false;
   final Set<String> _bookmarked = {};
   final Set<String> _read = {};
 
@@ -60,6 +64,8 @@ class _NoticeScreenState extends State<NoticeScreen> {
     super.initState();
     _loadRead();
     _loadNotices();
+    _loadNotifySetting();
+    _watcher.clearPending();
   }
 
   /// 두 게시판을 동시에 받아 최신순으로 합친다. 한쪽이 실패해도 다른 쪽은 보여준다.
@@ -86,6 +92,12 @@ class _NoticeScreenState extends State<NoticeScreen> {
       _notices = [for (final items in results) ...?items]
         ..sort((a, b) => b.date.compareTo(a.date));
     });
+  }
+
+  Future<void> _loadNotifySetting() async {
+    final enabled = await _watcher.isEnabled();
+    if (!mounted) return;
+    setState(() => _notifyEnabled = enabled);
   }
 
   Future<void> _loadRead() async {
@@ -291,29 +303,28 @@ class _NoticeScreenState extends State<NoticeScreen> {
   }
 
   Future<void> _onNotifyToggled(bool turnOn) async {
+    final messenger = ScaffoldMessenger.of(context);
     if (!turnOn) {
       setState(() => _notifyEnabled = false);
+      await _watcher.setEnabled(false);
+      messenger.showSnackBar(const SnackBar(content: Text('새 공지 알림을 껐어요')));
       return;
     }
 
     final granted = await _notifications.requestPermission();
     if (!mounted) return;
     if (!granted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('알림을 받으려면 설정에서 알림 권한을 허용해주세요')),
       );
       return;
     }
 
     setState(() => _notifyEnabled = true);
-
-    for (final notice in _notices.where(_isUnread)) {
-      await _notifications.showNoticeAlert(
-        id: notice.key,
-        title: '새 공지가 올라왔어요',
-        body: notice.title,
-      );
-    }
+    await _watcher.setEnabled(true);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('앱을 열 때 새 공지가 있으면 알려드릴게요')),
+    );
   }
 }
 

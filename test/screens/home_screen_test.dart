@@ -12,7 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:daejin_app/screens/home/widgets/home_top_icon_button.dart';
 import 'package:daejin_app/screens/home_screen.dart';
+import 'package:daejin_app/screens/notice/models/notice_item.dart';
+import 'package:daejin_app/services/notice_service.dart';
+import 'package:daejin_app/services/notice_watcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:daejin_app/services/session_cache.dart';
@@ -108,7 +115,9 @@ void main() {
       return cp949.encode(html);
     }
 
-    testWidgets('세션이 있고 오늘 남은 수업이 있으면 "오늘 수업 N개 남았어"와 다음 수업 카드를 보여준다', (tester) async {
+    testWidgets('세션이 있고 오늘 남은 수업이 있으면 "오늘 수업 N개 남았어"와 다음 수업 카드를 보여준다', (
+      tester,
+    ) async {
       final catalogClient = MockClient(
         (request) async => http.Response.bytes(catalogFixtureBytes(), 200),
       );
@@ -347,4 +356,67 @@ void main() {
       expect(find.text('네트워크 연결을 확인해주세요.'), findsNothing);
     });
   });
+
+  testWidgets('종 아이콘 점은 새 공지가 있을 때만 켜지고, 공지사항을 열면 꺼진다', (tester) async {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final notices = _FakeNotices();
+    final watcher = NoticeWatcher(
+      service: notices,
+      prefs: SharedPreferencesAsync(),
+      alert: ({required id, required title, required body}) async {},
+    );
+    bool bellDot() => tester
+        .widget<HomeTopIconButton>(
+          find.byWidgetPredicate(
+            (w) => w is HomeTopIconButton && w.icon == Icons.notifications_none,
+          ),
+        )
+        .dot;
+
+    await watcher.check(); // 처음 기록: 지금 공지는 모두 본 것
+    notices.items = [_notice('새 학사공지'), ...notices.items];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          weatherService: WeatherService(
+            client: MockClient((_) async => http.Response(_fixtureJson, 200)),
+          ),
+          noticeWatcher: watcher,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(bellDot(), isTrue);
+
+    // 공지사항 화면 안의 목록 조회는 이 테스트의 관심사가 아니라, 화면 전환만
+    // 짧게 기다린다(실제 서버를 기다리지 않도록).
+    await tester.tap(find.byIcon(Icons.notifications_none));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(bellDot(), isFalse);
+    expect(await watcher.hasPending(), isFalse);
+  });
+}
+
+NoticeItem _notice(String title) => NoticeItem(
+  title: title,
+  author: '학사팀',
+  date: '2026.10.31',
+  viewCount: 0,
+  tag: NoticeTag.academic,
+);
+
+class _FakeNotices implements NoticeServiceBase {
+  List<NoticeItem> items = [_notice('기존 공지')];
+
+  @override
+  Future<List<NoticeItem>> fetchNotices(
+    NoticeBoard board, {
+    bool forceRefresh = false,
+  }) async => board == NoticeBoard.academic ? items : const [];
+
+  @override
+  Future<NoticeDetail> fetchDetail(String detailPath) =>
+      throw UnimplementedError();
 }

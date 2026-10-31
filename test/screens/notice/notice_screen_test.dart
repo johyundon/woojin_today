@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -192,13 +193,27 @@ void main() {
     expect(service.forceFlags.skip(2), [true, true]);
   });
 
-  testWidgets('"새 글 알림" 종 버튼으로 끌 수 있다', (tester) async {
+  testWidgets('"새 글 알림"은 기본 꺼짐이고, 저장된 값을 보여주며 끄면 저장된다', (tester) async {
+    final prefs = SharedPreferencesAsync();
     await _pump(tester, _FakeNotices());
+    expect(find.byIcon(Icons.notifications_off), findsOneWidget);
 
+    await prefs.setBool('notice_watch_enabled', true);
+    await tester.pumpWidget(const SizedBox());
+    await _pump(tester, _FakeNotices());
     expect(find.byIcon(Icons.notifications_active), findsOneWidget);
+
     await tester.tap(find.byIcon(Icons.notifications_active));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.notifications_off), findsOneWidget);
+    expect(await prefs.getBool('notice_watch_enabled'), isFalse);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('공지사항 화면을 열면 홈 종 아이콘의 새 공지 표시를 지운다', (tester) async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setStringList('notice_watch_pending', ['2026.10.29-새 공지']);
+    await _pump(tester, _FakeNotices());
+    expect(await prefs.getStringList('notice_watch_pending'), isNull);
   });
 }

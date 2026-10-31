@@ -6,6 +6,7 @@ import '../services/course_catalog_service.dart';
 import '../services/logout_cleaner.dart';
 import '../services/my_enrolled_courses.dart';
 import '../services/my_timetable_service.dart';
+import '../services/notice_watcher.dart';
 import '../services/service_factory.dart';
 import '../services/session_cache.dart';
 import '../services/student_info_service.dart';
@@ -49,6 +50,7 @@ class HomeScreen extends StatefulWidget {
     this.studentInfoService,
     this.cafeteriaMenuService,
     this.now,
+    this.noticeWatcher,
   });
 
   /// 테스트에서 [WeatherService]를 mock으로 주입하기 위한 옵션. 기본값은
@@ -82,6 +84,9 @@ class HomeScreen extends StatefulWidget {
   /// 쓸 수 없다.
   final DateTime Function()? now;
 
+  /// 테스트용. 새 공지 확인([NoticeWatcher])을 가짜로 바꾼다.
+  final NoticeWatcher? noticeWatcher;
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -101,7 +106,12 @@ class HomeScreen extends StatefulWidget {
   }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  late final NoticeWatcher _noticeWatcher;
+
+  /// 공지사항 화면에서 아직 보지 않은 새 공지가 있으면 종 아이콘에 점을 띄운다.
+  bool _hasNewNotice = false;
+
   late final WeatherService _weatherService;
   WeatherResponse? _weatherData;
   bool _weatherLoading = true;
@@ -137,9 +147,34 @@ class _HomeScreenState extends State<HomeScreen> {
     _studentInfoService =
         widget.studentInfoService ?? ServiceFactory.studentInfo();
     _now = widget.now ?? DateTime.now;
+    _noticeWatcher = widget.noticeWatcher ?? NoticeWatcher();
+    WidgetsBinding.instance.addObserver(this);
+    _checkNotices();
     _loadWeather();
     _loadTodayClasses();
     _loadStudentInfo();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 앱으로 다시 돌아올 때마다 새 공지를 확인한다.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkNotices();
+  }
+
+  /// 새 공지가 올라왔는지 확인하고(알림이 켜져 있으면 알림도 띄움) 종 아이콘의
+  /// 점을 갱신한다. 실패해도 조용히 넘어간다([NoticeWatcher.check]).
+  Future<void> _checkNotices() async {
+    await _noticeWatcher.check();
+    final pending = await _noticeWatcher.hasPending();
+    if (mounted && pending != _hasNewNotice) {
+      setState(() => _hasNewNotice = pending);
+    }
   }
 
   /// "내 정보" 다이얼로그에 쓸 학생 정보를 홈 화면 진입 시 한 번만 불러와
@@ -327,9 +362,12 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(_collectionRoute());
   }
 
-  void _openNotice() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
+  /// 공지사항 화면이 열리면서 새 공지 표시를 지우므로 점도 바로 끈다.
+  Future<void> _openNotice() async {
+    setState(() => _hasNewNotice = false);
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NoticeScreen(watcher: _noticeWatcher)),
+    );
   }
 
   void _openCampusMap() {
@@ -518,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         HomeTopIconButton(
                           icon: Icons.notifications_none,
                           onTap: _openNotice,
-                          dot: true,
+                          dot: _hasNewNotice,
                         ),
                       ],
                     ),
