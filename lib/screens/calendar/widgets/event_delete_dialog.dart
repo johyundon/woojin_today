@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 
 const Color _deleteRed = Color(0xFFE5484D);
 
@@ -55,19 +56,21 @@ Future<bool> showEventDeleteDialog(
                 Expanded(
                   child: SizedBox(
                     height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F1F5),
-                        elevation: 0,
-                        shape: const StadiumBorder(),
-                      ),
-                      child: const Text(
-                        '취소',
-                        style: TextStyle(
-                          color: AppColors.ink,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                    child: Pressable.effect(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF1F1F5),
+                          elevation: 0,
+                          shape: const StadiumBorder(),
+                        ),
+                        child: const Text(
+                          '취소',
+                          style: TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
@@ -77,19 +80,21 @@ Future<bool> showEventDeleteDialog(
                 Expanded(
                   child: SizedBox(
                     height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _deleteRed,
-                        elevation: 0,
-                        shape: const StadiumBorder(),
-                      ),
-                      child: const Text(
-                        '삭제',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                    child: Pressable.effect(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _deleteRed,
+                          elevation: 0,
+                          shape: const StadiumBorder(),
+                        ),
+                        child: const Text(
+                          '삭제',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),

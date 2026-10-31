@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../fileshare_colors.dart';
 import '../received_file.dart';
 import '../received_file_format.dart';
@@ -76,7 +77,7 @@ class ReceivedFileRow extends StatelessWidget {
               ],
             ),
           ),
-          GestureDetector(
+          Pressable.icon(
             onTap: onDownload,
             child: Container(
               width: 38,

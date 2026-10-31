@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/mileage_models.dart';
 
 /// 장학 대상자 공지 카드 하나 — 제목/작성자·날짜·조회수 + "대상자 확인" 버튼.
@@ -53,17 +54,22 @@ class MileageNoticeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          OutlinedButton(
-            onPressed: onCheck,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.accent,
-              side: const BorderSide(color: AppColors.accent),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: const StadiumBorder(),
-            ),
-            child: const Text(
-              '대상자 확인',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          Pressable.effect(
+            child: OutlinedButton(
+              onPressed: onCheck,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                side: const BorderSide(color: AppColors.accent),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                shape: const StadiumBorder(),
+              ),
+              child: const Text(
+                '대상자 확인',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],

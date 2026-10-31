@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
 import '../campus_map_colors.dart';
 
 /// 지도 화면 상단의 출발지/목적지 검색바. 가운데 화살표로 방향을 보여주고,
@@ -60,12 +61,15 @@ class CampusSearchBar extends StatelessWidget {
           ),
           // 초기화할 게 있을 때(출발지/목적지 중 하나라도 선택됨)만 보인다.
           if (originName != null || destinationName != null)
-            IconButton(
-              onPressed: onReset,
-              icon: const Icon(
-                Icons.close,
-                color: CampusMapColors.danger,
-                size: 20,
+            Pressable.effect(
+              pressedScale: 0.85,
+              child: IconButton(
+                onPressed: onReset,
+                icon: const Icon(
+                  Icons.close,
+                  color: CampusMapColors.danger,
+                  size: 20,
+                ),
               ),
             ),
         ],
@@ -94,8 +98,7 @@ class _BuildingField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
+    return Pressable(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),

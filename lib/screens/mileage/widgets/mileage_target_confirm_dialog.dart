@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/mileage_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/mileage_models.dart';
 import 'mileage_roster_dialog.dart';
 
@@ -61,38 +62,42 @@ class _MileageTargetConfirmDialog extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      '확인',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                  child: Pressable.effect(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        '확인',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => showMileageRosterDialog(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: AppColors.border),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      '명단보기',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                  child: Pressable.effect(
+                    child: OutlinedButton(
+                      onPressed: () => showMileageRosterDialog(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        '명단보기',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -185,17 +190,20 @@ class _MileageTargetResultDialog extends StatelessWidget {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: const StadiumBorder(),
-                ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              child: Pressable.effect(
+                pressedScale: 0.96,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),

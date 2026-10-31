@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_colors.dart';
+import '../../../../widgets/pressable.dart';
 import '../models/department_rank.dart';
 
 const _mutedText = Color(0xFF6B6B70);
@@ -52,9 +53,9 @@ class _SubjectRankCardState extends State<SubjectRankCard> {
               ),
               const Spacer(),
               if (canExpand)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                Pressable(
                   onTap: () => setState(() => _showAll = !_showAll),
+                  pressedScale: 0.92,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 import '../home/widgets/home_top_icon_button.dart';
 
 /// "셔틀버스" 화면. 셔틀 운행 정보를 가져올 API가 아직 없어서 "서비스 준비
@@ -134,12 +135,12 @@ class ShuttleScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
-                      child: Material(
-                        color: AppColors.ink,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
+                      child: Pressable(
+                        onTap: () => Navigator.of(context).pop(),
+                        pressedScale: 0.97,
+                        child: Material(
+                          color: AppColors.ink,
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () => Navigator.of(context).pop(),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 16),
                             child: Text(

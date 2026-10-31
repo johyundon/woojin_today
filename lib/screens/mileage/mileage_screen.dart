@@ -5,6 +5,7 @@ import '../../services/mileage_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/twin_client.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/pressable.dart';
 import '../../widgets/twin_credentials_form.dart';
 import 'models/mileage_models.dart';
 import 'widgets/mileage_history_card.dart';
@@ -185,7 +186,7 @@ class _MileageScreenState extends State<MileageScreen> {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: GestureDetector(
+                  child: Pressable.icon(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 40,
@@ -352,19 +353,22 @@ class _Message extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: onRetry,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.lime,
-              foregroundColor: AppColors.ink,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          Pressable.effect(
+            pressedScale: 0.96,
+            child: FilledButton(
+              onPressed: onRetry,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.lime,
+                foregroundColor: AppColors.ink,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-            child: const Text(
-              '다시 시도',
-              style: TextStyle(fontWeight: FontWeight.w800),
+              child: const Text(
+                '다시 시도',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],
@@ -388,8 +392,10 @@ class _PointCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
+      enabled: onTap != null,
+      pressedScale: 0.97,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

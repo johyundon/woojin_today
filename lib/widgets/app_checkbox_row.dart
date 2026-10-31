@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'pressable.dart';
 
 /// 체크박스 + 라벨 (+ 선택적 "보기" 링크) 한 줄.
 /// 약관 동의 화면에서 "전체 동의합니다", "이용약관 동의", "개인정보 처리방침 동의"
@@ -25,8 +26,9 @@ class AppCheckboxRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Pressable(
       onTap: () => onChanged(!checked),
+      pressedScale: 0.98,
       child: Padding(
         padding: padding,
         child: Row(
@@ -46,8 +48,8 @@ class AppCheckboxRow extends StatelessWidget {
               ),
             ),
             if (onViewPressed != null)
-              GestureDetector(
-                onTap: onViewPressed,
+              Pressable.icon(
+                onTap: onViewPressed!,
                 child: const Text(
                   '보기',
                   style: TextStyle(

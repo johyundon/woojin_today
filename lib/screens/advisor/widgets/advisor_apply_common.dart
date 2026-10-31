@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 
 const Color _mutedText = Color(0xFF7C7B88);
 const Color _fieldBorder = Color(0xFFE4E3EC);
@@ -48,21 +49,25 @@ class AdvisorApplyPrimaryButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: ElevatedButton(
-        onPressed: enabled ? onTap : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.lime,
-          foregroundColor: AppColors.ink,
-          disabledBackgroundColor: _chipBackground,
-          disabledForegroundColor: _disabledText,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+      child: Pressable.effect(
+        enabled: enabled,
+        pressedScale: 0.97,
+        child: ElevatedButton(
+          onPressed: enabled ? onTap : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.lime,
+            foregroundColor: AppColors.ink,
+            disabledBackgroundColor: _chipBackground,
+            disabledForegroundColor: _disabledText,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
         ),
       ),
     );
@@ -180,7 +185,7 @@ class AdvisorApplyFormStep extends StatelessWidget {
         const SizedBox(height: 14),
         Row(
           children: [
-            GestureDetector(
+            Pressable(
               onTap: onBack,
               child: Container(
                 width: 84,

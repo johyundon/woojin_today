@@ -4,6 +4,7 @@ import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
 import '../../services/student_info_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/pressable.dart';
 import 'widgets/advisor_apply_tab.dart';
 import 'widgets/advisor_segmented_tabs.dart';
 import 'widgets/advisor_status_tab.dart';
@@ -103,7 +104,7 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: GestureDetector(
+                child: Pressable.icon(
                   onTap: () => Navigator.of(context).pop(),
                   child: Container(
                     width: 40,

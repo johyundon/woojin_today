@@ -4,6 +4,7 @@ import '../../services/air_quality_service.dart';
 import '../../services/weather_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 import '../home/widgets/weather_indicator.dart' show weatherDisplay;
 
 /// 지금부터 몇 시간 뒤의 예보를 시간대 줄에 보여줄지("지금" 다음 5칸).
@@ -41,7 +42,7 @@ class WeatherScreen extends StatelessWidget {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: GestureDetector(
+              child: Pressable.icon(
                 onTap: () => Navigator.of(context).pop(),
                 child: Container(
                   width: 40,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 
 /// "상담 현황" / "상담 신청" 세그먼트 탭(v4 리디자인). 진한 남색(cobaltDeep)
 /// 알약 안에서 선택된 쪽만 라임 배경 + 잉크 글씨로 떠오른다.
@@ -28,7 +29,7 @@ class AdvisorSegmentedTabs extends StatelessWidget {
         children: [
           for (var i = 0; i < _labels.length; i++)
             Expanded(
-              child: GestureDetector(
+              child: Pressable(
                 onTap: () => onChanged(i),
                 child: Container(
                   height: 40,

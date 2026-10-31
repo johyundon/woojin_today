@@ -4,6 +4,7 @@ import 'models/saved_timetable.dart';
 import 'services/saved_timetable_storage.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 
 /// "저장한 시간표" 목록 화면(상태 9). 전부 로컬(SharedPreferences) 저장분이다.
 ///
@@ -64,7 +65,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      GestureDetector(
+                      Pressable.icon(
                         onTap: () => Navigator.of(context).pop(),
                         child: Container(
                           width: 40,
@@ -150,93 +151,102 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
     return GestureDetector(
       onTap: () => setState(() => _expandedIndex = expanded ? null : index),
       onLongPress: () => _delete(item),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.ink.withValues(alpha: 0.2),
-              offset: const Offset(0, 6),
-              blurRadius: 14,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        style: const TextStyle(
-                          color: AppColors.ink,
-                          fontSize: 16,
+      child: Pressable.effect(
+        pressedScale: 0.98,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.ink.withValues(alpha: 0.2),
+                offset: const Offset(0, 6),
+                blurRadius: 14,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${item.year}년 ${item.semester}학기 · '
+                          '${item.courses.length}개 과목',
+                          style: const TextStyle(
+                            color: Color(0xFF6B6B70),
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          _formatSavedAt(item.savedAt),
+                          style: const TextStyle(
+                            color: Color(0xFF6B6B70),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Pressable.effect(
+                    pressedScale: 0.93,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(item),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cobalt,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        '시간표로 보기',
+                        style: TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item.year}년 ${item.semester}학기 · '
-                        '${item.courses.length}개 과목',
-                        style: const TextStyle(
-                          color: Color(0xFF6B6B70),
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        _formatSavedAt(item.savedAt),
-                        style: const TextStyle(
-                          color: Color(0xFF6B6B70),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(item),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.cobalt,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
                     ),
-                    shape: const StadiumBorder(),
                   ),
-                  child: const Text(
-                    '시간표로 보기',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                ],
+              ),
+              if (expanded) ...[
+                const SizedBox(height: 10),
+                const Divider(color: Color(0xFFE5E5EA)),
+                for (final course in item.courses)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Text(
+                      '${course.courseName} · ${course.professor} · '
+                      '${course.rawSchedule}',
+                      style: const TextStyle(
+                        color: Color(0xFF6B6B70),
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                ),
               ],
-            ),
-            if (expanded) ...[
-              const SizedBox(height: 10),
-              const Divider(color: Color(0xFFE5E5EA)),
-              for (final course in item.courses)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Text(
-                    '${course.courseName} · ${course.professor} · '
-                    '${course.rawSchedule}',
-                    style: const TextStyle(
-                      color: Color(0xFF6B6B70),
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../services/my_enrolled_courses.dart';
 import '../../services/my_timetable_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
+import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
 import '../home/widgets/home_bottom_nav.dart';
 import 'ai_recommend/ai_recommend_result_screen.dart';
@@ -358,9 +359,11 @@ class _TimetableScreenState extends State<TimetableScreen>
               style: const TextStyle(color: TimetableColors.textSecondary),
             ),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => _loadCatalog(forceRefresh: true),
-              child: const Text('다시 시도'),
+            Pressable.effect(
+              child: TextButton(
+                onPressed: () => _loadCatalog(forceRefresh: true),
+                child: const Text('다시 시도'),
+              ),
             ),
           ],
         ),

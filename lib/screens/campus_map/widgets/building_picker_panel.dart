@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
 import '../campus_map_colors.dart';
 import '../models/campus_building.dart';
 
@@ -133,8 +134,9 @@ class _BuildingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Pressable(
       onTap: onTap,
+      pressedScale: 0.98,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(

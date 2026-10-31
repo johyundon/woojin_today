@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
 
 const Color _weekendRed = Color(0xFFE5484D);
@@ -133,9 +134,9 @@ class CalendarMonthGrid extends StatelessWidget {
     final isToday = isTodayMonth && day == today.day;
     final dots = _dotColors(day);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Pressable(
       onTap: () => onDaySelected(day),
+      pressedScale: 0.9,
       child: SizedBox(
         height: 52,
         child: Column(

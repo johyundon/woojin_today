@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/weekday_labels.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 import 'models/calendar_event.dart';
 import 'widgets/date_pick_sheet.dart';
 import 'widgets/time_pick_sheet.dart';
@@ -146,7 +147,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
                           // (키보드가 올라와도 입력 칸이 넉넉히 보이게).
                           Row(
                             children: [
-                              GestureDetector(
+                              Pressable.icon(
                                 onTap: () => Navigator.of(context).pop(),
                                 child: Container(
                                   width: 40,
@@ -408,39 +409,43 @@ class _EventEditScreenState extends State<EventEditScreen> {
                             20,
                             16 + MediaQuery.of(context).padding.bottom,
                           ),
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(28),
-                              boxShadow: _canSave
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.cobalt.withValues(
-                                          alpha: 0.35,
+                          child: Pressable.effect(
+                            enabled: _canSave,
+                            pressedScale: 0.97,
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                boxShadow: _canSave
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.cobalt.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          offset: const Offset(0, 6),
+                                          blurRadius: 14,
                                         ),
-                                        offset: const Offset(0, 6),
-                                        blurRadius: 14,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: SizedBox.expand(
-                              child: ElevatedButton(
-                                onPressed: _canSave ? _save : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.cobalt,
-                                  disabledBackgroundColor: const Color(
-                                    0xFFC9D3F2,
+                                      ]
+                                    : null,
+                              ),
+                              child: SizedBox.expand(
+                                child: ElevatedButton(
+                                  onPressed: _canSave ? _save : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.cobalt,
+                                    disabledBackgroundColor: const Color(
+                                      0xFFC9D3F2,
+                                    ),
+                                    elevation: 0,
+                                    shape: const StadiumBorder(),
                                   ),
-                                  elevation: 0,
-                                  shape: const StadiumBorder(),
-                                ),
-                                child: const Text(
-                                  '저장하기',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
+                                  child: const Text(
+                                    '저장하기',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -601,9 +606,9 @@ class _ValuePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Pressable(
       onTap: onTap,
+      pressedScale: 0.93,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -636,8 +641,9 @@ class _OffsetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
+      pressedScale: 0.93,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),

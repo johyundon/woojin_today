@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/course_catalog_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 
 /// "강의계획서" 화면(상태 7).
 ///
@@ -53,7 +54,7 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        GestureDetector(
+                        Pressable.icon(
                           onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width: 40,
@@ -249,7 +250,8 @@ class _AccordionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
+      pressedScale: 0.98,
       onTap: onTap,
       child: Container(
         width: double.infinity,

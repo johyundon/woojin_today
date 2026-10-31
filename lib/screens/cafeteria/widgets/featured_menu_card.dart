@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/mascot_sticker.dart';
+import '../../../widgets/pressable.dart';
 import '../models/cafeteria_menu.dart';
 
 /// 큰 라임색 대표 메뉴 카드 — 분류/인기 칩, 즐겨찾기 하트, 대표 메뉴 두 줄, 곁들임
@@ -62,8 +63,7 @@ class FeaturedMenuCard extends StatelessWidget {
                       foreground: AppColors.ink,
                     ),
                   const Spacer(),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  Pressable.icon(
                     onTap: onFavoriteTap,
                     child: Icon(
                       favorite ? Icons.favorite : Icons.favorite_border,

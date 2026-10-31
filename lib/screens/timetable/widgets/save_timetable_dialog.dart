@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
 
 /// "시간표 저장" 다이얼로그(상태 8). 이름을 입력받아 확인 시 그 이름을
@@ -73,42 +74,46 @@ class _SaveTimetableDialogState extends State<SaveTimetableDialog> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: TimetableColors.textPrimary,
-                      side: const BorderSide(color: TimetableColors.border),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  child: Pressable.effect(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: TimetableColors.textPrimary,
+                        side: const BorderSide(color: TimetableColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      '취소',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                      child: const Text(
+                        '취소',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _confirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: TimetableColors.accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  child: Pressable.effect(
+                    child: ElevatedButton(
+                      onPressed: _confirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TimetableColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      '확인',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                      child: const Text(
+                        '확인',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

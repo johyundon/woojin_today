@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/class_schedule_parser.dart';
 import '../../../utils/time_format.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 import '../course_filters.dart';
 import '../timetable_colors.dart';
 import 'timetable_grid.dart' show PendingSlot;
@@ -89,7 +90,7 @@ class SearchFilterBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            GestureDetector(
+            Pressable.icon(
               onTap: onToggleFilterPanel,
               child: Container(
                 width: 44,
@@ -371,7 +372,7 @@ class _ActiveChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          GestureDetector(
+          Pressable.icon(
             onTap: onClear,
             child: const Icon(Icons.close, color: Colors.white, size: 14),
           ),
@@ -395,7 +396,8 @@ class _ToggleFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
+      pressedScale: 0.93,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

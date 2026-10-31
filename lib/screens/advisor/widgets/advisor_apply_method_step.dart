@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 import '../services/advisor_consultation_mock_data.dart';
 import 'advisor_apply_common.dart';
@@ -191,7 +192,7 @@ class _MethodButton extends StatelessWidget {
     final icon = method == ConsultationMethod.online
         ? Icons.videocam_rounded
         : Icons.meeting_room_rounded;
-    return GestureDetector(
+    return Pressable(
       onTap: () => onSelectMethod(method),
       child: Container(
         height: 42,

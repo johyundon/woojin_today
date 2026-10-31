@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'pressable.dart';
 
 /// 자동 로그인을 끄고 로그인해 기기에 학번·비밀번호가 없을 때 받는 입력 폼.
 /// 입력한 값은 이 화면에서만 쓰고 저장하지 않는다. 학과 등수·마일리지 화면이 같이 쓴다.
@@ -81,18 +82,24 @@ class TwinCredentialsForm extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: onSubmit,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.cobalt,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          Pressable.effect(
+            pressedScale: 0.96,
+            child: FilledButton(
+              onPressed: onSubmit,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.cobalt,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-            child: Text(
-              buttonLabel,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              child: Text(
+                buttonLabel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/course_catalog_service.dart';
 import '../../../utils/credit_format.dart';
+import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
 
 /// 과목 추가 패널의 검색 결과 한 줄.
@@ -22,7 +23,8 @@ class CourseResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Pressable(
+      pressedScale: 0.98,
       onTap: onViewDetail,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -75,7 +77,8 @@ class CourseResultCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                GestureDetector(
+                Pressable(
+                  pressedScale: 0.92,
                   onTap: onAdd,
                   child: Container(
                     padding: const EdgeInsets.symmetric(

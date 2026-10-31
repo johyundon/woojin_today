@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 import '../home/widgets/home_top_icon_button.dart';
 import '../../services/graduation_credit_service.dart';
 import 'models/graduation_credit.dart';
@@ -299,12 +300,14 @@ class _StatusCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.cobalt,
+                Pressable.effect(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.cobalt,
+                    ),
+                    onPressed: onRetry,
+                    child: const Text('다시 시도'),
                   ),
-                  onPressed: onRetry,
-                  child: const Text('다시 시도'),
                 ),
               ],
             ),
@@ -735,61 +738,58 @@ class _CategoryChip extends StatelessWidget {
     final valueColor = isMajor ? AppColors.lime : _categoryValueColor(category);
     final subColor = isMajor ? Colors.white.withValues(alpha: 0.7) : _mutedText;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isMajor ? AppColors.ink : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: _cardShadow,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+    return Pressable(
+      onTap: () => onTap(category),
+      enabled: category.courses.isNotEmpty,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isMajor ? AppColors.ink : Colors.white,
           borderRadius: BorderRadius.circular(24),
-          onTap: category.courses.isEmpty ? null : () => onTap(category),
-          child: Container(
-            width: 140,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  category.label,
-                  style: TextStyle(
-                    color: isMajor ? Colors.white : _mutedText,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+          boxShadow: _cardShadow,
+        ),
+        child: Container(
+          width: 140,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                category.label,
+                style: TextStyle(
+                  color: isMajor ? Colors.white : _mutedText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
-                Text.rich(
-                  TextSpan(
-                    children: [
+              ),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${category.earned}',
+                      style: TextStyle(
+                        color: valueColor,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (category.required != null)
                       TextSpan(
-                        text: '${category.earned}',
+                        text: '/${category.required}',
                         style: TextStyle(
-                          color: valueColor,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
+                          color: subColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (category.required != null)
-                        TextSpan(
-                          text: '/${category.required}',
-                          style: TextStyle(
-                            color: subColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-                Text(
-                  '${category.courseCount}과목',
-                  style: TextStyle(color: subColor, fontSize: 11),
-                ),
-              ],
-            ),
+              ),
+              Text(
+                '${category.courseCount}과목',
+                style: TextStyle(color: subColor, fontSize: 11),
+              ),
+            ],
           ),
         ),
       ),

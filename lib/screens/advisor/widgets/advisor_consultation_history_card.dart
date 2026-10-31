@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 import 'advisor_consultation_detail_dialog.dart';
 
@@ -66,7 +67,7 @@ class AdvisorConsultationHistoryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          GestureDetector(
+          Pressable(
             onTap: () =>
                 showAdvisorConsultationDetailSheet(context, history: history),
             child: const Text(

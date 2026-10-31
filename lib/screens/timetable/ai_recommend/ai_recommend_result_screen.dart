@@ -5,6 +5,7 @@ import '../../../theme/app_colors.dart';
 import '../../../utils/time_format.dart';
 import '../../../utils/weekday_labels.dart';
 import '../../../widgets/mascot_sticker.dart';
+import '../../../widgets/pressable.dart';
 import '../grid_layout.dart';
 import '../models/ai_recommend_answers.dart';
 import '../models/planned_course.dart';
@@ -279,20 +280,22 @@ class _AiRecommendResultScreenState extends State<AiRecommendResultScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.cobaltDeep,
-                                      shape: const StadiumBorder(),
-                                      elevation: 0,
-                                    ),
-                                    child: const Text(
-                                      '< 이전',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
+                                  child: Pressable.effect(
+                                    child: ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.cobaltDeep,
+                                        shape: const StadiumBorder(),
+                                        elevation: 0,
+                                      ),
+                                      child: const Text(
+                                        '< 이전',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -313,19 +316,22 @@ class _AiRecommendResultScreenState extends State<AiRecommendResultScreen> {
                                         ),
                                       ],
                                     ),
-                                    child: ElevatedButton(
-                                      onPressed: _onConfirm,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.lime,
-                                        shape: const StadiumBorder(),
-                                        elevation: 0,
-                                      ),
-                                      child: const Text(
-                                        '이 시간표 할래요',
-                                        style: TextStyle(
-                                          color: AppColors.ink,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
+                                    child: Pressable.effect(
+                                      pressedScale: 0.97,
+                                      child: ElevatedButton(
+                                        onPressed: _onConfirm,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.lime,
+                                          shape: const StadiumBorder(),
+                                          elevation: 0,
+                                        ),
+                                        child: const Text(
+                                          '이 시간표 할래요',
+                                          style: TextStyle(
+                                            color: AppColors.ink,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -374,7 +380,7 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        GestureDetector(
+        Pressable.icon(
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             width: 40,
@@ -411,7 +417,9 @@ class _RegenerateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
+      enabled: !loading,
+      pressedScale: 0.93,
       onTap: loading ? null : onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

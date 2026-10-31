@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 
 const Color _weekendRed = Color(0xFFE5484D);
 const Color _mutedText = Color(0xFF7C7B88);
@@ -140,8 +141,9 @@ class _AdvisorVisitCalendarState extends State<AdvisorVisitCalendar> {
   }
 
   Widget _buildNavButton(IconData icon, bool enabled, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
+    return Pressable.icon(
+      onTap: onTap,
+      enabled: enabled,
       child: Container(
         width: 28,
         height: 28,
@@ -170,12 +172,13 @@ class _AdvisorVisitCalendarState extends State<AdvisorVisitCalendar> {
         widget.selectedDate!.month == date.month &&
         widget.selectedDate!.day == date.day;
 
-    return GestureDetector(
+    return Pressable(
       key: ValueKey(
         'visit-calendar-day-${date.year}-${date.month}-${date.day}',
       ),
-      behavior: HitTestBehavior.opaque,
-      onTap: selectable ? () => widget.onDateSelected(date) : null,
+      onTap: () => widget.onDateSelected(date),
+      enabled: selectable,
+      pressedScale: 0.9,
       child: SizedBox(
         height: 40,
         child: Center(

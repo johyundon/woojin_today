@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import 'calendar_month_grid.dart';
 import 'sheet_buttons.dart';
 import 'sheet_header.dart';
@@ -286,7 +287,7 @@ class _MonthArrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable.icon(
       onTap: onTap,
       child: Container(
         width: 40,

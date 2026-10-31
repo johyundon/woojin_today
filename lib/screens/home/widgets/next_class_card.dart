@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/time_format.dart';
+import '../../../widgets/pressable.dart';
 
 /// 홈 화면의 "다음 수업" 흰색 큰 카드 ("우진이의 하루" v4 리디자인).
 /// [next]가 null이면 시간표를 아직 못 불러왔거나(= ![timetableLoaded]) 오늘
@@ -244,8 +245,9 @@ class NextClassCard extends StatelessWidget {
                   ],
                 ),
               ),
-              GestureDetector(
+              Pressable(
                 onTap: onTimetableTap,
+                pressedScale: 0.92,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
@@ -421,8 +423,9 @@ class NextClassCard extends StatelessWidget {
                 ],
               ),
             ),
-            GestureDetector(
+            Pressable(
               onTap: onDirectionsTap,
+              pressedScale: 0.92,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,

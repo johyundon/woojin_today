@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
+
 /// 홈 화면 "다음 수업" 카드 아래 나란히 놓이는 작은 카드
 /// ("우진이의 하루" v4 리디자인). 둥근 네모 아이콘 + 라벨 + 제목 + 아래 [footer].
 /// 배경/글자 색을 받아서 검은 카드와 분홍 카드에 함께 쓴다.
@@ -33,7 +35,7 @@ class HomeMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         height: 156,

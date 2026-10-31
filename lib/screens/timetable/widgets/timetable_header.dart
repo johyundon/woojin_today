@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/mascot_sticker.dart';
+import '../../../widgets/pressable.dart';
 
 /// 상단 헤더("우진이의 하루" v4 리디자인). 코발트 배경 위에 뒤로가기/저장/
 /// 저장목록 유틸 줄, 학기·학점 배지, "내 시간표" 제목, "자동 생성"/"과목
@@ -65,7 +66,8 @@ class TimetableHeader extends StatelessWidget {
           children: [
             _circleIconButton(Icons.arrow_back_ios_new, onBack),
             const Spacer(),
-            GestureDetector(
+            Pressable(
+              pressedScale: 0.92,
               onTap: onSave,
               child: const Text(
                 '저장',
@@ -77,7 +79,7 @@ class TimetableHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            GestureDetector(
+            Pressable.icon(
               onTap: onOpenSavedList,
               child: Stack(
                 clipBehavior: Clip.none,
@@ -117,7 +119,7 @@ class TimetableHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        GestureDetector(
+        Pressable(
           key: headerKey,
           onTap: onSemesterTap,
           child: Container(
@@ -181,7 +183,7 @@ class TimetableHeader extends StatelessWidget {
   }
 
   Widget _circleIconButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
+    return Pressable.icon(
       onTap: onTap,
       child: Container(
         width: 40,
@@ -202,7 +204,8 @@ class TimetableHeader extends StatelessWidget {
     required Color foreground,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return Pressable(
+      pressedScale: 0.93,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),

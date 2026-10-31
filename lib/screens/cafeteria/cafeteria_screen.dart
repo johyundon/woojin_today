@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/cafeteria_menu_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/pressable.dart';
 import 'models/cafeteria_menu.dart';
 import 'widgets/cafeteria_date_picker_dialog.dart';
 import 'widgets/cafeteria_venue_tabs.dart';
@@ -156,7 +157,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
             const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GestureDetector(
+              child: Pressable(
                 onTap: _cycleMeal,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -248,13 +249,15 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
                               fontSize: 14,
                             ),
                           ),
-                          TextButton(
-                            onPressed: _loadMenu,
-                            child: const Text(
-                              '다시 시도',
-                              style: TextStyle(
-                                color: AppColors.lime,
-                                fontWeight: FontWeight.w800,
+                          Pressable.effect(
+                            child: TextButton(
+                              onPressed: _loadMenu,
+                              child: const Text(
+                                '다시 시도',
+                                style: TextStyle(
+                                  color: AppColors.lime,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
@@ -326,7 +329,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
   }
 
   Widget _circleButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
+    return Pressable.icon(
       onTap: onTap,
       child: Container(
         width: 40,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nsd/nsd.dart' as nsd;
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 
 /// "주변 사람" 목록 한 줄 — 아바타 이니셜 + 광고된 이름 + "보내기".
 class PeerRow extends StatelessWidget {
@@ -54,14 +55,12 @@ class PeerRow extends StatelessWidget {
               ),
             ),
           ),
-          Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: onSend,
+          Pressable(
+            onTap: onSend,
+            pressedScale: 0.93,
+            child: Material(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              highlightColor: AppColors.cobalt.withValues(alpha: 0.12),
-              splashColor: AppColors.cobalt.withValues(alpha: 0.12),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(

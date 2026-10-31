@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 
 /// 선택한 날짜가 속한 주의 월~금 요일 칩 다섯 개. 선택한 날은 라임색, 오늘에는
 /// 숫자 아래에 점을 찍는다. 좌우로 밀면 이전/다음 주로 넘어간다([onWeekChanged]).
@@ -82,8 +83,9 @@ class _DayChip extends StatelessWidget {
     final isToday = _same(date, today);
     final foreground = selected ? AppColors.ink : Colors.white;
 
-    return GestureDetector(
+    return Pressable(
       onTap: () => onTap(date),
+      pressedScale: 0.9,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(

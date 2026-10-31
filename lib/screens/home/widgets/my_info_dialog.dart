@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/student_info_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../home_colors.dart';
 import '../home_enums.dart';
 import 'my_info_row.dart';
@@ -65,12 +66,12 @@ class MyInfoDialog extends StatelessWidget {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: Material(
-                color: AppColors.ink,
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
+              child: Pressable(
+                onTap: () => Navigator.of(context).pop(),
+                pressedScale: 0.96,
+                child: Material(
+                  color: AppColors.ink,
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => Navigator.of(context).pop(),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 15),
                     child: Text(
@@ -251,12 +252,12 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: Material(
-        color: AppColors.lime,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
+      child: Pressable(
+        onTap: onTap,
+        pressedScale: 0.96,
+        child: Material(
+          color: AppColors.lime,
           borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Text(

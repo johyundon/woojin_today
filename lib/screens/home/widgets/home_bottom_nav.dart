@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 
 /// 홈 화면 하단 탭 바 ("우진이의 하루" v4 리디자인).
 /// 화면 아래에 떠 있는 검은색 알약 모양이며, 시간표 / 모아보기 / [가운데
@@ -79,9 +80,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Pressable.icon(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(34),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -114,7 +114,7 @@ class _CenterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: GestureDetector(
+      child: Pressable.icon(
         onTap: onTap,
         child: Container(
           width: 64,

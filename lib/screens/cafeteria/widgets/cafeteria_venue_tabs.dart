@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/cafeteria_menu.dart';
 
 /// 학생식당/교직원식당 탭. 선택한 탭은 흰색 알약, 나머지는 어두운 파랑.
@@ -26,7 +27,7 @@ class CafeteriaVenueTabs extends StatelessWidget {
       child: Row(
         children: [
           for (final venue in CafeteriaVenue.values) ...[
-            GestureDetector(
+            Pressable(
               onTap: () => onChanged(venue),
               child: Container(
                 padding: const EdgeInsets.symmetric(

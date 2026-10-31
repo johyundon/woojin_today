@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/weather_service.dart';
+import '../../../widgets/pressable.dart';
 import '../home_colors.dart';
 
 /// Headline 우측의 날씨 아이콘/온도 영역. 로딩 중에는 작은 스피너,
@@ -42,8 +43,10 @@ class WeatherIndicator extends StatelessWidget {
     }
 
     final display = weatherDisplay(weather.currentWeatherCode);
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
+      enabled: onTap != null,
+      pressedScale: 0.92,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [

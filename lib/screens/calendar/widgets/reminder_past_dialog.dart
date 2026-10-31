@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 
 /// 알림을 걸려는 시각([attemptedAt])이 이미 지났을 때 띄우는 안내 팝업(v4
 /// 스타일). 어느 시각이 지났는지와 알림은 걸리지 않았다는 것, 어떻게 하면 되는지를
@@ -58,19 +59,22 @@ Future<void> showReminderPastDialog(
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cobalt,
-                  elevation: 0,
-                  shape: const StadiumBorder(),
-                ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+              child: Pressable.effect(
+                pressedScale: 0.97,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cobalt,
+                    elevation: 0,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),

@@ -6,6 +6,7 @@ import '../services/service_factory.dart';
 import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
+import '../widgets/pressable.dart';
 import 'student_id_find_screen.dart';
 import 'student_id_login_complete_screen.dart';
 import 'terms_agreement_screen.dart';
@@ -76,17 +77,20 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cobalt,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: const StadiumBorder(),
-                ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              child: Pressable.effect(
+                pressedScale: 0.96,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cobalt,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
@@ -233,19 +237,22 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.cobalt,
-                    elevation: 0,
-                    shape: const StadiumBorder(),
-                  ),
-                  child: const Text(
-                    '확인',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                child: Pressable.effect(
+                  pressedScale: 0.96,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.cobalt,
+                      elevation: 0,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text(
+                      '확인',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
@@ -413,16 +420,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: '비밀번호',
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          trailing: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              size: 24,
-                              color: Colors.black45,
-                            ),
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
+                          trailing: Pressable.effect(
+                            pressedScale: 0.85,
+                            child: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                size: 24,
+                                color: Colors.black45,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                             ),
                           ),
                         ),
@@ -492,34 +502,40 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                         const SizedBox(height: 16),
-                        Container(
-                          height: 62,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.rectangle,
-                            borderRadius: BorderRadius.circular(31),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.cobalt.withValues(alpha: 0.4),
-                                offset: const Offset(0, 12),
-                                blurRadius: 26,
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _onSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.cobalt,
-                              disabledBackgroundColor: AppColors.cobalt
-                                  .withValues(alpha: 0.5),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: const StadiumBorder(),
+                        Pressable.effect(
+                          enabled: !_isLoading,
+                          pressedScale: 0.96,
+                          child: Container(
+                            height: 62,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.rectangle,
+                              borderRadius: BorderRadius.circular(31),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cobalt.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                  offset: const Offset(0, 12),
+                                  blurRadius: 26,
+                                ),
+                              ],
                             ),
-                            child: Text(
-                              _isLoading ? '로그인 중...' : '로그인 →',
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _onSubmit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.cobalt,
+                                disabledBackgroundColor: AppColors.cobalt
+                                    .withValues(alpha: 0.5),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: const StadiumBorder(),
+                              ),
+                              child: Text(
+                                _isLoading ? '로그인 중...' : '로그인 →',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),

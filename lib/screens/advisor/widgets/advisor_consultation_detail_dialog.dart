@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 
 const Color _mutedText = Color(0xFF7C7B88);
@@ -71,19 +72,22 @@ class _AdvisorConsultationDetailSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.lime,
-                foregroundColor: AppColors.ink,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+            child: Pressable.effect(
+              pressedScale: 0.97,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.lime,
+                  foregroundColor: AppColors.ink,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                 ),
-              ),
-              child: const Text(
-                '확인',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                child: const Text(
+                  '확인',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
               ),
             ),
           ),

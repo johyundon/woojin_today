@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
+import '../widgets/pressable.dart';
 
 /// 학번 찾기 결과 화면 (Figma node 6:12).
 /// 조회된 학번을 보여주고, 그 학번으로 바로 로그인하도록 안내한다.
@@ -32,17 +33,22 @@ class StudentIdResultScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 8),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.15),
-                          shape: const CircleBorder(),
+                      Pressable.effect(
+                        pressedScale: 0.85,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.15,
+                            ),
+                            shape: const CircleBorder(),
+                          ),
+                          icon: const Icon(
+                            Icons.chevron_left,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
-                        icon: const Icon(
-                          Icons.chevron_left,
-                          color: Colors.white,
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -173,33 +179,38 @@ class StudentIdResultScreen extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Container(
-                          height: 62,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.rectangle,
-                            borderRadius: BorderRadius.circular(31),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.cobalt.withValues(alpha: 0.4),
-                                offset: const Offset(0, 12),
-                                blurRadius: 26,
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () =>
-                                Navigator.of(context).pop(studentId),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.cobalt,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: const StadiumBorder(),
+                        Pressable.effect(
+                          pressedScale: 0.96,
+                          child: Container(
+                            height: 62,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.rectangle,
+                              borderRadius: BorderRadius.circular(31),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cobalt.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                  offset: const Offset(0, 12),
+                                  blurRadius: 26,
+                                ),
+                              ],
                             ),
-                            child: const Text(
-                              '로그인하러 가기 →',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  Navigator.of(context).pop(studentId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.cobalt,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: const StadiumBorder(),
+                              ),
+                              child: const Text(
+                                '로그인하러 가기 →',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),

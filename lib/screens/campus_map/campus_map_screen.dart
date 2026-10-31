@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/pressable.dart';
 import 'campus_map_colors.dart';
 import 'models/campus_building.dart';
 import 'models/geo_point.dart';
@@ -221,13 +222,12 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Row(
                     children: [
-                      Material(
-                        color: AppColors.cobaltDeep,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => Navigator.of(context).pop(),
-                          child: const SizedBox(
+                      Pressable.icon(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Material(
+                          color: AppColors.cobaltDeep,
+                          shape: CircleBorder(),
+                          child: SizedBox(
                             width: 40,
                             height: 40,
                             child: Icon(

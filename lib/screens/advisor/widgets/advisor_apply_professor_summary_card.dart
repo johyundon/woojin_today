@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 
 const Color _mutedText = Color(0xFF7C7B88);
@@ -56,7 +57,7 @@ class AdvisorProfessorSummaryCard extends StatelessWidget {
               ],
             ),
           ),
-          GestureDetector(
+          Pressable(
             onTap: onToggleSearching,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

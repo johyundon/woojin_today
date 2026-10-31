@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 
 const Color _mutedText = Color(0xFF7C7B88);
@@ -98,8 +99,9 @@ class _ProfessorRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 9),
-      child: GestureDetector(
+      child: Pressable(
         onTap: onTap,
+        pressedScale: 0.98,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(

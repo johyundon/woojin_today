@@ -5,6 +5,7 @@ import '../services/service_factory.dart';
 import '../services/student_id_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
+import '../widgets/pressable.dart';
 import 'student_id_result_screen.dart';
 
 /// 학번 찾기 입력 화면 (Figma node 6:10).
@@ -113,17 +114,20 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cobalt,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: const StadiumBorder(),
-                ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              child: Pressable.effect(
+                pressedScale: 0.96,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cobalt,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
@@ -242,19 +246,23 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const SizedBox(height: 8),
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.white.withValues(
-                                      alpha: 0.15,
+                                Pressable.effect(
+                                  pressedScale: 0.85,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.white.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      shape: const CircleBorder(),
                                     ),
-                                    shape: const CircleBorder(),
+                                    icon: const Icon(
+                                      Icons.chevron_left,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
                                   ),
-                                  icon: const Icon(
-                                    Icons.chevron_left,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () => Navigator.of(context).pop(),
                                 ),
                                 const SizedBox(height: 16),
                                 SizedBox(
@@ -444,36 +452,41 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 18),
-                                Container(
-                                  height: 62,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.rectangle,
-                                    borderRadius: BorderRadius.circular(31),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.cobalt.withValues(
-                                          alpha: 0.4,
+                                Pressable.effect(
+                                  enabled: !_isLoading,
+                                  pressedScale: 0.96,
+                                  child: Container(
+                                    height: 62,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.rectangle,
+                                      borderRadius: BorderRadius.circular(31),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.cobalt.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                          offset: const Offset(0, 12),
+                                          blurRadius: 26,
                                         ),
-                                        offset: const Offset(0, 12),
-                                        blurRadius: 26,
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _isLoading ? null : _onSubmit,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.cobalt,
-                                      disabledBackgroundColor: AppColors.cobalt
-                                          .withValues(alpha: 0.5),
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: const StadiumBorder(),
+                                      ],
                                     ),
-                                    child: Text(
-                                      _isLoading ? '조회 중...' : '학번 찾기 →',
-                                      style: const TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w700,
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading ? null : _onSubmit,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.cobalt,
+                                        disabledBackgroundColor: AppColors
+                                            .cobalt
+                                            .withValues(alpha: 0.5),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: const StadiumBorder(),
+                                      ),
+                                      child: Text(
+                                        _isLoading ? '조회 중...' : '학번 찾기 →',
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ),

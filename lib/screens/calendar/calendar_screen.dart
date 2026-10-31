@@ -5,6 +5,7 @@ import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/weekday_labels.dart';
+import '../../widgets/pressable.dart';
 import 'event_edit_screen.dart';
 import 'models/calendar_event.dart';
 import 'services/academic_schedule_merge.dart';
@@ -452,7 +453,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 ),
                               ),
                               const Spacer(),
-                              GestureDetector(
+                              Pressable.icon(
                                 onTap: _onAddPressed,
                                 child: Container(
                                   width: 40,
@@ -524,7 +525,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _monthButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
+    return Pressable.icon(
       onTap: onTap,
       child: Container(
         width: 40,

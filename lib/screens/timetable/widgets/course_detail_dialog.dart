@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/course_catalog_service.dart';
 import '../../../utils/credit_format.dart';
+import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
 
 /// 과목 상세 다이얼로그(상태 6). "닫기" / "강의계획서 보기" 두 버튼.
@@ -59,38 +60,44 @@ class CourseDetailDialog extends StatelessWidget {
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onViewSyllabus,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TimetableColors.accent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              child: Pressable.effect(
+                pressedScale: 0.97,
+                child: ElevatedButton(
+                  onPressed: onViewSyllabus,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: TimetableColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  '강의계획서 보기',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  child: const Text(
+                    '강의계획서 보기',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: TimetableColors.textPrimary,
-                  side: const BorderSide(color: TimetableColors.border),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              child: Pressable.effect(
+                pressedScale: 0.97,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: TimetableColors.textPrimary,
+                    side: const BorderSide(color: TimetableColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  '닫기',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  child: const Text(
+                    '닫기',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),

@@ -4,6 +4,7 @@ import '../../services/notice_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 import 'models/notice_item.dart';
 import 'widgets/notice_tag_chips.dart';
 
@@ -87,7 +88,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        GestureDetector(
+                        Pressable.icon(
                           onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width: 40,
@@ -221,16 +222,18 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        FilledButton(
-          onPressed: _load,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.lime,
-            foregroundColor: AppColors.ink,
-            shape: const StadiumBorder(),
-          ),
-          child: const Text(
-            '다시 시도',
-            style: TextStyle(fontWeight: FontWeight.w800),
+        Pressable.effect(
+          child: FilledButton(
+            onPressed: _load,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.lime,
+              foregroundColor: AppColors.ink,
+              shape: const StadiumBorder(),
+            ),
+            child: const Text(
+              '다시 시도',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
           ),
         ),
       ];
@@ -321,19 +324,25 @@ class _AttachmentRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: () => ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(content: Text('미리보기는 지원하지 않아요'))),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.cobalt,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: const StadiumBorder(),
-            ),
-            child: const Text(
-              '미리보기',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          Pressable.effect(
+            child: ElevatedButton(
+              onPressed: () => ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('미리보기는 지원하지 않아요'))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.cobalt,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                shape: const StadiumBorder(),
+              ),
+              child: const Text(
+                '미리보기',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],

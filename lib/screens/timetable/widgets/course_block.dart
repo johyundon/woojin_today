@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
 import '../grid_layout.dart';
 import '../timetable_colors.dart';
 
@@ -23,7 +24,7 @@ class CourseBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = colorForCourseKey(layout.course.key);
     final textColor = textColorOnBlock(color);
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.all(2),
@@ -76,7 +77,7 @@ class CourseBlock extends StatelessWidget {
             Positioned(
               top: 4,
               right: 4,
-              child: GestureDetector(
+              child: Pressable.icon(
                 onTap: onRemove,
                 child: Container(
                   padding: const EdgeInsets.all(2),

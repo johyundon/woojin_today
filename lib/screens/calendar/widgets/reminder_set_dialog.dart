@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import 'ringing_bell.dart';
 
 /// 시간 정보가 없는 일정(학사일정 등)에 알림을 걸었을 때 띄우는 안내 팝업(v4
@@ -70,19 +71,22 @@ Future<void> showReminderSetDialog(
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cobalt,
-                  elevation: 0,
-                  shape: const StadiumBorder(),
-                ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+              child: Pressable.effect(
+                pressedScale: 0.97,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cobalt,
+                    elevation: 0,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),

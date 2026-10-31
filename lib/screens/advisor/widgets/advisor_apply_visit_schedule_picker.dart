@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../services/advisor_consultation_mock_data.dart';
 import 'advisor_visit_calendar.dart';
 
@@ -91,7 +92,7 @@ class _TimeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       key: ValueKey('visit-time-$time'),
       onTap: onTap,
       child: Container(

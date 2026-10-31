@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 import '../models/ai_recommend_answers.dart';
 
 const List<Weekday> _weekdayValues = [
@@ -96,7 +97,7 @@ class _StepChrome extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
           child: Row(
             children: [
-              GestureDetector(
+              Pressable.icon(
                 onTap: () => Navigator.of(context).pop(),
                 child: Container(
                   width: 36,
@@ -201,19 +202,22 @@ class _StepBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final nextButton = SizedBox(
       height: 56,
-      child: ElevatedButton(
-        onPressed: onNext,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.lime,
-          shape: const StadiumBorder(),
-          elevation: 0,
-        ),
-        child: Text(
-          nextLabel,
-          style: const TextStyle(
-            color: AppColors.ink,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+      child: Pressable.effect(
+        pressedScale: 0.97,
+        child: ElevatedButton(
+          onPressed: onNext,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.lime,
+            shape: const StadiumBorder(),
+            elevation: 0,
+          ),
+          child: Text(
+            nextLabel,
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ),
@@ -228,18 +232,20 @@ class _StepBottomBar extends StatelessWidget {
         SizedBox(
           width: 92,
           height: 56,
-          child: OutlinedButton(
-            onPressed: onBack,
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.white54),
-              shape: const StadiumBorder(),
-            ),
-            child: const Text(
-              '< 이전',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+          child: Pressable.effect(
+            child: OutlinedButton(
+              onPressed: onBack,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white54),
+                shape: const StadiumBorder(),
+              ),
+              child: const Text(
+                '< 이전',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -266,7 +272,8 @@ class _SelectableTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
+      pressedScale: 0.97,
       onTap: onTap,
       child: Container(
         width: double.infinity,
@@ -516,7 +523,7 @@ class _WeekdayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -553,7 +560,7 @@ class _RoundNumberButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable.icon(
       onTap: onTap,
       child: Container(
         width: 32,

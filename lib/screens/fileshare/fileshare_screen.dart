@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
+import '../../widgets/pressable.dart';
 import 'fileshare_colors.dart';
 import 'received_file.dart';
 import 'widgets/peer_row.dart';
@@ -356,7 +357,7 @@ class _FileShareScreenState extends State<FileShareScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        GestureDetector(
+                        Pressable.icon(
                           onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width: 40,
@@ -538,22 +539,26 @@ class _FileShareScreenState extends State<FileShareScreen> {
     return SizedBox(
       width: double.infinity,
       height: 54,
-      child: ElevatedButton.icon(
-        onPressed: _enabled ? _sendFile : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.cobalt,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.cobalt.withValues(alpha: 0.35),
-          disabledForegroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+      child: Pressable.effect(
+        enabled: _enabled,
+        pressedScale: 0.97,
+        child: ElevatedButton.icon(
+          onPressed: _enabled ? _sendFile : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.cobalt,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.cobalt.withValues(alpha: 0.35),
+            disabledForegroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
           ),
-        ),
-        icon: const Icon(Icons.ios_share, size: 18),
-        label: const Text(
-          '내 파일 보내기',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          icon: const Icon(Icons.ios_share, size: 18),
+          label: const Text(
+            '내 파일 보내기',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
         ),
       ),
     );

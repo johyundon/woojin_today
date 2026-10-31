@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
 import 'sheet_header.dart';
 
@@ -161,26 +162,29 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
                   Expanded(
                     child: SizedBox(
                       height: 52,
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            Navigator.of(context).pop(EventDetailAction.delete),
-                        icon: const Icon(
-                          Icons.delete,
-                          size: 18,
-                          color: Color(0xFFE5484D),
-                        ),
-                        label: const Text(
-                          '삭제하기',
-                          style: TextStyle(
+                      child: Pressable.effect(
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              Navigator.of(context)
+                                  .pop(EventDetailAction.delete),
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 18,
                             color: Color(0xFFE5484D),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFDECEC),
-                          elevation: 0,
-                          shape: const StadiumBorder(),
+                          label: const Text(
+                            '삭제하기',
+                            style: TextStyle(
+                              color: Color(0xFFE5484D),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFDECEC),
+                            elevation: 0,
+                            shape: const StadiumBorder(),
+                          ),
                         ),
                       ),
                     ),
@@ -189,26 +193,28 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
                   Expanded(
                     child: SizedBox(
                       height: 52,
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            Navigator.of(context).pop(EventDetailAction.edit),
-                        icon: const Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          '수정하기',
-                          style: TextStyle(
+                      child: Pressable.effect(
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              Navigator.of(context).pop(EventDetailAction.edit),
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 18,
                             color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.cobalt,
-                          elevation: 0,
-                          shape: const StadiumBorder(),
+                          label: const Text(
+                            '수정하기',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.cobalt,
+                            elevation: 0,
+                            shape: const StadiumBorder(),
+                          ),
                         ),
                       ),
                     ),

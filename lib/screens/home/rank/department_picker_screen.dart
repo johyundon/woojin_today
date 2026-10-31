@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/mascot_sticker.dart';
+import '../../../widgets/pressable.dart';
 
 const _mutedText = Color(0xFF6B6B70);
 const _fieldBackground = Color(0xFFF1F1F5);
@@ -82,7 +83,7 @@ class _DepartmentPickerScreenState extends State<DepartmentPickerScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          GestureDetector(
+                          Pressable.icon(
                             onTap: () => Navigator.of(context).pop(),
                             child: Container(
                               width: 40,
@@ -235,39 +236,43 @@ class _DepartmentPickerScreenState extends State<DepartmentPickerScreen> {
                             20,
                             16 + MediaQuery.of(context).padding.bottom,
                           ),
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(28),
-                              boxShadow: _canChange
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.cobalt.withValues(
-                                          alpha: 0.35,
+                          child: Pressable.effect(
+                            enabled: _canChange,
+                            pressedScale: 0.96,
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                boxShadow: _canChange
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.cobalt.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          offset: const Offset(0, 6),
+                                          blurRadius: 14,
                                         ),
-                                        offset: const Offset(0, 6),
-                                        blurRadius: 14,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: SizedBox.expand(
-                              child: ElevatedButton(
-                                onPressed: _canChange ? _confirm : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.cobalt,
-                                  disabledBackgroundColor: const Color(
-                                    0xFFC9D3F2,
+                                      ]
+                                    : null,
+                              ),
+                              child: SizedBox.expand(
+                                child: ElevatedButton(
+                                  onPressed: _canChange ? _confirm : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.cobalt,
+                                    disabledBackgroundColor: const Color(
+                                      0xFFC9D3F2,
+                                    ),
+                                    elevation: 0,
+                                    shape: const StadiumBorder(),
                                   ),
-                                  elevation: 0,
-                                  shape: const StadiumBorder(),
-                                ),
-                                child: const Text(
-                                  '변경하기',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
+                                  child: const Text(
+                                    '변경하기',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -302,9 +307,9 @@ class _DepartmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Pressable(
       onTap: onTap,
+      pressedScale: 0.97,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
@@ -431,19 +436,21 @@ class _ConfirmSheet extends StatelessWidget {
                 flex: 2,
                 child: SizedBox(
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _fieldBackground,
-                      elevation: 0,
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      '취소',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
+                  child: Pressable.effect(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _fieldBackground,
+                        elevation: 0,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        '취소',
+                        style: TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -454,19 +461,21 @@ class _ConfirmSheet extends StatelessWidget {
                 flex: 3,
                 child: SizedBox(
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.cobalt,
-                      elevation: 0,
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      '변경',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
+                  child: Pressable.effect(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cobalt,
+                        elevation: 0,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        '변경',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),

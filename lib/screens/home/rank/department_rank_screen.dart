@@ -5,6 +5,7 @@ import '../../../services/service_factory.dart';
 import '../../../services/session_cache.dart';
 import '../../../services/twin_rank_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../../../widgets/twin_credentials_form.dart';
 import 'department_codes.dart';
 import 'department_picker_screen.dart';
@@ -274,7 +275,7 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: GestureDetector(
+                child: Pressable.icon(
                   onTap: () => Navigator.of(context).pop(),
                   child: Container(
                     width: 40,
@@ -376,8 +377,9 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
+      pressedScale: 0.92,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -438,19 +440,22 @@ class _Message extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: onPressed,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.lime,
-              foregroundColor: AppColors.ink,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          Pressable.effect(
+            pressedScale: 0.96,
+            child: FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.lime,
+                foregroundColor: AppColors.ink,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-            child: Text(
-              buttonLabel,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              child: Text(
+                buttonLabel,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],

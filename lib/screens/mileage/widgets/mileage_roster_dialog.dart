@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../services/mileage_roster_mock_data.dart';
 
 /// "명단 (800명)" 다이얼로그 — 학번 검색 + 전체 학번 그리드.
@@ -131,17 +132,23 @@ class _MileageRosterDialogState extends State<_MileageRosterDialog> {
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.border),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: const StadiumBorder(),
-                  ),
-                  child: const Text(
-                    '닫기',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                child: Pressable.effect(
+                  pressedScale: 0.96,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text(
+                      '닫기',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),

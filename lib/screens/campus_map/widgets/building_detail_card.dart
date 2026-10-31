@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
 import '../campus_map_colors.dart';
 
 /// 지도 마커를 탭했을 때 하단에서 올라오는 건물 상세 카드.
@@ -44,8 +45,7 @@ class BuildingDetailCard extends StatelessWidget {
                   ),
                 ),
               ),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
+              Pressable.icon(
                 onTap: onClose,
                 child: const Padding(
                   padding: EdgeInsets.all(4),
@@ -86,23 +86,25 @@ class BuildingDetailCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _ShadowedButton(
-                  child: OutlinedButton(
-                    onPressed: onSetOrigin,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: CampusMapColors.surface,
-                      foregroundColor: CampusMapColors.textPrimary,
-                      side: const BorderSide(color: CampusMapColors.border),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                child: Pressable.effect(
+                  child: _ShadowedButton(
+                    child: OutlinedButton(
+                      onPressed: onSetOrigin,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: CampusMapColors.surface,
+                        foregroundColor: CampusMapColors.textPrimary,
+                        side: const BorderSide(color: CampusMapColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      '출발지로 선택',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                      child: const Text(
+                        '출발지로 선택',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -110,23 +112,25 @@ class BuildingDetailCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _ShadowedButton(
-                  child: ElevatedButton(
-                    onPressed: onSetDestination,
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: CampusMapColors.accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                child: Pressable.effect(
+                  child: _ShadowedButton(
+                    child: ElevatedButton(
+                      onPressed: onSetDestination,
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: CampusMapColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      '도착지로 선택',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                      child: const Text(
+                        '도착지로 선택',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

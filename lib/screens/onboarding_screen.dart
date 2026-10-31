@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
+import '../widgets/pressable.dart';
 import 'student_id_login_complete_screen.dart';
 
 /// 온보딩 화면 ("우진이의 하루" v4 리디자인, 01 섹션 3~5번째 화면).
@@ -95,19 +96,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: SizedBox(
                 width: double.infinity,
                 height: 60,
-                child: ElevatedButton(
-                  onPressed: _onNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.lime,
-                    foregroundColor: AppColors.ink,
-                    elevation: 0,
-                    shape: const StadiumBorder(),
-                  ),
-                  child: Text(
-                    _isLastPage ? '시작하기 →' : '다음 →',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                child: Pressable.effect(
+                  pressedScale: 0.96,
+                  child: ElevatedButton(
+                    onPressed: _onNext,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.lime,
+                      foregroundColor: AppColors.ink,
+                      elevation: 0,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Text(
+                      _isLastPage ? '시작하기 →' : '다음 →',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),

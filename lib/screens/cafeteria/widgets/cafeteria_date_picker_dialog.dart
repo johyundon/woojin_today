@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../widgets/pressable.dart';
 import '../cafeteria_colors.dart';
 
 /// "날짜 선택" 팝업 (Figma node 6:71). 년/월/일 3열 휠 — 전부 숫자 뒤에
@@ -146,38 +147,49 @@ class _CafeteriaDatePickerDialogState
             const SizedBox(height: 20),
             Row(
               children: [
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: CafeteriaColors.textPrimary,
-                    side: const BorderSide(color: CafeteriaColors.border),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 13,
+                Pressable.effect(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: CafeteriaColors.textPrimary,
+                      side: const BorderSide(color: CafeteriaColors.border),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 13,
+                      ),
+                      shape: const StadiumBorder(),
                     ),
-                    shape: const StadiumBorder(),
-                  ),
-                  child: const Text(
-                    '취소',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    child: const Text(
+                      '취소',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () =>
-                      Navigator.of(context).pop(DateTime(_year, _month, _day)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: CafeteriaColors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 13,
+                Pressable.effect(
+                  child: ElevatedButton(
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pop(DateTime(_year, _month, _day)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: CafeteriaColors.accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 13,
+                      ),
+                      shape: const StadiumBorder(),
                     ),
-                    shape: const StadiumBorder(),
-                  ),
-                  child: const Text(
-                    '확인',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    child: const Text(
+                      '확인',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ],

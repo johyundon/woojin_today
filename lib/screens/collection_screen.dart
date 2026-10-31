@@ -14,6 +14,7 @@ import 'mileage/mileage_screen.dart';
 import 'notice/notice_screen.dart';
 import 'shuttle/shuttle_screen.dart';
 import 'weather/weather_page.dart';
+import '../widgets/pressable.dart';
 
 /// "모아보기" 화면 ("우진이의 하루" v4 리디자인).
 ///
@@ -302,9 +303,9 @@ class _CollectionGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Pressable(
       onTap: onTap,
+      pressedScale: 0.9,
       child: Column(
         children: [
           Container(

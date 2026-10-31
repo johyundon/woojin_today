@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/pressable.dart';
 
 /// 약관 상세/전체보기 화면 (Figma node 6:5).
 /// "이용약관 동의" 화면의 두 "보기" 링크(이용약관 / 개인정보 처리방침)가
@@ -285,14 +286,20 @@ class TermsDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
               child: Row(
                 children: [
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF5F3EF),
-                      shape: const CircleBorder(),
+                  Pressable.effect(
+                    pressedScale: 0.85,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFF5F3EF),
+                        shape: const CircleBorder(),
+                      ),
+                      icon: const Icon(
+                        Icons.chevron_left,
+                        color: AppColors.ink,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                    icon: const Icon(Icons.chevron_left, color: AppColors.ink),
-                    onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 12),
                   Text(

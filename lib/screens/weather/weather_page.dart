@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/air_quality_service.dart';
 import '../../services/weather_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/pressable.dart';
 import 'weather_screen.dart';
 
 /// 날씨를 직접 조회한 뒤 [WeatherScreen]을 보여주는 진입 화면. 모아보기처럼
@@ -71,7 +72,7 @@ class _WeatherPageState extends State<WeatherPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 0, 0),
-              child: GestureDetector(
+              child: Pressable.icon(
                 onTap: () => Navigator.of(context).pop(),
                 child: Container(
                   width: 40,
@@ -98,17 +99,19 @@ class _WeatherPageState extends State<WeatherPage> {
                           style: TextStyle(color: Colors.white, fontSize: 15),
                         ),
                         const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _load,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.lime,
-                            foregroundColor: AppColors.ink,
-                            elevation: 0,
-                            shape: const StadiumBorder(),
-                          ),
-                          child: const Text(
-                            '다시 시도',
-                            style: TextStyle(fontWeight: FontWeight.w800),
+                        Pressable.effect(
+                          child: ElevatedButton(
+                            onPressed: _load,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.lime,
+                              foregroundColor: AppColors.ink,
+                              elevation: 0,
+                              shape: const StadiumBorder(),
+                            ),
+                            child: const Text(
+                              '다시 시도',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
                           ),
                         ),
                       ],
