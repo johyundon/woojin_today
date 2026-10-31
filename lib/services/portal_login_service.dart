@@ -79,64 +79,6 @@ class _RedirectChainResult {
   final bool passedPasswordNotice;
 }
 
-/// ⚠️ 임시(T-WIN 확인용): 쿠키를 이름이 아니라 (서버, 이름)으로 나눠 보관한다.
-/// 로그인 과정이 여러 서버를 거치며 같은 이름의 쿠키를 주고받을 때 서로 덮어쓰지
-/// 않게 하려는 것이다. Domain 속성이 있으면 하위 서버에도 보내고, 없으면 그 서버에만
-/// 보낸다. 경로와 만료 시각은 다루지 않고, Max-Age=0이면 지운다.
-class _HostCookies {
-  final Map<String, ({String name, String value, String domain, bool hostOnly})>
-  _items = {};
-
-  void store(Uri url, List<String> setCookies) {
-    for (final cookie in setCookies) {
-      final parts = cookie.split(';');
-      final eq = parts.first.indexOf('=');
-      if (eq <= 0) continue;
-      final name = parts.first.substring(0, eq).trim();
-      final value = parts.first.substring(eq + 1).trim();
-      var domain = url.host.toLowerCase();
-      var hostOnly = true;
-      var expired = false;
-      for (final attr in parts.skip(1)) {
-        final a = attr.trim().toLowerCase();
-        if (a.startsWith('domain=')) {
-          domain = a.substring(7).replaceFirst(RegExp(r'^\.'), '');
-          hostOnly = false;
-        } else if (a.startsWith('max-age=') && a.substring(8).trim() == '0') {
-          expired = true;
-        }
-      }
-      final key = '$domain|$name';
-      if (expired) {
-        _items.remove(key);
-      } else {
-        _items[key] = (
-          name: name,
-          value: value,
-          domain: domain,
-          hostOnly: hostOnly,
-        );
-      }
-    }
-  }
-
-  String headerFor(Uri url) {
-    final host = url.host.toLowerCase();
-    return _items.values
-        .where(
-          (c) => c.hostOnly
-              ? c.domain == host
-              : host == c.domain || host.endsWith('.${c.domain}'),
-        )
-        .map((c) => '${c.name}=${c.value}')
-        .join('; ');
-  }
-
-  /// 값은 빼고 "서버:이름"만 돌려준다(콘솔 확인용).
-  String describe() =>
-      _items.values.map((c) => '${c.domain}:${c.name}').join(',');
-}
-
 /// [PortalLoginService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
 /// 서비스를 주고받는다.
 abstract class PortalLoginServiceBase {
@@ -211,7 +153,6 @@ class PortalLoginService implements PortalLoginServiceBase {
         return step1;
       }
       if (kDebugMode) await _debugCheckPwdChange(client, cookieJar);
-      if (kDebugMode) await _debugCheckTwin(userId, userPwd);
       if (step1.userId2 != null) {
         return step1;
       }
@@ -372,163 +313,6 @@ class PortalLoginService implements PortalLoginServiceBase {
     }
   }
 
-  /// ⚠️ 임시: T-WIN에 따로 로그인한 뒤 명세의 평균성적 주소(getResultDivInfoPage.do)가
-  /// "내 성적"을 주는지 본다. 첫 화면을 먼저 열고 쿠키를 서버별로 나눠 담는 방식 하나만
-  /// 시도하고, 결과를 `[T-WIN-요약]` 한 줄로 남긴다. 실패해도 포털 로그인에는 영향을
-  /// 주지 않는다.
-  Future<void> _debugCheckTwin(String userId, String userPwd) async {
-    final summary = await _debugTwinAttempt(
-      userId,
-      userPwd,
-      true,
-      hostScoped: true,
-    );
-    // 시스템 로그가 긴 줄을 자르므로 항목별로 나눠 찍는다.
-    for (final part in summary.split(' | ')) {
-      debugPrint('[T-WIN-요약] $part');
-    }
-  }
-
-  Future<String> _debugTwinAttempt(
-    String userId,
-    String userPwd,
-    bool preVisit, {
-    bool hostScoped = false,
-  }) async {
-    final label =
-        '[T-WIN-요약] 첫 화면 먼저 열기=${preVisit ? 'O' : 'X'}, '
-        '서버별 쿠키=${hostScoped ? 'O' : 'X'}';
-    final hostCookies = hostScoped ? _HostCookies() : null;
-    String shortUrl(String? url) {
-      final uri = url == null ? null : Uri.tryParse(url);
-      return uri == null ? '-' : '${uri.host}${uri.path}';
-    }
-
-    // 포털 로그인과 쿠키가 섞이지 않게 T-WIN 전용 클라이언트와 쿠키 맵을 새로 만든다.
-    final client = _clientFactory();
-    final jar = <String, String>{};
-    try {
-      if (preVisit) {
-        await _followRedirects(
-          client,
-          jar,
-          http.Request(
-            'GET',
-            Uri.parse('https://together.daejin.ac.kr/clientMain/a/t/main.do'),
-          )..headers['User-Agent'] = _userAgent,
-          hostCookies: hostCookies,
-        );
-      }
-      String cookieNames() =>
-          hostCookies != null ? hostCookies.describe() : jar.keys.join(',');
-      final cookiesBefore = cookieNames();
-
-      final before = debugLog.length;
-      final login = await _followRedirects(
-        client,
-        jar,
-        http.Request(
-            'POST',
-            Uri.parse('https://together.daejin.ac.kr/login/a/n/loginProc.do'),
-          )
-          ..headers['Content-Type'] =
-              'application/x-www-form-urlencoded; charset=UTF-8'
-          ..headers['Origin'] = 'https://together.daejin.ac.kr'
-          ..headers['Referer'] = preVisit
-              ? 'https://together.daejin.ac.kr/clientMain/a/t/main.do'
-              : 'https://together.daejin.ac.kr'
-          ..headers['User-Agent'] = _userAgent
-          ..body =
-              'targetUrl=%2FclientMain%2Fa%2Ft%2Fmain.do'
-              '&userId=${Uri.encodeQueryComponent(userId)}'
-              '&userPw=${Uri.encodeQueryComponent(userPwd)}',
-        hostCookies: hostCookies,
-      );
-      final hops = debugLog
-          .sublist(before)
-          .map((hop) {
-            final m = RegExp(r'\[hop\] (\w+) (\S+) -> (\d+) location=(\S+)')
-                .firstMatch(hop);
-            if (m == null) return null;
-            return '${m.group(1)} ${shortUrl(m.group(2))}->${m.group(3)}'
-                '(${m.group(4) == 'null' ? '-' : shortUrl(m.group(4))})';
-          })
-          .whereType<String>()
-          .join(' / ');
-      // 로그인 응답 본문에 서버가 알려주는 실패 문구가 있는지(알림창 스크립트 등).
-      final alertText = RegExp(r'alert\(\s*.([^)]{1,80})')
-          .firstMatch(login.finalBody)
-          ?.group(1);
-
-      // 명세의 Referer 페이지("나의 미래")를 먼저 열어 학과코드·학년코드를 찾는다.
-      // 앱이 학생의 학과코드를 따로 갖고 있지 않아서다. 못 찾으면 명세 예시 값을 쓴다.
-      final view = await _followRedirects(
-        client,
-        jar,
-        http.Request(
-          'GET',
-          Uri.parse(
-            'https://together.daejin.ac.kr/myFuture/a/m/myFutureView.do',
-          ),
-        )..headers['User-Agent'] = _userAgent,
-        hostCookies: hostCookies,
-      );
-      final viewBody = view.finalBody;
-      final foundSust = RegExp(r'sustCd\W{1,10}([A-Z]{2}\d{4})')
-          .firstMatch(viewBody)
-          ?.group(1);
-      final foundShyr = RegExp(r'shyrCd\W{1,10}(\d)')
-          .firstMatch(viewBody)
-          ?.group(1);
-      final sustCd = foundSust ?? 'AA0194';
-      final shyrCd = foundShyr ?? '3';
-
-      final result = await _followRedirects(
-        client,
-        jar,
-        http.Request(
-            'POST',
-            Uri.parse(
-              'https://together.daejin.ac.kr/myFuture/a/n/getResultDivInfoPage.do',
-            ),
-          )
-          ..headers['Content-Type'] =
-              'application/x-www-form-urlencoded; charset=UTF-8'
-          ..headers['IS_AJAX'] = 'isAjax'
-          ..headers['X-Requested-With'] = 'XMLHttpRequest'
-          ..headers['Origin'] = 'https://together.daejin.ac.kr'
-          ..headers['Referer'] =
-              'https://together.daejin.ac.kr/myFuture/a/m/myFutureView.do'
-          ..headers['User-Agent'] = _userAgent
-          ..body =
-              'sustCd=$sustCd&shyrCd=$shyrCd&pageIndex=1'
-              '&searchType=STD_GROUP&roadMapType=SAMEGRADE',
-        hostCookies: hostCookies,
-      );
-      final body = result.finalBody;
-      String? strongIn(String cls) => RegExp(
-        '$cls[^>]*>.*?<strong>\\s*([0-9.]+)\\s*</strong>',
-        dotAll: true,
-      ).firstMatch(body)?.group(1);
-
-      return '$label | 로그인 경로: $hops | 로그인 응답 알림: $alertText | '
-          '쿠키(로그인 전→후): [$cookiesBefore]→[${cookieNames()}] | '
-          '나의 미래 화면: 상태=${view.finalStatusCode}, '
-          '최종=${shortUrl(view.finalUrl.toString())}, '
-          '"로그인이 필요"=${viewBody.contains('로그인이 필요')}, '
-          '학과코드=${foundSust ?? '못 찾음→AA0194'}, '
-          '학년코드=${foundShyr ?? '못 찾음→3'} | '
-          '평균성적(명세 주소): 상태=${result.finalStatusCode}, '
-          '"로그인이 필요"=${body.contains('로그인이 필요')}, '
-          '내 성적=${strongIn('grade_my')}, 동일 학년=${strongIn('grade_same')}, '
-          '길이=${body.length}';
-    } catch (e) {
-      return '$label | 확인 실패: $e';
-    } finally {
-      client.close();
-    }
-  }
-
   String? _extractUidFromLocations(List<String> locations) {
     for (final location in locations) {
       if (location.contains('uid%253D')) {
@@ -559,9 +343,8 @@ class PortalLoginService implements PortalLoginServiceBase {
   Future<_RedirectChainResult> _followRedirects(
     http.Client client,
     Map<String, String> cookieJar,
-    http.Request initialRequest, {
-    _HostCookies? hostCookies,
-  }) async {
+    http.Request initialRequest,
+  ) async {
     final setCookies = <String>[];
     final locations = <String>[];
     var passedPasswordNotice = false;
@@ -569,10 +352,7 @@ class PortalLoginService implements PortalLoginServiceBase {
     var request = initialRequest;
     for (var hop = 0; hop < _maxRedirects; hop++) {
       request.followRedirects = false;
-      if (hostCookies != null) {
-        final header = hostCookies.headerFor(request.url);
-        if (header.isNotEmpty) request.headers['Cookie'] = header;
-      } else if (cookieJar.isNotEmpty) {
+      if (cookieJar.isNotEmpty) {
         request.headers['Cookie'] = cookieJar.entries
             .map((e) => '${e.key}=${e.value}')
             .join('; ');
@@ -591,17 +371,13 @@ class PortalLoginService implements PortalLoginServiceBase {
       final hopSetCookies =
           response.headersSplitValues['set-cookie'] ?? const <String>[];
       setCookies.addAll(hopSetCookies);
-      if (hostCookies != null) {
-        hostCookies.store(request.url, hopSetCookies);
-      } else {
-        for (final cookie in hopSetCookies) {
-          final pair = cookie.split(';').first;
-          final eq = pair.indexOf('=');
-          if (eq > 0) {
-            cookieJar[pair.substring(0, eq).trim()] = pair
-                .substring(eq + 1)
-                .trim();
-          }
+      for (final cookie in hopSetCookies) {
+        final pair = cookie.split(';').first;
+        final eq = pair.indexOf('=');
+        if (eq > 0) {
+          cookieJar[pair.substring(0, eq).trim()] = pair
+              .substring(eq + 1)
+              .trim();
         }
       }
 
