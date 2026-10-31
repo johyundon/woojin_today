@@ -6,6 +6,8 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'host_cookie_jar.dart';
+
 /// T-WIN 성적 조회가 어디서 실패했는지.
 enum TwinRankFailure {
   /// T-WIN 로그인이 안 됨(학번·비밀번호 오류, 서버 점검 등).
@@ -135,7 +137,7 @@ class TwinRankService implements TwinRankServiceBase {
       }
     }
 
-    final cookies = _HostCookies();
+    final cookies = HostCookieJar();
     await _login(cookies, userId, userPwd);
     final (myGpa, sameGradeAvg) = await _fetchMyGpa(cookies, sustCd, shyrCd);
     final (peers, total) = await _fetchPeers(cookies, sustCd, shyrCd);
@@ -155,7 +157,7 @@ class TwinRankService implements TwinRankServiceBase {
   /// 성공한 순서 그대로). 리다이렉트를 끝까지 따라가 최종 응답이 2xx이고 주소에
   /// `/login/`이 없으면 성공이다.
   Future<void> _login(
-    _HostCookies cookies,
+    HostCookieJar cookies,
     String userId,
     String userPwd,
   ) async {
@@ -186,7 +188,7 @@ class TwinRankService implements TwinRankServiceBase {
 
   /// 명세 2번. `li.grade_my strong`이 내 평점, `li.grade_same strong`이 같은 학년 평균.
   Future<(double, double?)> _fetchMyGpa(
-    _HostCookies cookies,
+    HostCookieJar cookies,
     String sustCd,
     String shyrCd,
   ) async {
@@ -215,7 +217,7 @@ class TwinRankService implements TwinRankServiceBase {
   /// 명세 3번. 1페이지에서 전체 인원수를 읽고, 나머지 페이지는 한꺼번에 요청한 뒤
   /// 페이지 순서대로 이어 붙인다.
   Future<(List<double>, int)> _fetchPeers(
-    _HostCookies cookies,
+    HostCookieJar cookies,
     String sustCd,
     String shyrCd,
   ) async {
@@ -274,7 +276,7 @@ class TwinRankService implements TwinRankServiceBase {
   /// 요청을 보내고 (최종 상태 코드, 최종 주소, 본문)을 돌려준다.
   /// [followRedirects]면 3xx를 직접 따라가며 각 서버의 쿠키를 주고받는다.
   Future<(int, Uri, String)> _send(
-    _HostCookies cookies,
+    HostCookieJar cookies,
     http.Request request, {
     bool followRedirects = true,
   }) async {
@@ -340,58 +342,5 @@ class TwinRankService implements TwinRankServiceBase {
     } catch (e) {
       debugPrint('[TwinRank] 성적 저장 실패: $e');
     }
-  }
-}
-
-/// 쿠키를 (서버, 이름)으로 나눠 보관한다. Domain 속성이 있으면 하위 서버에도
-/// 보내고, 없으면 받은 서버에만 보낸다. 경로·만료 시각은 다루지 않고, Max-Age=0이면
-/// 지운다.
-class _HostCookies {
-  final Map<String, ({String name, String value, String domain, bool hostOnly})>
-  _items = {};
-
-  void store(Uri url, List<String> setCookies) {
-    for (final cookie in setCookies) {
-      final parts = cookie.split(';');
-      final eq = parts.first.indexOf('=');
-      if (eq <= 0) continue;
-      final name = parts.first.substring(0, eq).trim();
-      final value = parts.first.substring(eq + 1).trim();
-      var domain = url.host.toLowerCase();
-      var hostOnly = true;
-      var expired = false;
-      for (final attr in parts.skip(1)) {
-        final a = attr.trim().toLowerCase();
-        if (a.startsWith('domain=')) {
-          domain = a.substring(7).replaceFirst(RegExp(r'^\.'), '');
-          hostOnly = false;
-        } else if (a.startsWith('max-age=') && a.substring(8).trim() == '0') {
-          expired = true;
-        }
-      }
-      final key = '$domain|$name';
-      if (expired) {
-        _items.remove(key);
-      } else {
-        _items[key] = (
-          name: name,
-          value: value,
-          domain: domain,
-          hostOnly: hostOnly,
-        );
-      }
-    }
-  }
-
-  String headerFor(Uri url) {
-    final host = url.host.toLowerCase();
-    return _items.values
-        .where(
-          (c) => c.hostOnly
-              ? c.domain == host
-              : host == c.domain || host.endsWith('.${c.domain}'),
-        )
-        .map((c) => '${c.name}=${c.value}')
-        .join('; ');
   }
 }

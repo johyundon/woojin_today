@@ -1,18 +1,93 @@
-// NoticeScreen이 분류 칩/카드/북마크를 오버플로우 없이 보여주고, 공지 상세와
-// 마일리지 대상자 확인 다이얼로그로 제대로 이어지는지 확인한다.
+// NoticeScreen이 학사공지·마일리지장학 공지를 받아 최신순으로 보여주고, 분류 칩·
+// 읽음·북마크·상세(실제 본문/첨부)·불러오기 실패·새로고침이 동작하는지 확인한다.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
+import 'package:daejin_app/screens/notice/models/notice_item.dart';
 import 'package:daejin_app/screens/notice/notice_screen.dart';
+import 'package:daejin_app/services/notice_service.dart';
 
-Future<void> _pump(WidgetTester tester) async {
+class _FakeNotices implements NoticeServiceBase {
+  bool failMileage = false;
+  final forceFlags = <bool>[];
+  final detailCalls = <String>[];
+
+  @override
+  Future<List<NoticeItem>> fetchNotices(
+    NoticeBoard board, {
+    bool forceRefresh = false,
+  }) async {
+    forceFlags.add(forceRefresh);
+    if (board == NoticeBoard.mileage) {
+      if (failMileage) throw const NoticeException('fail');
+      return const [
+        NoticeItem(
+          title: '2026학년도 1학기 마일리지장학 대상자 공지',
+          author: '학생복지팀',
+          date: '2026.08.05',
+          viewCount: 2233,
+          tag: NoticeTag.scholarship,
+          detailPath: '/m1',
+          hasAttachment: true,
+        ),
+      ];
+    }
+    return const [
+      NoticeItem(
+        title: '부·복수전공 이수신청 안내',
+        author: '학사팀',
+        date: '2026.10.29',
+        viewCount: 94,
+        tag: NoticeTag.academic,
+        isNew: true,
+        detailPath: '/a1',
+        hasAttachment: true,
+      ),
+      NoticeItem(
+        title: '학사팀 업무 일시 중단 안내',
+        author: '학사팀',
+        date: '2026.10.20',
+        viewCount: 85,
+        tag: NoticeTag.academic,
+        isNew: true,
+        detailPath: '/a2',
+      ),
+      NoticeItem(
+        title: '중간시험 수업평가 시행 안내',
+        author: '교무팀',
+        date: '2026.10.01',
+        viewCount: 394,
+        tag: NoticeTag.academic,
+        detailPath: '/a3',
+      ),
+    ];
+  }
+
+  @override
+  Future<NoticeDetail> fetchDetail(String detailPath) async {
+    detailCalls.add(detailPath);
+    return const NoticeDetail(
+      title: '부·복수전공 이수신청 안내',
+      author: '학사팀',
+      date: '2026.10.29',
+      viewCount: 95,
+      body: '1. 관련 : 학칙 시행세칙\n\n가. 이수신청 대상 : 재학생',
+      attachments: [
+        NoticeAttachment(name: '붙임 1 안내문.xlsx', url: 'https://x/1'),
+        NoticeAttachment(name: '붙임 2 서식.hwp', url: 'https://x/2'),
+      ],
+    );
+  }
+}
+
+Future<void> _pump(WidgetTester tester, _FakeNotices service) async {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: NoticeScreen()));
+  await tester.pumpWidget(MaterialApp(home: NoticeScreen(service: service)));
   await tester.pumpAndSettle();
 }
 
@@ -22,137 +97,103 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
-  testWidgets('공지를 열면 빨간 점과 "새 글" 개수가 줄고, 다시 와도 유지된다', (tester) async {
-    await _pump(tester);
-    expect(find.text('새 글 4개'), findsOneWidget);
-
-    await tester.tap(find.text('2026-2학기 수강 정정 및 철회 안내'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
-    await tester.pumpAndSettle();
-    expect(find.text('새 글 3개'), findsOneWidget);
-
-    // 화면을 새로 열어도(저장된 읽음 상태를 불러와서) 그대로 3개.
-    await tester.pumpWidget(const SizedBox());
-    await _pump(tester);
-    expect(find.text('새 글 3개'), findsOneWidget);
-  });
-
-  testWidgets('전체 칩이 기본이고 최신 공지가 맨 위에 보인다', (tester) async {
-    await _pump(tester);
+  testWidgets('두 게시판을 최신순으로 합쳐 보여주고, 학과·행사 칩은 숨긴다', (tester) async {
+    await _pump(tester, _FakeNotices());
 
     expect(tester.takeException(), isNull);
     expect(find.text('놓치면 안 되는 공지'), findsOneWidget);
-    expect(find.text('새 글 4개'), findsOneWidget);
-    for (final label in ['전체', '학사', '장학', '학과', '행사']) {
+    expect(find.text('새 글 2개'), findsOneWidget);
+    for (final label in ['전체', '학사', '장학']) {
       expect(find.text(label), findsWidgets);
     }
-    expect(find.text('2026-2학기 수강 정정 및 철회 안내'), findsOneWidget);
-    expect(find.text('필독'), findsOneWidget);
-    expect(find.text('교무처 · 10.08'), findsOneWidget);
-  });
-
-  testWidgets('칩을 누르면 그 분류의 공지만 보인다', (tester) async {
-    await _pump(tester);
-
-    await tester.tap(find.text('행사').first);
-    await tester.pumpAndSettle();
-    expect(find.text('대진 축제 부스 운영 동아리 신청'), findsOneWidget);
-    expect(find.text('2026-2학기 수강 정정 및 철회 안내'), findsNothing);
-
-    await tester.tap(find.text('전체').first);
-    await tester.pumpAndSettle();
-    expect(find.text('2026-2학기 수강 정정 및 철회 안내'), findsOneWidget);
-  });
-
-  testWidgets('북마크 아이콘을 누르면 채워진 북마크로 바뀐다', (tester) async {
-    await _pump(tester);
-
-    expect(find.byIcon(Icons.bookmark), findsNothing);
-    await tester.tap(find.byIcon(Icons.bookmark_border).first);
-    await tester.pump();
-    expect(find.byIcon(Icons.bookmark), findsOneWidget);
-  });
-
-  testWidgets('북마크한 공지는 목록 맨 위로 올라가고, 해제하면 원래 자리로 돌아간다', (tester) async {
-    await _pump(tester);
-    const target = '대진 축제 부스 운영 동아리 신청'; // 원래 4번째
+    expect(find.text('학과'), findsNothing);
+    expect(find.text('행사'), findsNothing);
 
     double topOf(String text) => tester.getTopLeft(find.text(text)).dy;
-    expect(topOf(target), greaterThan(topOf('2026-2학기 수강 정정 및 철회 안내')));
-
-    // 4번째 카드의 북마크를 누른다.
-    await tester.tap(find.byIcon(Icons.bookmark_border).at(3));
-    await tester.pumpAndSettle();
-    expect(topOf(target), lessThan(topOf('2026-2학기 수강 정정 및 철회 안내')));
-
-    // 이제 맨 위가 된 그 카드의 북마크를 다시 눌러 해제.
-    await tester.tap(find.byIcon(Icons.bookmark));
-    await tester.pumpAndSettle();
-    expect(topOf(target), greaterThan(topOf('2026-2학기 수강 정정 및 철회 안내')));
+    expect(topOf('부·복수전공 이수신청 안내'), lessThan(topOf('중간시험 수업평가 시행 안내')));
+    expect(find.text('학사팀 · 10.29'), findsOneWidget);
   });
 
-  testWidgets('공지를 탭하면 상세 화면으로 이동한다', (tester) async {
-    await _pump(tester);
-
-    await tester.tap(find.text('2026-2학기 수강 정정 및 철회 안내'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('작성자'), findsOneWidget);
-    expect(find.textContaining('수강 정정 및 철회 기간'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
-    await tester.pumpAndSettle();
-    expect(find.text('2026-2학기 수강 정정 및 철회 안내'), findsOneWidget);
-  });
-
-  testWidgets('장학 칩: "대상자" 공지는 대상자 확인 다이얼로그로, "시행 안내"는 상세 화면으로 간다', (
-    tester,
-  ) async {
-    await _pump(tester);
+  testWidgets('장학 칩을 누르면 마일리지장학 공지만 보인다', (tester) async {
+    await _pump(tester, _FakeNotices());
 
     await tester.tap(find.text('장학').first);
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('2026학년도 1학기 마일리지장학 대상자 공지'));
-    await tester.pumpAndSettle();
-    expect(find.text('아쉽게도 대상자 명단에 없어요..'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-
-    await tester.tap(find.text('확인'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('2026학년도 1학기 마일리지장학 시행 안내'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('시행 계획'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsOneWidget);
+    expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
   });
 
-  testWidgets('종합강의시간표 공지의 첨부파일 "미리보기"는 스낵바를 보여준다', (tester) async {
-    await _pump(tester);
+  testWidgets('공지를 열면 실제 본문과 첨부파일이 보이고, 새 글 개수가 줄어 유지된다', (tester) async {
+    final service = _FakeNotices();
+    await _pump(tester, service);
 
-    await tester.tap(find.text('학사').first);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('2026학년도 2학기 종합강의시간표'),
-      300,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('2026학년도 2학기 종합강의시간표'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('2026학년도 2학기 종합강의시간표'));
+    await tester.tap(find.text('부·복수전공 이수신청 안내'));
     await tester.pumpAndSettle();
 
+    expect(service.detailCalls, ['/a1']);
+    expect(find.textContaining('이수신청 대상 : 재학생'), findsOneWidget);
+    expect(find.text('95'), findsOneWidget);
     expect(find.text('첨부파일'), findsOneWidget);
-    await tester.tap(find.text('미리보기'));
+    expect(find.text('붙임 1 안내문.xlsx'), findsOneWidget);
+    expect(find.text('붙임 2 서식.hwp'), findsOneWidget);
+
+    await tester.tap(find.text('미리보기').first);
     await tester.pump();
     expect(find.text('미리보기는 지원하지 않아요'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.pumpAndSettle();
+    expect(find.text('새 글 1개'), findsOneWidget);
+
+    // 화면을 새로 열어도(저장된 읽음 상태를 불러와서) 그대로 1개.
+    await tester.pumpWidget(const SizedBox());
+    await _pump(tester, service);
+    expect(find.text('새 글 1개'), findsOneWidget);
   });
 
-  testWidgets('"새 글 알림" 종 버튼으로 끄고 켤 수 있다', (tester) async {
-    await _pump(tester);
+  testWidgets('북마크한 공지는 맨 위로 올라가고, 해제하면 원래 자리로 돌아간다', (tester) async {
+    await _pump(tester, _FakeNotices());
+    const target = '중간시험 수업평가 시행 안내'; // 학사 3건 중 가장 오래된 것
+    const newest = '부·복수전공 이수신청 안내';
+
+    double topOf(String text) => tester.getTopLeft(find.text(text)).dy;
+    expect(topOf(target), greaterThan(topOf(newest)));
+
+    await tester.tap(find.byIcon(Icons.bookmark_border).at(2));
+    await tester.pumpAndSettle();
+    expect(topOf(target), lessThan(topOf(newest)));
+
+    await tester.tap(find.byIcon(Icons.bookmark));
+    await tester.pumpAndSettle();
+    expect(topOf(target), greaterThan(topOf(newest)));
+  });
+
+  testWidgets('한 게시판을 못 불러오면 안내를 띄우고, 다시 시도하면 채운다', (tester) async {
+    final service = _FakeNotices()..failMileage = true;
+    await _pump(tester, service);
+
+    expect(find.text('마일리지장학 공지를 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('부·복수전공 이수신청 안내'), findsOneWidget);
+
+    service.failMileage = false;
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(find.text('마일리지장학 공지를 불러오지 못했어요'), findsNothing);
+    expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsOneWidget);
+  });
+
+  testWidgets('당겨서 새로고침하면 캐시를 무시하고 새로 받는다', (tester) async {
+    final service = _FakeNotices();
+    await _pump(tester, service);
+    expect(service.forceFlags, [false, false]);
+
+    await tester.fling(find.text('부·복수전공 이수신청 안내'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+    expect(service.forceFlags.skip(2), [true, true]);
+  });
+
+  testWidgets('"새 글 알림" 종 버튼으로 끌 수 있다', (tester) async {
+    await _pump(tester, _FakeNotices());
 
     expect(find.byIcon(Icons.notifications_active), findsOneWidget);
     await tester.tap(find.byIcon(Icons.notifications_active));

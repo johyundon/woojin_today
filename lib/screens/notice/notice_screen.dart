@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../services/notice_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
 import 'models/notice_item.dart';
-import 'services/notice_mock_data.dart';
 import 'services/notice_read_storage.dart';
 import 'widgets/notice_list_card.dart';
 
@@ -12,7 +13,10 @@ import 'widgets/notice_list_card.dart';
 /// 칩으로 거르고, 카드의 북마크로 중요한 공지를 표시해 둘 수 있다(북마크는
 /// 저장하지 않고 화면이 열려 있는 동안만 유지된다).
 ///
-/// 공지사항 API가 명세서에 없어 [NoticeMockData]의 목데이터로만 동작한다.
+/// 학사공지·마일리지장학 공지를 학교 홈페이지에서 받아 보여준다([NoticeService],
+/// 1시간 캐시, 당겨서 새로고침). 실제 게시판이 없는 학과·행사 탭과 목업 공지
+/// ([NoticeMockData](services/notice_mock_data.dart))는 코드를 남겨 두고 화면에서만
+/// 숨겼다([_visibleTags]).
 ///
 /// "새 글 알림 받기" 토글은 서버가 없어 "새 공지가 올라왔는지" 실시간으로
 /// 구독할 방법은 없지만([NotificationService]와 같은 이유, 캘린더 알림
@@ -21,15 +25,29 @@ import 'widgets/notice_list_card.dart';
 /// 켜짐/꺼짐 상태 자체는 저장하지 않는다(화면을 나갔다 들어오면 기본값
 /// true로 초기화됨).
 class NoticeScreen extends StatefulWidget {
-  const NoticeScreen({super.key});
+  const NoticeScreen({this.service, super.key});
+
+  /// 테스트용 주입 지점.
+  final NoticeServiceBase? service;
 
   @override
   State<NoticeScreen> createState() => _NoticeScreenState();
 }
 
 class _NoticeScreenState extends State<NoticeScreen> {
+  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다.
+  static const _visibleTags = [NoticeTag.academic, NoticeTag.scholarship];
+
   final _notifications = NotificationService.instance;
   final _readStorage = NoticeReadStorage();
+  late final NoticeServiceBase _service =
+      widget.service ?? ServiceFactory.notice();
+
+  List<NoticeItem> _notices = const [];
+  bool _loading = true;
+
+  /// 불러오지 못한 게시판 이름들(예: "학사공지"). 비어 있으면 모두 성공.
+  List<String> _failedBoards = const [];
 
   /// null이면 "전체".
   NoticeTag? _filter;
@@ -41,6 +59,33 @@ class _NoticeScreenState extends State<NoticeScreen> {
   void initState() {
     super.initState();
     _loadRead();
+    _loadNotices();
+  }
+
+  /// 두 게시판을 동시에 받아 최신순으로 합친다. 한쪽이 실패해도 다른 쪽은 보여준다.
+  Future<void> _loadNotices({bool forceRefresh = false}) async {
+    final results = await Future.wait([
+      for (final board in NoticeBoard.values)
+        _service
+            .fetchNotices(board, forceRefresh: forceRefresh)
+            .then<List<NoticeItem>?>((items) => items)
+            .catchError((Object _) => null),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _failedBoards = [
+        for (var i = 0; i < NoticeBoard.values.length; i++)
+          if (results[i] == null)
+            switch (NoticeBoard.values[i]) {
+              NoticeBoard.academic => '학사공지',
+              NoticeBoard.mileage => '마일리지장학 공지',
+            },
+      ];
+      // 날짜가 "2026.10.29" 형식이라 문자열 비교가 곧 날짜 비교다.
+      _notices = [for (final items in results) ...?items]
+        ..sort((a, b) => b.date.compareTo(a.date));
+    });
   }
 
   Future<void> _loadRead() async {
@@ -59,13 +104,15 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = NoticeMockData.noticesFor(_filter);
+    final filtered = _filter == null
+        ? _notices
+        : _notices.where((n) => n.tag == _filter).toList();
     // 북마크한 공지를 맨 위로(각 묶음 안의 순서는 최신순 그대로).
     final notices = [
       ...filtered.where((n) => _bookmarked.contains(n.key)),
       ...filtered.where((n) => !_bookmarked.contains(n.key)),
     ];
-    final newCount = NoticeMockData.all.where(_isUnread).length;
+    final newCount = _notices.where(_isUnread).length;
 
     return Scaffold(
       backgroundColor: AppColors.cobalt,
@@ -187,7 +234,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
                     selected: _filter == null,
                     onTap: () => setState(() => _filter = null),
                   ),
-                  for (final tag in NoticeTag.values) ...[
+                  for (final tag in _visibleTags) ...[
                     const SizedBox(width: 8),
                     _FilterChip(
                       label: tag.label,
@@ -200,24 +247,42 @@ class _NoticeScreenState extends State<NoticeScreen> {
             ),
             const SizedBox(height: 14),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                itemCount: notices.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final notice = notices[index];
-                  final key = notice.key;
-                  return NoticeListCard(
-                    notice: notice,
-                    bookmarked: _bookmarked.contains(key),
-                    unread: _isUnread(notice),
-                    onBookmarkTap: () => setState(() {
-                      if (!_bookmarked.remove(key)) _bookmarked.add(key);
-                    }),
-                    onOpened: () => _markRead(notice),
-                  );
-                },
-              ),
+              child: _loading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () => _loadNotices(forceRefresh: true),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                        children: [
+                          if (_failedBoards.isNotEmpty)
+                            _LoadErrorCard(
+                              boards: _failedBoards,
+                              onRetry: () {
+                                setState(() => _loading = true);
+                                _loadNotices(forceRefresh: true);
+                              },
+                            ),
+                          for (final notice in notices) ...[
+                            NoticeListCard(
+                              notice: notice,
+                              bookmarked: _bookmarked.contains(notice.key),
+                              unread: _isUnread(notice),
+                              detailService: _service,
+                              onBookmarkTap: () => setState(() {
+                                if (!_bookmarked.remove(notice.key)) {
+                                  _bookmarked.add(notice.key);
+                                }
+                              }),
+                              onOpened: () => _markRead(notice),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
@@ -242,13 +307,57 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
     setState(() => _notifyEnabled = true);
 
-    for (final notice in NoticeMockData.all.where(_isUnread)) {
+    for (final notice in _notices.where(_isUnread)) {
       await _notifications.showNoticeAlert(
         id: notice.key,
         title: '새 공지가 올라왔어요',
         body: notice.title,
       );
     }
+  }
+}
+
+/// 게시판을 불러오지 못했을 때 목록 위에 띄우는 안내.
+class _LoadErrorCard extends StatelessWidget {
+  const _LoadErrorCard({required this.boards, required this.onRetry});
+
+  final List<String> boards;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${boards.join(', ')}를 불러오지 못했어요',
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text(
+              '다시 시도',
+              style: TextStyle(
+                color: AppColors.cobalt,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

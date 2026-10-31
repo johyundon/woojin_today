@@ -30,6 +30,8 @@ class NoticeItem {
     this.body,
     this.attachmentFileName,
     this.scholarshipNotice,
+    this.detailPath,
+    this.hasAttachment = false,
   });
 
   final String title;
@@ -57,4 +59,11 @@ class NoticeItem {
   /// null이 아니면 마일리지 "대상자" 공지 — 탭했을 때 상세 화면이 아니라
   /// 기존 마일리지 화면의 대상자 확인 다이얼로그로 이어진다.
   final MileageNotice? scholarshipNotice;
+
+  /// 학교 홈페이지 상세 페이지 경로(예: `/bbs/daejin/188/463279/artclView.do`).
+  /// 실제 공지([NoticeService])에만 있고, 목업 공지는 null이다.
+  final String? detailPath;
+
+  /// 목록에서 본 첨부파일 유무(`p.file-y`). 파일 이름은 상세에서 받는다.
+  final bool hasAttachment;
 }

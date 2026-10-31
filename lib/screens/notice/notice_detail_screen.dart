@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../services/notice_service.dart';
+import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
 import 'models/notice_item.dart';
@@ -14,13 +16,60 @@ const _mutedText = Color(0xFF6B6B70);
 /// SDK를 쓰고 있었다 — 실제 PDF 파일도 없고 그 SDK를 연동하는 건 이 화면의
 /// 범위를 크게 벗어나서, 탭하면 "미리보기는 지원하지 않아요"라는 스낵바만
 /// 보여주는 것으로 범위를 줄였다.
-class NoticeDetailScreen extends StatelessWidget {
-  const NoticeDetailScreen({super.key, required this.notice});
+///
+/// 실제 공지([NoticeItem.detailPath]가 있음)는 학교 홈페이지 상세 페이지에서 본문과
+/// 첨부파일 이름을 받아 보여준다([NoticeService.fetchDetail]). 목업 공지는
+/// [NoticeItem.body]를 그대로 쓴다.
+class NoticeDetailScreen extends StatefulWidget {
+  const NoticeDetailScreen({super.key, required this.notice, this.service});
 
   final NoticeItem notice;
 
+  /// 테스트용 주입 지점.
+  final NoticeServiceBase? service;
+
+  @override
+  State<NoticeDetailScreen> createState() => _NoticeDetailScreenState();
+}
+
+class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
+  NoticeDetail? _detail;
+  bool _loading = false;
+  String? _error;
+
+  NoticeItem get notice => widget.notice;
+
+  @override
+  void initState() {
+    super.initState();
+    if (notice.detailPath != null) _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final detail = await (widget.service ?? ServiceFactory.notice())
+          .fetchDetail(notice.detailPath!);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _detail = detail;
+      });
+    } on NoticeException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.isNetwork ? '네트워크 연결을 확인해 주세요.' : '공지 내용을 불러오지 못했어요.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final detail = _detail;
     return Scaffold(
       backgroundColor: AppColors.cobalt,
       body: SafeArea(
@@ -125,34 +174,17 @@ class NoticeDetailScreen extends StatelessWidget {
                           ),
                           child: Row(
                             children: [
-                              _MetaCell('작성일', notice.date),
-                              _MetaCell('작성자', notice.author),
-                              _MetaCell('조회수', '${notice.viewCount}'),
+                              _MetaCell('작성일', detail?.date ?? notice.date),
+                              _MetaCell('작성자', detail?.author ?? notice.author),
+                              _MetaCell(
+                                '조회수',
+                                '${detail?.viewCount ?? notice.viewCount}',
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Text(
-                          notice.body ?? '',
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 14,
-                            height: 1.7,
-                          ),
-                        ),
-                        if (notice.attachmentFileName != null) ...[
-                          const SizedBox(height: 24),
-                          const Text(
-                            '첨부파일',
-                            style: TextStyle(
-                              color: _mutedText,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          _AttachmentRow(fileName: notice.attachmentFileName!),
-                        ],
+                        ..._content(detail),
                       ],
                     ),
                   ),
@@ -163,6 +195,71 @@ class NoticeDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 본문 + 첨부파일. 실제 공지는 받는 중/실패/성공을, 목업은 저장된 본문을 보여준다.
+  List<Widget> _content(NoticeDetail? detail) {
+    if (_loading) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.cobalt),
+          ),
+        ),
+      ];
+    }
+    final error = _error;
+    if (error != null) {
+      return [
+        Text(
+          error,
+          style: const TextStyle(
+            color: AppColors.ink,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: _load,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.lime,
+            foregroundColor: AppColors.ink,
+            shape: const StadiumBorder(),
+          ),
+          child: const Text(
+            '다시 시도',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ];
+    }
+    final body = detail?.body ?? notice.body ?? '';
+    final fileNames = detail != null
+        ? [for (final a in detail.attachments) a.name]
+        : [?notice.attachmentFileName];
+    return [
+      SelectableText(
+        body,
+        style: const TextStyle(color: AppColors.ink, fontSize: 14, height: 1.7),
+      ),
+      if (fileNames.isNotEmpty) ...[
+        const SizedBox(height: 24),
+        const Text(
+          '첨부파일',
+          style: TextStyle(
+            color: _mutedText,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        for (final name in fileNames) ...[
+          const SizedBox(height: 10),
+          _AttachmentRow(fileName: name),
+        ],
+      ],
+    ];
   }
 }
 

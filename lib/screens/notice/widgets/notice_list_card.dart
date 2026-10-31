@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/notice_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../mileage/widgets/mileage_target_confirm_dialog.dart';
 import '../models/notice_item.dart';
@@ -19,6 +20,7 @@ class NoticeListCard extends StatelessWidget {
     required this.unread,
     required this.onBookmarkTap,
     required this.onOpened,
+    this.detailService,
     super.key,
   });
 
@@ -31,6 +33,9 @@ class NoticeListCard extends StatelessWidget {
 
   /// 카드를 눌러 공지를 열 때(상세 화면/대상자 확인 창 이동 직전) 호출된다.
   final VoidCallback onOpened;
+
+  /// 상세 화면이 본문을 받을 때 쓸 서비스(테스트에서 가짜를 넘긴다).
+  final NoticeServiceBase? detailService;
 
   static const _mutedText = Color(0xFF6B6B70);
 
@@ -48,7 +53,10 @@ class NoticeListCard extends StatelessWidget {
       return;
     }
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NoticeDetailScreen(notice: notice)),
+      MaterialPageRoute(
+        builder: (_) =>
+            NoticeDetailScreen(notice: notice, service: detailService),
+      ),
     );
   }
 
