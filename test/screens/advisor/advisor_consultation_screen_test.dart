@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:daejin_app/screens/advisor/advisor_consultation_screen.dart';
 import 'package:daejin_app/screens/advisor/services/advisor_consultation_mock_data.dart';
+import 'package:daejin_app/services/fakes/fake_student_info_service.dart';
 import 'package:daejin_app/services/session_cache.dart';
 
 void main() {
@@ -18,8 +19,11 @@ void main() {
 
   testWidgets('userId2가 있으면 실제(Fake) 지도교수 성함을 불러와 보여준다', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: AdvisorConsultationScreen(userId2: 'mock-user-id2'),
+      MaterialApp(
+        home: AdvisorConsultationScreen(
+          userId2: 'mock-user-id2',
+          studentInfoService: FakeStudentInfoService(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -41,8 +45,11 @@ void main() {
 
   testWidgets('현황 탭 기본 데이터와 상세보기 바텀시트가 동작한다', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: AdvisorConsultationScreen(userId2: 'mock-user-id2'),
+      MaterialApp(
+        home: AdvisorConsultationScreen(
+          userId2: 'mock-user-id2',
+          studentInfoService: FakeStudentInfoService(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -72,8 +79,11 @@ void main() {
 
   testWidgets('신청 탭: 기본 지도교수 선택, 변경, 온라인 상담 신청까지 이어진다', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: AdvisorConsultationScreen(userId2: 'mock-user-id2'),
+      MaterialApp(
+        home: AdvisorConsultationScreen(
+          userId2: 'mock-user-id2',
+          studentInfoService: FakeStudentInfoService(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -170,8 +180,11 @@ void main() {
 
   testWidgets('신청 탭: 방문 상담은 전화/이메일 없이 날짜·시간 선택 2단계로 끝난다', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: AdvisorConsultationScreen(userId2: 'mock-user-id2'),
+      MaterialApp(
+        home: AdvisorConsultationScreen(
+          userId2: 'mock-user-id2',
+          studentInfoService: FakeStudentInfoService(),
+        ),
       ),
     );
     await tester.pumpAndSettle();

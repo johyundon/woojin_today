@@ -168,7 +168,11 @@ class AdvisorApplyFormStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return AdvisorApplyCard(
       children: [
-        AdvisorApplyStepHeader(title: title, step: step, totalSteps: totalSteps),
+        AdvisorApplyStepHeader(
+          title: title,
+          step: step,
+          totalSteps: totalSteps,
+        ),
         const SizedBox(height: 14),
         AdvisorApplyProgressDots(step: step, totalSteps: totalSteps),
         const SizedBox(height: 14),

@@ -41,92 +41,97 @@ class MileageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
+      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
+      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
+      backgroundColor: Colors.white,
+      body: ColoredBox(
+        color: AppColors.cobalt,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.cobaltDeep,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
                 child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: AppColors.cobaltDeep,
-                    shape: BoxShape.circle,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                    size: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.lime,
+                    borderRadius: BorderRadius.circular(99),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.lime,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: const Text(
-                  '비교과 · 활동',
-                  style: TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              '모은 마일리지',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 34,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.04,
-              ),
-            ),
-            const SizedBox(height: 18),
-            const MileageTotalCard(),
-            const SizedBox(height: 12),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _PointCard(
-                      color: AppColors.lime,
-                      label: '이번 학기',
-                      value: '+${formatPoints(MileageMockData.termPoints)}P',
+                  child: const Text(
+                    '비교과 · 활동',
+                    style: TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _PointCard(
-                      color: AppColors.blushPink,
-                      label: '장학 기준',
-                      value:
-                          '${formatPoints(MileageMockData.scholarshipPoints)}P',
-                      onTap: () => _openScholarshipTargets(context),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const MileageHistoryCard(activities: MileageMockData.activities),
-          ],
+              const SizedBox(height: 10),
+              const Text(
+                '모은 마일리지',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.04,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const MileageTotalCard(),
+              const SizedBox(height: 12),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _PointCard(
+                        color: AppColors.lime,
+                        label: '이번 학기',
+                        value: '+${formatPoints(MileageMockData.termPoints)}P',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _PointCard(
+                        color: AppColors.blushPink,
+                        label: '장학 기준',
+                        value:
+                            '${formatPoints(MileageMockData.scholarshipPoints)}P',
+                        onTap: () => _openScholarshipTargets(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const MileageHistoryCard(activities: MileageMockData.activities),
+            ],
+          ),
         ),
       ),
     );

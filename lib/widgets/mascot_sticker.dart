@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// 마스코트("우진이")를 다이컷 스티커처럼 보여주는 위젯.
 ///
@@ -52,8 +53,8 @@ class MascotSticker extends StatelessWidget {
                   sigmaX: 9 * scale,
                   sigmaY: 9 * scale,
                 ),
-                child: Image.asset(
-                  'assets/images/mascot_wave.png',
+                child: SvgPicture.asset(
+                  'assets/images/mascot_wave.svg',
                   width: width,
                   fit: BoxFit.contain,
                 ),
@@ -68,15 +69,15 @@ class MascotSticker extends StatelessWidget {
                   Colors.white,
                   BlendMode.srcIn,
                 ),
-                child: Image.asset(
-                  'assets/images/mascot_wave.png',
+                child: SvgPicture.asset(
+                  'assets/images/mascot_wave.svg',
                   width: width,
                   fit: BoxFit.contain,
                 ),
               ),
             ),
-          Image.asset(
-            'assets/images/mascot_wave.png',
+          SvgPicture.asset(
+            'assets/images/mascot_wave.svg',
             width: width,
             fit: BoxFit.contain,
           ),

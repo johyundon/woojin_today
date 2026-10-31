@@ -51,7 +51,7 @@ class MyMenuSheet extends StatelessWidget {
   }
 }
 
-class _MenuTile extends StatelessWidget {
+class _MenuTile extends StatefulWidget {
   const _MenuTile({
     required this.icon,
     required this.label,
@@ -65,46 +65,74 @@ class _MenuTile extends StatelessWidget {
   final bool danger;
 
   @override
+  State<_MenuTile> createState() => _MenuTileState();
+}
+
+class _MenuTileState extends State<_MenuTile> {
+  // 손가락을 대고 있는 동안만 true. 칸을 살짝 줄여 눌렸다는 걸 보여준다.
+  bool _pressed = false;
+  // 탭이 끝난 뒤 메뉴가 닫히기 전까지 true. 짧게 톡 쳐도 줄어든 모습이
+  // 보이도록 손을 뗀 뒤에도 잠깐 줄어든 상태를 유지한다.
+  bool _tapped = false;
+
+  Future<void> _onTap() async {
+    if (_tapped) return;
+    setState(() => _tapped = true);
+    await Future.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
+    Navigator.of(context).pop(widget.action);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFF0F0F8),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
+    final icon = widget.icon;
+    final label = widget.label;
+    final danger = widget.danger;
+    return AnimatedScale(
+      scale: _pressed || _tapped ? 0.97 : 1.0,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOut,
+      child: Material(
+        color: const Color(0xFFF0F0F8),
         borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.of(context).pop(action),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: danger ? AppColors.blushPink : AppColors.lime,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: danger ? _accentRed : AppColors.ink,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onHighlightChanged: (value) => setState(() => _pressed = value),
+          onTap: _onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: danger ? AppColors.blushPink : AppColors.lime,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
                     color: danger ? _accentRed : AppColors.ink,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: danger ? _accentRed : const Color(0x99121212),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: danger ? _accentRed : AppColors.ink,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: danger ? _accentRed : const Color(0x99121212),
+                ),
+              ],
+            ),
           ),
         ),
       ),

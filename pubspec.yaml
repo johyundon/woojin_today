@@ -76,6 +76,7 @@ dependencies:
   # 한 번 뜬다(iOS 정책, 앱에서 막을 수 없음).
   nsd: ^5.0.1
   kakao_map_plugin: ^1.0.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:

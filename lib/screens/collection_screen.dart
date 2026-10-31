@@ -63,9 +63,11 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const FileShareScreen()));
   }
 
-  static void _openDepartmentRank(BuildContext context) {
+  void _openDepartmentRank(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DepartmentRankScreen(isDark: true)),
+      MaterialPageRoute(
+        builder: (_) => DepartmentRankScreen(isDark: true, userId2: userId2),
+      ),
     );
   }
 
@@ -94,7 +96,7 @@ class CollectionScreen extends StatelessWidget {
       icon: Icons.directions_walk_rounded,
       onTap: _openCampusMap,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       label: '학과등수',
       icon: Icons.bar_chart_rounded,
       onTap: _openDepartmentRank,

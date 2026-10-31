@@ -31,28 +31,30 @@ class SubjectRank {
 
 /// "학과등수" 결과 화면에 필요한 데이터 전부.
 ///
-/// 실제 성적 API가 없어 전부 목업이다([FakeDepartmentRankService] 참고).
+/// 실제 화면은 T-WIN 평점으로 [buildDepartmentRank](rank_calculator.dart)가
+/// 만든다. [shortName]·[semester]·[subjects]는 실제 데이터가 없어 비워 두고,
+/// 목업([FakeDepartmentRankService])에서만 채운다.
 class DepartmentRank {
   const DepartmentRank({
     required this.departmentName,
-    required this.shortName,
-    required this.semester,
+    this.shortName,
+    this.semester,
     required this.grade,
     required this.myGpa,
     required this.departmentAverageGpa,
     required this.totalCount,
     required this.myRank,
     required this.distribution,
-    required this.subjects,
+    this.subjects = const [],
   });
 
   final String departmentName;
 
-  /// 칩에 쓰는 줄임 이름(예: "컴공").
-  final String shortName;
+  /// 줄임 이름(예: "컴공", 목업만).
+  final String? shortName;
 
-  /// 몇 학기인지(목업).
-  final int semester;
+  /// 몇 학기인지(목업만).
+  final int? semester;
 
   final int grade;
 
@@ -68,6 +70,6 @@ class DepartmentRank {
   /// 1위부터 등수 오름차순으로 정렬된 전체 분포.
   final List<DepartmentRankEntry> distribution;
 
-  /// 과목별 석차(목업).
+  /// 과목별 석차(목업만. 실제 API에는 과목별 성적이 없다).
   final List<SubjectRank> subjects;
 }

@@ -17,6 +17,7 @@ import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:daejin_app/services/session_cache.dart';
 import 'package:daejin_app/services/student_info_service.dart';
+import 'package:daejin_app/services/fakes/fake_cafeteria_menu_service.dart';
 import 'package:daejin_app/services/weather_service.dart';
 
 const _fixtureJson = '''
@@ -238,6 +239,9 @@ void main() {
       if (settleAfterOpen) {
         await tester.pumpAndSettle();
       } else {
+        // 메뉴 칸이 눌린 모습을 잠깐 보여준 뒤 닫히므로(0.12초), 그만큼 시간을
+        // 흘려보낸 다음 다이얼로그가 막 열린 프레임을 본다.
+        await tester.pump(const Duration(milliseconds: 150));
         await tester.pump();
       }
     }
@@ -252,6 +256,7 @@ void main() {
             weatherService: fakeWeatherService(),
             userId2: 'REAL_USER_UID',
             studentInfoService: StudentInfoService(client: mockClient),
+            cafeteriaMenuService: FakeCafeteriaMenuService(),
           ),
         ),
       );

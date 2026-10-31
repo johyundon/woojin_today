@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../theme/app_colors.dart';
 
@@ -129,8 +130,8 @@ class _CenterButton extends StatelessWidget {
               color: AppColors.lime,
               shape: BoxShape.circle,
             ),
-            child: Image.asset(
-              'assets/images/mascot_wave.png',
+            child: SvgPicture.asset(
+              'assets/images/mascot_wave.svg',
               width: 40,
               fit: BoxFit.contain,
             ),

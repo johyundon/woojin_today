@@ -338,111 +338,118 @@ class _FileShareScreenState extends State<FileShareScreen> {
     final showRadar = _enabled && !hasReceived;
 
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: AppColors.cobaltDeep,
-                            shape: BoxShape.circle,
+      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
+      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
+      backgroundColor: Colors.white,
+      body: ColoredBox(
+        color: AppColors.cobalt,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: const BoxDecoration(
+                              color: AppColors.cobaltDeep,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new,
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.lime,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: const Text(
+                            '파일공유',
+                            style: TextStyle(
+                              color: AppColors.ink,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _titleFor(
+                            enabled: _enabled,
+                            receivedCount: _receivedFiles.length,
+                          ),
+                          style: const TextStyle(
                             color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.lime,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: const Text(
-                          '파일공유',
-                          style: TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 13,
+                            fontSize: 30,
                             fontWeight: FontWeight.w800,
+                            letterSpacing: -0.035,
+                            height: 1.22,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _titleFor(
-                          enabled: _enabled,
-                          receivedCount: _receivedFiles.length,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.035,
-                          height: 1.22,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Positioned(
-                    top: 20,
-                    left: 240,
-                    child: MascotSticker(width: 120),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                      ],
+                    ),
+                    const Positioned(
+                      top: 20,
+                      left: 240,
+                      child: MascotSticker(width: 120),
+                    ),
+                  ],
                 ),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    20,
-                    20,
-                    16 + MediaQuery.of(context).padding.bottom,
+              ),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(32),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildStatusCard(peers.length),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: showRadar
-                            ? _buildDiscoverySection(peers)
-                            : _buildReceivedFilesSection(),
-                      ),
-                      const SizedBox(height: 14),
-                      _buildSendButton(),
-                    ],
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      20,
+                      20,
+                      16 + MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStatusCard(peers.length),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: showRadar
+                              ? _buildDiscoverySection(peers)
+                              : _buildReceivedFilesSection(),
+                        ),
+                        const SizedBox(height: 14),
+                        _buildSendButton(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -520,11 +527,7 @@ class _FileShareScreenState extends State<FileShareScreen> {
             _enabled
                 ? '주변 사람 $peerCount명이 발견됐어요.'
                 : '파일공유 기능을 활성화하면 발견된 사람이 여기 떠요.',
-            style: const TextStyle(
-              color: mutedText,
-              fontSize: 13,
-              height: 1.4,
-            ),
+            style: const TextStyle(color: mutedText, fontSize: 13, height: 1.4),
           ),
         ],
       ),

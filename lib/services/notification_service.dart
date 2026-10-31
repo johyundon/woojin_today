@@ -185,6 +185,9 @@ class NotificationService {
     }
   }
 
+  /// 예약된 알림을 종류와 상관없이 전부 취소한다(로그아웃 시).
+  Future<void> cancelAll() => _plugin.cancelAll();
+
   Future<void> cancelReminder(String eventId) {
     return _plugin.cancel(id: _notificationIdFor(eventId));
   }

@@ -8,10 +8,18 @@ import 'rank_hero_card.dart';
 const _scholarshipTopPercent = 20;
 
 /// 나란히 놓이는 "내 평점"(라임) / "장학"(핑크) 카드 두 장.
+///
+/// 장학 기준(상위 20%)이 확인되지 않아 지금은 [showScholarship]을 꺼서 "내 평점"
+/// 카드만 보여준다. 기준이 확인되면 켜면 된다.
 class RankSummaryCards extends StatelessWidget {
-  const RankSummaryCards({required this.data, super.key});
+  const RankSummaryCards({
+    required this.data,
+    this.showScholarship = false,
+    super.key,
+  });
 
   final DepartmentRank data;
+  final bool showScholarship;
 
   @override
   Widget build(BuildContext context) {
@@ -77,32 +85,37 @@ class RankSummaryCards extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _SummaryCard(
-              color: AppColors.blushPink,
-              icon: Icons.workspace_premium,
-              label: '장학',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    eligible ? '성적우수 장학\n지원 가능' : '성적우수 장학\n지원 기준 미달',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
+          if (showScholarship) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SummaryCard(
+                color: AppColors.blushPink,
+                icon: Icons.workspace_premium,
+                label: '장학',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      eligible ? '성적우수 장학\n지원 가능' : '성적우수 장학\n지원 기준 미달',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    '기준 상위 $_scholarshipTopPercent%',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    const Text(
+                      '기준 상위 $_scholarshipTopPercent%',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

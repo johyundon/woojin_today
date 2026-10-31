@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cp949_codec/cp949_codec.dart';
+import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
@@ -30,7 +31,9 @@ class StudentInfoResponse {
   /// 소속 학과. 라벨 후보는 추론이다("학과"/"학과명"/"소속학과") — 실기기 검증 필요.
   final String? department;
 
-  /// 학년. 라벨 후보는 추론이다("학년"/"학년도") — 실기기 검증 필요.
+  /// 학년("3학년"). 응답의 "학적 정보"에는 학년 칸이 없어서(2026-10-31 실제 응답
+  /// 확인), "학적 변동 내역" 표의 마지막 기록으로 계산한다
+  /// ([StudentInfoService.gradeFromHistory]).
   final String? grade;
 }
 
@@ -99,8 +102,11 @@ class StudentInfoService implements StudentInfoServiceBase {
   static const _gradeLabels = ['학년', '학년도'];
 
   final http.Client _client;
+  final DateTime Function() _now;
 
-  StudentInfoService({http.Client? client}) : _client = client ?? http.Client();
+  StudentInfoService({http.Client? client, DateTime Function()? now})
+    : _client = client ?? http.Client(),
+      _now = now ?? DateTime.now;
 
   /// [userId2]: 포털 로그인으로 얻은 **본인** SSO uid. 개인 데이터 조회라
   /// 고정값/기본값을 두지 않는다 — 반드시 호출자가 실제 값을 넘겨야 한다.
@@ -148,8 +154,62 @@ class StudentInfoService implements StudentInfoServiceBase {
       advisorName: _findValue(cells, _advisorLabels),
       name: _findValue(cells, _nameLabels),
       department: _findValue(cells, _departmentLabels),
-      grade: _findValue(cells, _gradeLabels),
+      grade: _findValue(cells, _gradeLabels) ?? _gradeFromHistory(document),
     );
+  }
+
+  String? _gradeFromHistory(Document document) {
+    final grade = gradeFromHistory(document, _now());
+    return grade == null ? null : '$grade학년';
+  }
+
+  /// "학적 변동 내역" 표(년도(학기) | 변동 일자 | 변동 사항 | 학년 | ...)에서 지금
+  /// 학년을 계산한다. 표를 못 찾으면 null.
+  ///
+  /// 가장 최근 기록의 학년을 기준으로, 그 기록이 휴학이 아니면 그 해 이후 3월이 지날
+  /// 때마다 1학년씩 더한다(1~4로 맞춤). 학교가 이수 학기로 학년을 정한다면 어긋날
+  /// 수 있는 추정이다.
+  @visibleForTesting
+  static int? gradeFromHistory(Document document, DateTime now) {
+    final yearPattern = RegExp(r'^(\d{4})\s*\((\d)\)');
+    int? gradeCol;
+    int? statusCol;
+    ({int year, int term, int grade, String status})? latest;
+
+    for (final row in document.querySelectorAll('tr')) {
+      final cells = row.children
+          .map((c) => c.text.replaceAll(RegExp(r'\s+'), ' ').trim())
+          .toList();
+      if (cells.contains('년도(학기)') && cells.contains('학년')) {
+        gradeCol = cells.indexOf('학년');
+        statusCol = cells.indexOf('변동 사항');
+        continue;
+      }
+      if (gradeCol == null || cells.length <= gradeCol) continue;
+      final when = yearPattern.firstMatch(cells.first);
+      final grade = int.tryParse(cells[gradeCol]);
+      if (when == null || grade == null) continue;
+      final year = int.parse(when.group(1)!);
+      final term = int.parse(when.group(2)!);
+      // 같은 학기 안에서는 표에서 뒤에 나온 기록을 최근으로 본다.
+      if (latest == null ||
+          year > latest.year ||
+          (year == latest.year && term >= latest.term)) {
+        latest = (
+          year: year,
+          term: term,
+          grade: grade,
+          status: statusCol != null && statusCol >= 0 ? cells[statusCol] : '',
+        );
+      }
+    }
+    if (latest == null) return null;
+
+    final schoolYear = now.month >= 3 ? now.year : now.year - 1;
+    final passedYears = latest.status.contains('휴학')
+        ? 0
+        : (schoolYear - latest.year).clamp(0, 10);
+    return (latest.grade + passedYears).clamp(1, 4);
   }
 
   /// [labels] 중 하나와 텍스트가 정확히 일치하는 `td.tr_chrm1_n`을 찾아 그

@@ -138,7 +138,9 @@ class SearchFilterBar extends StatelessWidget {
 
     if (pendingSlot != null) {
       final label =
-          weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(pendingSlot!.day)];
+          weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(
+            pendingSlot!.day,
+          )];
       chips.add(
         _ActiveChip(
           label:
@@ -256,11 +258,16 @@ class SearchFilterBar extends StatelessWidget {
             label: '요일',
             selectedLabel: filters.day == null
                 ? null
-                : weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(filters.day!)],
+                : weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(
+                    filters.day!,
+                  )],
             options: [
               const _DropdownOption(null, '전체'),
               for (var i = 0; i < _weekdayChipValues.length; i++)
-                _DropdownOption(_weekdayChipValues[i], weekdayLabelsWeekdaysOnly[i]),
+                _DropdownOption(
+                  _weekdayChipValues[i],
+                  weekdayLabelsWeekdaysOnly[i],
+                ),
             ],
             onSelected: (value) {
               filters.day = value;

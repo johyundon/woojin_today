@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../services/cafeteria_menu_service.dart';
 import '../services/class_schedule_parser.dart';
 import '../services/course_catalog_service.dart';
+import '../services/logout_cleaner.dart';
 import '../services/my_enrolled_courses.dart';
 import '../services/my_timetable_service.dart';
 import '../services/service_factory.dart';
@@ -45,6 +47,7 @@ class HomeScreen extends StatefulWidget {
     this.courseCatalogService,
     this.myTimetableService,
     this.studentInfoService,
+    this.cafeteriaMenuService,
     this.now,
   });
 
@@ -68,6 +71,10 @@ class HomeScreen extends StatefulWidget {
   /// 테스트에서 [StudentInfoService]를 mock으로 주입하기 위한 옵션.
   /// [weatherService]와 동일한 패턴.
   final StudentInfoServiceBase? studentInfoService;
+
+  /// 테스트에서 학식 서비스를 mock으로 주입하기 위한 옵션. [weatherService]와
+  /// 동일한 패턴.
+  final CafeteriaMenuServiceBase? cafeteriaMenuService;
 
   /// 테스트에서 "지금 시각"을 고정하기 위한 옵션. 기본값은 `null`이며, 이
   /// 경우 실제 [DateTime.now]를 쓴다. "지금이 수업 시간인지" 판단은 실제
@@ -309,7 +316,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openDepartmentRank() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DepartmentRankScreen(isDark: true)),
+      MaterialPageRoute(
+        builder: (_) =>
+            DepartmentRankScreen(isDark: true, userId2: widget.userId2),
+      ),
     );
   }
 
@@ -345,15 +355,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       case AvatarMenuAction.logout:
-        // 로그아웃하면 다른 학생이 같은 기기로 재로그인할 수 있으므로, 이전
-        // 세션의 캐시(학생정보/시간표/개설과목)가 다음 로그인에 잘못
-        // 재사용되지 않도록 반드시 비운다.
-        SessionCache.clear();
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
+        _logout();
     }
+  }
+
+  /// 로그아웃하면 다른 학생이 같은 기기로 재로그인할 수 있으므로, 기기에 남은
+  /// 이전 사용자의 데이터(자동 로그인 정보, 캐시, 저장한 시간표·일정, 예약
+  /// 알림 등)를 전부 지운 뒤 로그인 화면으로 간다.
+  Future<void> _logout() async {
+    await clearUserDataOnLogout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   /// 홈 위에 열린 탭 화면(시간표/모아보기/캘린더)의 하단 탭 바를 눌렀을 때. 지금
@@ -602,6 +617,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: CafeteriaMenuCard(
                             now: now,
                             onTap: _openCafeteria,
+                            service: widget.cafeteriaMenuService,
                           ),
                         ),
                       ],

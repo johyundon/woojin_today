@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 /// `POST /subLogin/daejin/login.do` (+ 필요시 `GET /sugang/LinkPortal.jsp?dvd=P`
@@ -16,6 +17,7 @@ class PortalLoginResult {
     this.wmonid,
     this.jsessionId,
     this.userId2,
+    this.passwordChangeOverdue = false,
   });
 
   final bool success;
@@ -32,6 +34,13 @@ class PortalLoginResult {
   /// SSO uid. 1단계에서 못 찾으면 2단계 폴백으로 재시도하며, 그래도 못 찾으면
   /// null이지만 로그인 자체는 성공으로 처리한다.
   final String? userId2;
+
+  /// 비밀번호를 6개월 넘게 바꾸지 않은 계정이면 true.
+  ///
+  /// 학교 서버는 이 사실을 별도 값으로 주지 않고, 로그인 리다이렉트 중간에
+  /// "6개월간 변경하지 않았습니다" 안내 페이지를 끼워 넣는 것으로만 드러낸다.
+  /// 그래서 1단계 체인의 모든 홉 HTML에서 이 문구를 찾아 판단한다.
+  final bool passwordChangeOverdue;
 }
 
 /// 네트워크 연결 실패 또는 서버 오류(5xx 등)로 로그인 요청 자체를 완료하지
@@ -54,18 +63,82 @@ class _RedirectChainResult {
     required this.locations,
     required this.finalBody,
     required this.finalStatusCode,
+    required this.finalUrl,
+    required this.passedPasswordNotice,
   });
 
   final List<String> setCookies;
   final List<String> locations;
   final String finalBody;
   final int finalStatusCode;
+
+  /// 체인의 마지막 요청 주소(리다이렉트를 다 따라간 뒤 도착한 곳).
+  final Uri finalUrl;
+
+  /// 체인 중 어느 홉의 HTML에든 비밀번호 6개월 미변경 안내 문구가 있었는지.
+  final bool passedPasswordNotice;
+}
+
+/// ⚠️ 임시(T-WIN 확인용): 쿠키를 이름이 아니라 (서버, 이름)으로 나눠 보관한다.
+/// 로그인 과정이 여러 서버를 거치며 같은 이름의 쿠키를 주고받을 때 서로 덮어쓰지
+/// 않게 하려는 것이다. Domain 속성이 있으면 하위 서버에도 보내고, 없으면 그 서버에만
+/// 보낸다. 경로와 만료 시각은 다루지 않고, Max-Age=0이면 지운다.
+class _HostCookies {
+  final Map<String, ({String name, String value, String domain, bool hostOnly})>
+  _items = {};
+
+  void store(Uri url, List<String> setCookies) {
+    for (final cookie in setCookies) {
+      final parts = cookie.split(';');
+      final eq = parts.first.indexOf('=');
+      if (eq <= 0) continue;
+      final name = parts.first.substring(0, eq).trim();
+      final value = parts.first.substring(eq + 1).trim();
+      var domain = url.host.toLowerCase();
+      var hostOnly = true;
+      var expired = false;
+      for (final attr in parts.skip(1)) {
+        final a = attr.trim().toLowerCase();
+        if (a.startsWith('domain=')) {
+          domain = a.substring(7).replaceFirst(RegExp(r'^\.'), '');
+          hostOnly = false;
+        } else if (a.startsWith('max-age=') && a.substring(8).trim() == '0') {
+          expired = true;
+        }
+      }
+      final key = '$domain|$name';
+      if (expired) {
+        _items.remove(key);
+      } else {
+        _items[key] = (
+          name: name,
+          value: value,
+          domain: domain,
+          hostOnly: hostOnly,
+        );
+      }
+    }
+  }
+
+  String headerFor(Uri url) {
+    final host = url.host.toLowerCase();
+    return _items.values
+        .where(
+          (c) => c.hostOnly
+              ? c.domain == host
+              : host == c.domain || host.endsWith('.${c.domain}'),
+        )
+        .map((c) => '${c.name}=${c.value}')
+        .join('; ');
+  }
+
+  /// 값은 빼고 "서버:이름"만 돌려준다(콘솔 확인용).
+  String describe() =>
+      _items.values.map((c) => '${c.domain}:${c.name}').join(',');
 }
 
 /// [PortalLoginService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
-/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
-/// ([lib/services/fakes/fake_portal_login_service.dart]의
-/// `FakePortalLoginService`)을 교체 가능하게 한다.
+/// 서비스를 주고받는다.
 abstract class PortalLoginServiceBase {
   Future<PortalLoginResult> login({
     required String userId,
@@ -76,6 +149,10 @@ abstract class PortalLoginServiceBase {
 /// 대진대 포털 로그인(1단계 `login.do`, 필요시 2단계 `LinkPortal.jsp` 폴백)을
 /// 호출한다.
 class PortalLoginService implements PortalLoginServiceBase {
+  // ⚠️ 임시 디버그 기록: 마지막 로그인 시도의 홉 요약과 check.do 응답.
+  // 디버그 실행에서만 채워지고 비밀번호·쿠키 값은 넣지 않는다. 확인 후 삭제.
+  static final List<String> debugLog = [];
+
   static const _loginUrl = 'https://www.daejin.ac.kr/subLogin/daejin/login.do';
   static const _fallbackUrl =
       'https://dreams2.daejin.ac.kr/sugang/LinkPortal.jsp?dvd=P';
@@ -92,6 +169,12 @@ class PortalLoginService implements PortalLoginServiceBase {
   static final _uidPattern = RegExp(r'uid%3D(.+?)(?:%26|&|$)');
   static final _userIdCookiePattern = RegExp(r'^userId=([^;]*)');
   static final _remainingAttemptsPattern = RegExp(r'(\d+)회\s*더\s*잘못입력');
+  // 명세서의 안내 문구는 "6개월간 변경하지 않았습니다"인데, 실제 페이지
+  // 문구는 아직 실기기로 확인하지 못했다. 띄어쓰기나 "비밀번호를" 같은 말이
+  // 끼어도 찾히도록 조금 느슨하게 맞춘다.
+  static final _passwordNoticePattern = RegExp(
+    r'6\s*개월\s*(?:간|동안)?\s*(?:비밀번호를?\s*)?변경\s*하지\s*않',
+  );
   static final _metaRefreshPattern = RegExp(
     r'''<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["']?\d+\s*;\s*url=([^"'>]+)["']?''',
     caseSensitive: false,
@@ -122,10 +205,13 @@ class PortalLoginService implements PortalLoginServiceBase {
     // 공유해야 한다 — client 인스턴스뿐 아니라 수집한 쿠키 맵도 함께 넘긴다.
     final cookieJar = <String, String>{};
     try {
+      if (kDebugMode) debugLog.clear();
       final step1 = await _step1(client, cookieJar, userId, userPwd);
       if (step1.failReason != null) {
         return step1;
       }
+      if (kDebugMode) await _debugCheckPwdChange(client, cookieJar);
+      if (kDebugMode) await _debugCheckTwin(userId, userPwd);
       if (step1.userId2 != null) {
         return step1;
       }
@@ -143,6 +229,7 @@ class PortalLoginService implements PortalLoginServiceBase {
         wmonid: cookieJar['WMONID'] ?? step1.wmonid,
         jsessionId: cookieJar['JSESSIONID'] ?? step1.jsessionId,
         userId2: fallbackUid,
+        passwordChangeOverdue: step1.passwordChangeOverdue,
       );
     } on PortalLoginException {
       rethrow;
@@ -220,6 +307,7 @@ class PortalLoginService implements PortalLoginServiceBase {
       wmonid: wmonid,
       jsessionId: jsessionId,
       userId2: userId2,
+      passwordChangeOverdue: chain.passedPasswordNotice,
     );
   }
 
@@ -242,6 +330,203 @@ class PortalLoginService implements PortalLoginServiceBase {
       }
     }
     return userId2;
+  }
+
+  /// ⚠️ 임시: 1단계 직후(www 세션 쿠키 상태)에 check.do를 한 번 불러 응답을
+  /// [debugLog]에 남긴다. 실패해도 로그인에는 영향을 주지 않는다.
+  Future<void> _debugCheckPwdChange(
+    http.Client client,
+    Map<String, String> cookieJar,
+  ) async {
+    try {
+      final request =
+          http.Request(
+              'POST',
+              Uri.parse('https://www.daejin.ac.kr/pwdChangeNtcn/check.do'),
+            )
+            ..followRedirects = false
+            ..headers['Content-Type'] =
+                'application/x-www-form-urlencoded;charset=UTF-8'
+            ..headers['X-Requested-With'] = 'XMLHttpRequest'
+            ..headers['Referer'] = 'https://www.daejin.ac.kr/'
+            ..headers['User-Agent'] = _userAgent
+            ..headers['Cookie'] = cookieJar.entries
+                .map((e) => '${e.key}=${e.value}')
+                .join('; ')
+            ..body = 'siteId=daejin&fnctId=subLogin';
+      final response = await http.Response.fromStream(
+        await client.send(request).timeout(const Duration(seconds: 15)),
+      );
+      final body = utf8.decode(response.bodyBytes, allowMalformed: true);
+      debugLog.add(
+        '[check.do] cookies=${cookieJar.keys.join(',')} '
+        'status=${response.statusCode} '
+        'type=${response.headers['content-type']} '
+        'location=${response.headers['location']}',
+      );
+      debugLog.add(
+        '[check.do body] ${body.length > 6000 ? body.substring(0, 6000) : body}',
+      );
+    } catch (e) {
+      debugLog.add('[check.do] 실패: $e');
+    }
+  }
+
+  /// ⚠️ 임시: T-WIN에 따로 로그인한 뒤 명세의 평균성적 주소(getResultDivInfoPage.do)가
+  /// "내 성적"을 주는지 본다. 첫 화면을 먼저 열고 쿠키를 서버별로 나눠 담는 방식 하나만
+  /// 시도하고, 결과를 `[T-WIN-요약]` 한 줄로 남긴다. 실패해도 포털 로그인에는 영향을
+  /// 주지 않는다.
+  Future<void> _debugCheckTwin(String userId, String userPwd) async {
+    final summary = await _debugTwinAttempt(
+      userId,
+      userPwd,
+      true,
+      hostScoped: true,
+    );
+    // 시스템 로그가 긴 줄을 자르므로 항목별로 나눠 찍는다.
+    for (final part in summary.split(' | ')) {
+      debugPrint('[T-WIN-요약] $part');
+    }
+  }
+
+  Future<String> _debugTwinAttempt(
+    String userId,
+    String userPwd,
+    bool preVisit, {
+    bool hostScoped = false,
+  }) async {
+    final label =
+        '[T-WIN-요약] 첫 화면 먼저 열기=${preVisit ? 'O' : 'X'}, '
+        '서버별 쿠키=${hostScoped ? 'O' : 'X'}';
+    final hostCookies = hostScoped ? _HostCookies() : null;
+    String shortUrl(String? url) {
+      final uri = url == null ? null : Uri.tryParse(url);
+      return uri == null ? '-' : '${uri.host}${uri.path}';
+    }
+
+    // 포털 로그인과 쿠키가 섞이지 않게 T-WIN 전용 클라이언트와 쿠키 맵을 새로 만든다.
+    final client = _clientFactory();
+    final jar = <String, String>{};
+    try {
+      if (preVisit) {
+        await _followRedirects(
+          client,
+          jar,
+          http.Request(
+            'GET',
+            Uri.parse('https://together.daejin.ac.kr/clientMain/a/t/main.do'),
+          )..headers['User-Agent'] = _userAgent,
+          hostCookies: hostCookies,
+        );
+      }
+      String cookieNames() =>
+          hostCookies != null ? hostCookies.describe() : jar.keys.join(',');
+      final cookiesBefore = cookieNames();
+
+      final before = debugLog.length;
+      final login = await _followRedirects(
+        client,
+        jar,
+        http.Request(
+            'POST',
+            Uri.parse('https://together.daejin.ac.kr/login/a/n/loginProc.do'),
+          )
+          ..headers['Content-Type'] =
+              'application/x-www-form-urlencoded; charset=UTF-8'
+          ..headers['Origin'] = 'https://together.daejin.ac.kr'
+          ..headers['Referer'] = preVisit
+              ? 'https://together.daejin.ac.kr/clientMain/a/t/main.do'
+              : 'https://together.daejin.ac.kr'
+          ..headers['User-Agent'] = _userAgent
+          ..body =
+              'targetUrl=%2FclientMain%2Fa%2Ft%2Fmain.do'
+              '&userId=${Uri.encodeQueryComponent(userId)}'
+              '&userPw=${Uri.encodeQueryComponent(userPwd)}',
+        hostCookies: hostCookies,
+      );
+      final hops = debugLog
+          .sublist(before)
+          .map((hop) {
+            final m = RegExp(r'\[hop\] (\w+) (\S+) -> (\d+) location=(\S+)')
+                .firstMatch(hop);
+            if (m == null) return null;
+            return '${m.group(1)} ${shortUrl(m.group(2))}->${m.group(3)}'
+                '(${m.group(4) == 'null' ? '-' : shortUrl(m.group(4))})';
+          })
+          .whereType<String>()
+          .join(' / ');
+      // 로그인 응답 본문에 서버가 알려주는 실패 문구가 있는지(알림창 스크립트 등).
+      final alertText = RegExp(r'alert\(\s*.([^)]{1,80})')
+          .firstMatch(login.finalBody)
+          ?.group(1);
+
+      // 명세의 Referer 페이지("나의 미래")를 먼저 열어 학과코드·학년코드를 찾는다.
+      // 앱이 학생의 학과코드를 따로 갖고 있지 않아서다. 못 찾으면 명세 예시 값을 쓴다.
+      final view = await _followRedirects(
+        client,
+        jar,
+        http.Request(
+          'GET',
+          Uri.parse(
+            'https://together.daejin.ac.kr/myFuture/a/m/myFutureView.do',
+          ),
+        )..headers['User-Agent'] = _userAgent,
+        hostCookies: hostCookies,
+      );
+      final viewBody = view.finalBody;
+      final foundSust = RegExp(r'sustCd\W{1,10}([A-Z]{2}\d{4})')
+          .firstMatch(viewBody)
+          ?.group(1);
+      final foundShyr = RegExp(r'shyrCd\W{1,10}(\d)')
+          .firstMatch(viewBody)
+          ?.group(1);
+      final sustCd = foundSust ?? 'AA0194';
+      final shyrCd = foundShyr ?? '3';
+
+      final result = await _followRedirects(
+        client,
+        jar,
+        http.Request(
+            'POST',
+            Uri.parse(
+              'https://together.daejin.ac.kr/myFuture/a/n/getResultDivInfoPage.do',
+            ),
+          )
+          ..headers['Content-Type'] =
+              'application/x-www-form-urlencoded; charset=UTF-8'
+          ..headers['IS_AJAX'] = 'isAjax'
+          ..headers['X-Requested-With'] = 'XMLHttpRequest'
+          ..headers['Origin'] = 'https://together.daejin.ac.kr'
+          ..headers['Referer'] =
+              'https://together.daejin.ac.kr/myFuture/a/m/myFutureView.do'
+          ..headers['User-Agent'] = _userAgent
+          ..body =
+              'sustCd=$sustCd&shyrCd=$shyrCd&pageIndex=1'
+              '&searchType=STD_GROUP&roadMapType=SAMEGRADE',
+        hostCookies: hostCookies,
+      );
+      final body = result.finalBody;
+      String? strongIn(String cls) => RegExp(
+        '$cls[^>]*>.*?<strong>\\s*([0-9.]+)\\s*</strong>',
+        dotAll: true,
+      ).firstMatch(body)?.group(1);
+
+      return '$label | 로그인 경로: $hops | 로그인 응답 알림: $alertText | '
+          '쿠키(로그인 전→후): [$cookiesBefore]→[${cookieNames()}] | '
+          '나의 미래 화면: 상태=${view.finalStatusCode}, '
+          '최종=${shortUrl(view.finalUrl.toString())}, '
+          '"로그인이 필요"=${viewBody.contains('로그인이 필요')}, '
+          '학과코드=${foundSust ?? '못 찾음→AA0194'}, '
+          '학년코드=${foundShyr ?? '못 찾음→3'} | '
+          '평균성적(명세 주소): 상태=${result.finalStatusCode}, '
+          '"로그인이 필요"=${body.contains('로그인이 필요')}, '
+          '내 성적=${strongIn('grade_my')}, 동일 학년=${strongIn('grade_same')}, '
+          '길이=${body.length}';
+    } catch (e) {
+      return '$label | 확인 실패: $e';
+    } finally {
+      client.close();
+    }
   }
 
   String? _extractUidFromLocations(List<String> locations) {
@@ -274,15 +559,20 @@ class PortalLoginService implements PortalLoginServiceBase {
   Future<_RedirectChainResult> _followRedirects(
     http.Client client,
     Map<String, String> cookieJar,
-    http.Request initialRequest,
-  ) async {
+    http.Request initialRequest, {
+    _HostCookies? hostCookies,
+  }) async {
     final setCookies = <String>[];
     final locations = <String>[];
+    var passedPasswordNotice = false;
 
     var request = initialRequest;
     for (var hop = 0; hop < _maxRedirects; hop++) {
       request.followRedirects = false;
-      if (cookieJar.isNotEmpty) {
+      if (hostCookies != null) {
+        final header = hostCookies.headerFor(request.url);
+        if (header.isNotEmpty) request.headers['Cookie'] = header;
+      } else if (cookieJar.isNotEmpty) {
         request.headers['Cookie'] = cookieJar.entries
             .map((e) => '${e.key}=${e.value}')
             .join('; ');
@@ -301,13 +591,17 @@ class PortalLoginService implements PortalLoginServiceBase {
       final hopSetCookies =
           response.headersSplitValues['set-cookie'] ?? const <String>[];
       setCookies.addAll(hopSetCookies);
-      for (final cookie in hopSetCookies) {
-        final pair = cookie.split(';').first;
-        final eq = pair.indexOf('=');
-        if (eq > 0) {
-          cookieJar[pair.substring(0, eq).trim()] = pair
-              .substring(eq + 1)
-              .trim();
+      if (hostCookies != null) {
+        hostCookies.store(request.url, hopSetCookies);
+      } else {
+        for (final cookie in hopSetCookies) {
+          final pair = cookie.split(';').first;
+          final eq = pair.indexOf('=');
+          if (eq > 0) {
+            cookieJar[pair.substring(0, eq).trim()] = pair
+                .substring(eq + 1)
+                .trim();
+          }
         }
       }
 
@@ -320,12 +614,22 @@ class PortalLoginService implements PortalLoginServiceBase {
           location != null;
 
       final body = utf8.decode(response.bodyBytes, allowMalformed: true);
+      if (_passwordNoticePattern.hasMatch(body)) passedPasswordNotice = true;
       // HTTP 3xx가 아니라 <meta http-equiv="refresh" ...>로 클라이언트 쪽
       // 리다이렉트를 지시하는 응답이 실기기에서 확인됨(200으로 응답하면서
       // "대진대학교" 안내 페이지 + gopage.jsp로의 메타 리다이렉트). 이걸 안
       // 따라가면 세션 수립이 끝나기 전에 체인을 끝낸 걸로 착각해서, 이후
       // dreams2 API 호출이 전부 미인증 취급을 받는 버그로 이어졌다.
       final metaRefreshUrl = isRedirect ? null : _extractMetaRefreshUrl(body);
+      if (kDebugMode) {
+        debugLog.add(
+          '[hop] ${request.method} ${request.url} -> ${response.statusCode} '
+          'location=$location meta=$metaRefreshUrl '
+          'cookies=${hopSetCookies.map((c) => c.split('=').first).join(',')} '
+          'notice=${_passwordNoticePattern.hasMatch(body)} '
+          'title=${RegExp(r'<title>([^<]*)</title>', caseSensitive: false).firstMatch(body)?.group(1)?.trim()}',
+        );
+      }
 
       if (!isRedirect && metaRefreshUrl == null) {
         return _RedirectChainResult(
@@ -333,6 +637,8 @@ class PortalLoginService implements PortalLoginServiceBase {
           locations: locations,
           finalBody: body,
           finalStatusCode: response.statusCode,
+          finalUrl: request.url,
+          passedPasswordNotice: passedPasswordNotice,
         );
       }
 

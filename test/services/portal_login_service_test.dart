@@ -2,6 +2,8 @@
 // 응답 픽스처로 검증한다. 실제 대진대 서버 호출(네트워크)은 하지 않고
 // http.testing.MockClient로 리다이렉트 체인을 흉내낸다.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -44,6 +46,74 @@ void main() {
       expect(result.wmonid, 'wmo001');
       expect(result.jsessionId, 'js001');
       expect(result.userId2, 'stu001');
+    });
+
+    test('1단계 중간 홉에 6개월 미변경 안내 문구가 있으면 passwordChangeOverdue가 true다', () async {
+      final mockClient = MockClient((request) async {
+        switch (request.url.toString()) {
+          case 'https://www.daejin.ac.kr/subLogin/daejin/login.do':
+            return http.Response(
+              '',
+              302,
+              headers: {
+                'location': 'https://www.daejin.ac.kr/pwNotice.jsp',
+                'set-cookie': 'WMONID=wmo009; Path=/, JSESSIONID=js009; Path=/',
+              },
+            );
+          case 'https://www.daejin.ac.kr/pwNotice.jsp':
+            // 안내 페이지: 문구를 보여주면서 메타 리다이렉트로 다음 홉을 지시한다.
+            return http.Response.bytes(
+              utf8.encode(
+                '<html><meta http-equiv="refresh" '
+                'content="0;url=https://www.daejin.ac.kr/main.jsp?uid%253Dstu009">'
+                '비밀번호를 6개월간 변경하지 않았습니다.</html>',
+              ),
+              200,
+            );
+          case 'https://www.daejin.ac.kr/main.jsp?uid%253Dstu009':
+            return http.Response(
+              '<html>메인</html>',
+              200,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+            );
+        }
+        throw StateError('예상치 못한 요청: ${request.url}');
+      });
+      final service = PortalLoginService(clientFactory: () => mockClient);
+
+      final result = await service.login(userId: '20211476', userPwd: 'pw');
+
+      expect(result.success, isTrue);
+      expect(result.passwordChangeOverdue, isTrue);
+    });
+
+    test('안내 문구가 없으면 passwordChangeOverdue는 false다', () async {
+      final mockClient = MockClient((request) async {
+        switch (request.url.toString()) {
+          case 'https://www.daejin.ac.kr/subLogin/daejin/login.do':
+            return http.Response(
+              '',
+              302,
+              headers: {
+                'location': 'https://www.daejin.ac.kr/main.jsp?uid%3Dstu010',
+                'set-cookie': 'WMONID=wmo010; Path=/, JSESSIONID=js010; Path=/',
+              },
+            );
+          case 'https://www.daejin.ac.kr/main.jsp?uid%3Dstu010':
+            return http.Response(
+              '<html>메인</html>',
+              200,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+            );
+        }
+        throw StateError('예상치 못한 요청: ${request.url}');
+      });
+      final service = PortalLoginService(clientFactory: () => mockClient);
+
+      final result = await service.login(userId: '20211476', userPwd: 'pw');
+
+      expect(result.success, isTrue);
+      expect(result.passwordChangeOverdue, isFalse);
     });
 
     test('1단계에서 uid를 못 찾으면 2단계 폴백으로 uid를 찾는다', () async {

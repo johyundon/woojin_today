@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:daejin_app/screens/cafeteria/cafeteria_screen.dart';
+import 'package:daejin_app/services/fakes/fake_cafeteria_menu_service.dart';
 
 /// 점심시간(낮 12시) 기준으로 연다 — 목데이터의 "오늘" 점심이 기본으로 보인다.
 Future<void> _pump(WidgetTester tester, {DateTime? now, double w = 390}) async {
@@ -16,7 +17,10 @@ Future<void> _pump(WidgetTester tester, {DateTime? now, double w = 390}) async {
   final t = DateTime.now();
   await tester.pumpWidget(
     MaterialApp(
-      home: CafeteriaScreen(now: now ?? DateTime(t.year, t.month, t.day, 12)),
+      home: CafeteriaScreen(
+        now: now ?? DateTime(t.year, t.month, t.day, 12),
+        service: FakeCafeteriaMenuService(),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -184,7 +188,10 @@ void main() {
     final t = DateTime.now();
     await tester.pumpWidget(
       MaterialApp(
-        home: CafeteriaScreen(now: DateTime(t.year, t.month, t.day, 12)),
+        home: CafeteriaScreen(
+          now: DateTime(t.year, t.month, t.day, 12),
+          service: FakeCafeteriaMenuService(),
+        ),
       ),
     );
     await tester.pumpAndSettle();

@@ -16,18 +16,24 @@ const Color _mutedLavender = Color(0xFFD7D9F5);
 /// (우진이의 하루 v4 시안, standalone.html "13-1~13-10" 화면).
 ///
 /// 지도교수 성함만큼은 이 화면에서 유일하게 실제 연동이 있다 — 포털
-/// 로그인으로 얻은 [userId2]로 [StudentInfoService](`kUseMockApi`일 때는
-/// [FakeStudentInfoService])를 호출해 조회한다(home_screen.dart와 같은
+/// 로그인으로 얻은 [userId2]로 [StudentInfoService]를 호출해 조회한다(home_screen.dart와 같은
 /// 패턴). 그 외 상담 인정 횟수/학기별 표/이력/다른 교수 목록/방문 상담
 /// 가능 시간은 API 명세서에 대응 엔드포인트가 없어
 /// [AdvisorConsultationMockData]의 하드코딩된 목데이터로만 동작한다.
 class AdvisorConsultationScreen extends StatefulWidget {
-  const AdvisorConsultationScreen({required this.userId2, super.key});
+  const AdvisorConsultationScreen({
+    required this.userId2,
+    this.studentInfoService,
+    super.key,
+  });
 
   /// 포털 로그인으로 얻은 본인 SSO uid — [StudentInfoService.fetchStudentInfo]
   /// 호출에 필요하다. null이면(세션 없음) 지도교수 조회 자체를 하지 않고
   /// 방어적으로 "불러올 수 없음" 상태로 처리한다.
   final String? userId2;
+
+  /// 테스트에서 [StudentInfoService]를 가짜로 바꿔 끼우려고 주입할 수 있다.
+  final StudentInfoServiceBase? studentInfoService;
 
   @override
   State<AdvisorConsultationScreen> createState() =>
@@ -44,7 +50,8 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
   @override
   void initState() {
     super.initState();
-    _studentInfoService = ServiceFactory.studentInfo();
+    _studentInfoService =
+        widget.studentInfoService ?? ServiceFactory.studentInfo();
     _loadAdvisorName();
   }
 
@@ -85,64 +92,69 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: AppColors.cobaltDeep,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Text(
-                '지도교수 상담',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.035,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _buildAdvisorCard(),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: AdvisorSegmentedTabs(
-                selectedIndex: _selectedTab,
-                onChanged: (index) => setState(() => _selectedTab = index),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _selectedTab == 0
-                  ? const AdvisorStatusTab()
-                  : AdvisorApplyTab(
-                      advisorName: _advisorName,
-                      advisorLoading: _advisorLoading,
-                      onViewStatus: () => setState(() => _selectedTab = 0),
+      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
+      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
+      backgroundColor: Colors.white,
+      body: ColoredBox(
+        color: AppColors.cobalt,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.cobaltDeep,
+                      shape: BoxShape.circle,
                     ),
-            ),
-          ],
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Text(
+                  '지도교수 상담',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.035,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: _buildAdvisorCard(),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: AdvisorSegmentedTabs(
+                  selectedIndex: _selectedTab,
+                  onChanged: (index) => setState(() => _selectedTab = index),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _selectedTab == 0
+                    ? const AdvisorStatusTab()
+                    : AdvisorApplyTab(
+                        advisorName: _advisorName,
+                        advisorLoading: _advisorLoading,
+                        onViewStatus: () => setState(() => _selectedTab = 0),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

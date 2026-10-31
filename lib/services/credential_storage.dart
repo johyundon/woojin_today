@@ -20,6 +20,12 @@ class CredentialStorage {
     await _storage.write(key: _userPwdKey, value: userPwd);
   }
 
+  /// 로그아웃 시 저장된 학번·비밀번호를 지운다.
+  Future<void> clear() async {
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _userPwdKey);
+  }
+
   /// 저장된 자격증명이 하나라도 없으면 null을 반환한다.
   Future<({String userId, String userPwd})?> read() async {
     final userId = await _storage.read(key: _userIdKey);

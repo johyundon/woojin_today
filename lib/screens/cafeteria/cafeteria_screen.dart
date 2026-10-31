@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../services/cafeteria_menu_service.dart';
+import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import 'models/cafeteria_menu.dart';
-import 'services/cafeteria_menu_mock_data.dart';
 import 'widgets/cafeteria_date_picker_dialog.dart';
 import 'widgets/cafeteria_venue_tabs.dart';
 import 'widgets/cafeteria_week_row.dart';
@@ -13,11 +14,14 @@ import 'widgets/small_menu_card.dart';
 /// 교직원식당)을 고르면, 그 식당의 메뉴가 큰 대표 카드 하나와 작은 코너 카드들로
 /// 나온다. 아침/점심/저녁은 위쪽 라임 알약을 눌러 바꾼다.
 ///
-/// 학생식당 메뉴 API 연동이 없어(명세서에 대응 엔드포인트 없음) 메뉴는
-/// [CafeteriaMenuMockData]의 하드코딩된 목데이터로만 조회한다 — 날짜가 바뀌면 그
-/// 함수를 다시 호출해 본문을 갱신한다.
+/// 메뉴는 학교 사이트에서 받아 오며([CafeteriaMenuService]), 날짜가 바뀌면 그 날의
+/// 메뉴를 다시 조회한다. 서버는 학생식당/교직원식당을 구분해 주지 않아 받은 메뉴는
+/// 모두 학생식당으로 보여준다.
 class CafeteriaScreen extends StatefulWidget {
-  const CafeteriaScreen({this.now, super.key});
+  const CafeteriaScreen({this.now, this.service, super.key});
+
+  /// 학식을 조회하는 서비스. 테스트에서 가짜로 바꿔 끼우려고 주입할 수 있다.
+  final CafeteriaMenuServiceBase? service;
 
   /// "지금" 기준 시각(오늘 표시와 기본 끼니 고르기에 쓴다). 테스트에서 고정하려고
   /// 주입할 수 있다.
@@ -36,6 +40,46 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
   /// 즐겨찾기한 메뉴(날짜+메뉴). 화면이 열려 있는 동안만 유지된다.
   final Set<String> _favorites = {};
 
+  late final CafeteriaMenuServiceBase _service =
+      widget.service ?? ServiceFactory.cafeteriaMenu();
+
+  DailyCafeteriaMenu? _menu;
+  bool _loading = true;
+  bool _loadFailed = false;
+
+  /// 날짜를 빠르게 바꿨을 때 늦게 도착한 이전 응답이 화면을 덮어쓰지 않게 한다.
+  int _loadId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMenu();
+  }
+
+  Future<void> _loadMenu() async {
+    final id = ++_loadId;
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    try {
+      final menu = await _service.fetchMenu(_selectedDate);
+      if (!mounted || id != _loadId) return;
+      setState(() {
+        _menu = menu;
+        _loading = false;
+      });
+    } on CafeteriaMenuException catch (e) {
+      debugPrint('[Cafeteria] 학식 조회 실패: $e');
+      if (!mounted || id != _loadId) return;
+      setState(() {
+        _menu = null;
+        _loading = false;
+        _loadFailed = true;
+      });
+    }
+  }
+
   static DateTime _dateOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 
@@ -48,8 +92,10 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
 
   String _dateKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
-  void _selectDate(DateTime date) =>
-      setState(() => _selectedDate = _dateOnly(date));
+  void _selectDate(DateTime date) {
+    setState(() => _selectedDate = _dateOnly(date));
+    _loadMenu();
+  }
 
   void _moveWeek(int delta) =>
       _selectDate(_selectedDate.add(Duration(days: 7 * delta)));
@@ -86,8 +132,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final menu = CafeteriaMenuMockData.menuFor(_selectedDate);
-    final items = _itemsToShow(menu);
+    final items = _itemsToShow(_menu);
 
     return Scaffold(
       backgroundColor: AppColors.cobalt,
@@ -187,7 +232,36 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
             ),
             const SizedBox(height: 14),
             Expanded(
-              child: items.isEmpty
+              child: _loading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.lime),
+                    )
+                  : _loadFailed
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '학식을 불러오지 못했어요',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _loadMenu,
+                            child: const Text(
+                              '다시 시도',
+                              style: TextStyle(
+                                color: AppColors.lime,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : items.isEmpty
                   ? const Center(
                       child: Text(
                         '등록된 메뉴가 없어요',

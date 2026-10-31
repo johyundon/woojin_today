@@ -1,124 +1,194 @@
-// 학과등수 화면이 시안("나 몇 등이야?")의 숫자와 구성을 보여주는지, 분포가 종
-// 모양인지, 과목 "전체" 펼치기와 학과 변경 흐름이 동작하는지 확인한다.
+// 학과등수 화면이 T-WIN 평점으로 계산한 등수를 보여주는지, 학번·비밀번호가 없을 때
+// 입력 폼을 띄우는지, 학년·학과를 바꾸면 그 값으로 다시 조회하는지 확인한다.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:daejin_app/screens/home/rank/department_rank_screen.dart';
-import 'package:daejin_app/screens/home/rank/services/fake_department_rank_service.dart';
+import 'package:daejin_app/services/twin_rank_service.dart';
 
-Future<void> _pump(WidgetTester tester, {double w = 390}) async {
+class _FakeTwin implements TwinRankServiceBase {
+  _FakeTwin({this.failure});
+
+  TwinRankFailure? failure;
+  final calls = <Map<String, Object>>[];
+
+  @override
+  Future<TwinGradeStats> fetchGradeStats({
+    required String userId,
+    required String userPwd,
+    required String sustCd,
+    required String shyrCd,
+    bool forceRefresh = false,
+  }) async {
+    calls.add({
+      'userId': userId,
+      'userPwd': userPwd,
+      'sustCd': sustCd,
+      'shyrCd': shyrCd,
+      'forceRefresh': forceRefresh,
+    });
+    final f = failure;
+    if (f != null) throw TwinRankException(f, 'fail');
+    return TwinGradeStats(
+      myGpa: 4.34,
+      sameGradeAvg: 3.23,
+      peerGpas: const [4.1, 4.5, 4.34, 3.9, 3.2, 2.8],
+      totalCount: 6,
+      fetchedAt: DateTime(2026, 10, 31),
+    );
+  }
+}
+
+Future<void> _pump(
+  WidgetTester tester, {
+  required _FakeTwin service,
+  String? department = '컴퓨터공학전공',
+  Credentials? credentials = (userId: '20240001', userPwd: 'pw'),
+  double w = 390,
+}) async {
   tester.view.physicalSize = Size(w * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    const MaterialApp(home: DepartmentRankScreen(isDark: true)),
+    MaterialApp(
+      home: DepartmentRankScreen(
+        isDark: true,
+        department: department,
+        service: service,
+        readCredentials: () async => credentials,
+        now: () => DateTime(2026, 10, 31),
+      ),
+    ),
   );
   await tester.pumpAndSettle();
 }
 
 void main() {
-  testWidgets('컴공 기준 시안의 숫자와 구성이 그대로 나온다', (tester) async {
-    await _pump(tester);
+  testWidgets('저장된 학번으로 학년을 추정해 조회하고 계산한 등수를 보여준다', (tester) async {
+    final service = _FakeTwin();
+    await _pump(tester, service: service);
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('1학기 · 컴공 1학년'), findsOneWidget);
-    expect(find.text('나 몇 등이야?'), findsOneWidget);
-    expect(find.text('학과 84명 중'), findsOneWidget);
-    expect(find.text('12'), findsOneWidget);
-    expect(find.text('상위 14%'), findsOneWidget);
+    // 2024학번은 2026년 10월에 3학년.
+    expect(service.calls.single['sustCd'], 'AA0194');
+    expect(service.calls.single['shyrCd'], '3');
+    expect(service.calls.single['forceRefresh'], false);
+
+    expect(find.text('컴퓨터공학전공'), findsOneWidget);
+    expect(find.text('3학년'), findsOneWidget);
+    expect(find.text('학과 6명 중'), findsOneWidget);
+    // 4.5 한 명만 나보다 높아서 2등.
+    expect(find.text('2'), findsOneWidget);
     expect(find.text('나'), findsOneWidget);
-    expect(find.text('하위'), findsOneWidget);
-    expect(find.text('학과 점수 분포'), findsOneWidget);
-    expect(find.text('상위'), findsOneWidget);
+    expect(find.textContaining('4.34'), findsOneWidget);
+    expect(find.text('학과 평균보다 1.11'), findsOneWidget);
 
-    // 내 평점 4.12 / 4.5, 학과 평균보다 0.71, 장학.
-    expect(find.text('내 평점'), findsOneWidget);
-    expect(find.textContaining('4.12'), findsOneWidget);
-    expect(find.text('학과 평균보다 0.71'), findsOneWidget);
-    expect(find.text('성적우수 장학\n지원 가능'), findsOneWidget);
-    expect(find.text('기준 상위 20%'), findsOneWidget);
-
-    // 과목별 석차 3개(+ 전체 ›).
-    for (final name in ['컴퓨터개론', '이산수학', '대학영어']) {
-      expect(find.text(name), findsOneWidget);
-    }
-    expect(find.textContaining('3/84'), findsOneWidget);
-    expect(find.textContaining('9/84'), findsOneWidget);
-    expect(find.textContaining('31/84'), findsOneWidget);
-    expect(find.text('전체 ›'), findsOneWidget);
-  });
-
-  testWidgets('점수 분포는 가운데가 불룩한 종 모양이다', (tester) async {
-    // 가짜 서비스가 실제 지연(Future.delayed)을 쓰므로 가짜 시계 밖에서 기다린다.
-    final data = (await tester.runAsync(
-      () => FakeDepartmentRankService().fetchDepartmentRank(
-        departmentName: '컴퓨터공학전공',
-      ),
-    ))!;
-    final gpas = data.distribution.map((e) => e.gpa).toList();
-    final min = gpas.reduce((a, b) => a < b ? a : b);
-    final max = gpas.reduce((a, b) => a > b ? a : b);
-
-    // 20칸으로 묶으면 한가운데 근처가 가장 높고 양 끝은 낮다.
-    final counts = List<int>.filled(20, 0);
-    for (final g in gpas) {
-      counts[((g - min) / (max - min) * 20).floor().clamp(0, 19)]++;
-    }
-    final peakIndex = counts.indexOf(counts.reduce((a, b) => a > b ? a : b));
-    expect(peakIndex, inInclusiveRange(7, 13));
-    expect(counts.first, lessThan(counts[peakIndex]));
-    expect(counts.last, lessThan(counts[peakIndex]));
-
-    expect(data.totalCount, 84);
-    expect(data.myRank, 12);
-    expect(data.myGpa, 4.12);
-    expect(data.departmentAverageGpa, closeTo(3.41, 0.02));
-    expect(data.subjects.length, greaterThan(3));
-  });
-
-  testWidgets('전체 ›를 누르면 과목이 모두 보이고 접기 ‹로 줄어든다', (tester) async {
-    await _pump(tester);
-
-    expect(find.text('자료구조'), findsNothing);
-    await tester.scrollUntilVisible(
-      find.text('전체 ›'),
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(find.text('전체 ›'));
-    await tester.pumpAndSettle();
-    for (final name in ['자료구조', '선형대수', '운영체제']) {
-      expect(find.text(name), findsOneWidget);
-    }
-    expect(find.text('접기 ‹'), findsOneWidget);
-
-    await tester.tap(find.text('접기 ‹'));
-    await tester.pumpAndSettle();
-    expect(find.text('자료구조'), findsNothing);
-    expect(find.text('전체 ›'), findsOneWidget);
-  });
-
-  testWidgets('학과를 바꾸면 그 학과의 줄임 이름과 인원이 나온다', (tester) async {
-    await _pump(tester);
-
-    await tester.tap(find.text('1학기 · 컴공 1학년'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('전기공학과'));
-    await tester.pump();
-    await tester.tap(find.text('변경하기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('변경'));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.text('1학기 · 전기 1학년'), findsOneWidget);
-    expect(find.text('학과 61명 중'), findsOneWidget);
+    // 실제 데이터가 없는 장학·과목별 석차 카드는 보이지 않는다.
+    expect(find.text('장학'), findsNothing);
+    expect(find.text('과목별 석차'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('"내 정보"의 학년이 있으면 학번 추정 대신 그 학년으로 조회한다', (tester) async {
+    final service = _FakeTwin();
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DepartmentRankScreen(
+          isDark: true,
+          department: '컴퓨터공학전공',
+          grade: 3,
+          service: service,
+          // 2021학번은 학번으로만 추정하면 4학년이 된다.
+          readCredentials: () async => (userId: '20210001', userPwd: 'pw'),
+          now: () => DateTime(2026, 10, 31),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.calls.single['shyrCd'], '3');
+    expect(find.text('3학년'), findsOneWidget);
+  });
+
+  testWidgets('저장된 학번·비밀번호가 없으면 입력받아 조회한다', (tester) async {
+    final service = _FakeTwin();
+    await _pump(tester, service: service, credentials: null);
+
+    expect(find.text('학번과 비밀번호가 필요해요'), findsOneWidget);
+    expect(service.calls, isEmpty);
+
+    await tester.enterText(find.byType(TextField).at(0), '20250002');
+    await tester.enterText(find.byType(TextField).at(1), 'secret');
+    await tester.tap(find.text('등수 보기'));
+    await tester.pumpAndSettle();
+
+    expect(service.calls.single['userId'], '20250002');
+    expect(service.calls.single['userPwd'], 'secret');
+    expect(service.calls.single['shyrCd'], '2');
+    expect(find.text('학과 6명 중'), findsOneWidget);
+  });
+
+  testWidgets('입력한 비밀번호로 로그인에 실패하면 폼을 다시 보여준다', (tester) async {
+    final service = _FakeTwin(failure: TwinRankFailure.loginFailed);
+    await _pump(tester, service: service, credentials: null);
+
+    await tester.enterText(find.byType(TextField).at(0), '20250002');
+    await tester.enterText(find.byType(TextField).at(1), 'wrong');
+    await tester.tap(find.text('등수 보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('학번과 비밀번호가 필요해요'), findsOneWidget);
+    expect(find.textContaining('T-WIN 로그인에 실패했어요'), findsOneWidget);
+  });
+
+  testWidgets('통신 실패면 안내와 다시 시도 버튼을 보여준다', (tester) async {
+    final service = _FakeTwin(failure: TwinRankFailure.network);
+    await _pump(tester, service: service);
+
+    expect(find.text('네트워크 연결을 확인해 주세요.'), findsOneWidget);
+    service.failure = null;
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(find.text('학과 6명 중'), findsOneWidget);
+  });
+
+  testWidgets('학과코드를 모르는 학과면 학과를 고르게 한다', (tester) async {
+    final service = _FakeTwin();
+    await _pump(tester, service: service, department: '없는학과');
+
+    expect(service.calls, isEmpty);
+    expect(find.textContaining('학과코드를 몰라요'), findsOneWidget);
+    expect(find.text('학과 고르기'), findsOneWidget);
+  });
+
+  testWidgets('학년을 바꾸면 그 학년코드로 다시 조회한다', (tester) async {
+    final service = _FakeTwin();
+    await _pump(tester, service: service);
+
+    await tester.tap(find.text('3학년'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1학년'));
+    await tester.pumpAndSettle();
+
+    expect(service.calls.last['shyrCd'], '1');
+    expect(find.text('1학년'), findsOneWidget);
+  });
+
+  testWidgets('당겨서 새로고침하면 캐시를 무시하고 새로 받는다', (tester) async {
+    final service = _FakeTwin();
+    await _pump(tester, service: service);
+
+    await tester.fling(find.text('나 몇 등이야?'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    expect(service.calls.last['forceRefresh'], true);
   });
 
   testWidgets('작은 화면(360w)에서도 넘치지 않는다', (tester) async {
-    await _pump(tester, w: 360);
+    await _pump(tester, service: _FakeTwin(), w: 360);
     expect(tester.takeException(), isNull);
   });
 }

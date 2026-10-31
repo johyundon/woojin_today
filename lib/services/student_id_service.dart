@@ -30,9 +30,7 @@ class StudentIdSearchError extends StudentIdSearchResult {
 }
 
 /// [StudentIdService]의 공개 API. 화면/팩토리는 이 인터페이스 타입으로
-/// 서비스를 주고받아, 실제 구현(HTTP 호출)과 테스트용 가짜 구현
-/// ([lib/services/fakes/fake_student_id_service.dart]의
-/// `FakeStudentIdService`)을 교체 가능하게 한다.
+/// 서비스를 주고받는다.
 abstract class StudentIdServiceBase {
   Future<StudentIdSearchResult> findStudentId({
     required String name,
@@ -47,6 +45,9 @@ abstract class StudentIdServiceBase {
 class StudentIdService implements StudentIdServiceBase {
   static const _endpoint =
       'https://www.daejin.ac.kr/userInfoSearch/daejin/1/idSearch.do';
+  static const _userAgent =
+      'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
 
   /// 조회된 학번은 <strong>20211476</strong> 형태의 응답 HTML에서 학번만 뽑아낸다.
   static final _studentNoPattern = RegExp(
@@ -85,7 +86,11 @@ class StudentIdService implements StudentIdServiceBase {
       response = await _client
           .post(
             Uri.parse(_endpoint),
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            headers: {
+              'Content-Type':
+                  'application/x-www-form-urlencoded; charset=UTF-8',
+              'User-Agent': _userAgent,
+            },
             body: body,
           )
           .timeout(const Duration(seconds: 15));

@@ -164,118 +164,126 @@ class _TimetableScreenState extends State<TimetableScreen>
   Widget build(BuildContext context) {
     final now = _now();
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
+      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
+      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
+      backgroundColor: Colors.white,
       extendBody: true,
       bottomNavigationBar: _addPanelOpen
           ? null
           : HomeBottomNav(selectedIndex: 0, onTap: _onTabTap),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
-              child: TimetableHeader(
-                semesterLabel: '$_year년 $_semester학기',
-                totalCredits: _totalCredits,
-                savedCount: _savedCount,
-                headerKey: _headerKey,
-                onBack: () => Navigator.of(context).pop(),
-                onSemesterTap: _openSemesterMenu,
-                onSave: _openSaveDialog,
-                onOpenSavedList: _openSavedList,
-                onAutoFill: _openAiRecommendWizard,
-                onAddCourse: () =>
-                    setState(() => _addPanelOpen = !_addPanelOpen),
-              ),
-            ),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(36),
+      body: ColoredBox(
+        color: AppColors.cobalt,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+                child: TimetableHeader(
+                  semesterLabel: '$_year년 $_semester학기',
+                  totalCredits: _totalCredits,
+                  savedCount: _savedCount,
+                  headerKey: _headerKey,
+                  onBack: () => Navigator.of(context).pop(),
+                  onSemesterTap: _openSemesterMenu,
+                  onSave: _openSaveDialog,
+                  onOpenSavedList: _openSavedList,
+                  onAutoFill: _openAiRecommendWizard,
+                  onAddCourse: () =>
+                      setState(() => _addPanelOpen = !_addPanelOpen),
                 ),
-                child: ColoredBox(
-                  color: TimetableColors.panelBackground,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      _bodyHeight = constraints.maxHeight;
-                      // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의
-                      // 실측 높이"를 기준으로 상한을 계산해서, 핸들을 아무리
-                      // 당겨도 화면(Column)이 넘치지 않는 값으로만 움직이게
-                      // 한다.
-                      final panelHeight = constraints.maxHeight * 0.75;
-                      final displayedGridHeight =
-                          _computedMaxGridViewportHeight(
-                            filterPanelOpen: false,
-                            extraReserve: _addPanelOpen ? panelHeight : 0,
-                          );
-                      _scheduleChromeMeasurement(displayedGridHeight);
+              ),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(36),
+                  ),
+                  child: ColoredBox(
+                    color: TimetableColors.panelBackground,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        _bodyHeight = constraints.maxHeight;
+                        // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의
+                        // 실측 높이"를 기준으로 상한을 계산해서, 핸들을 아무리
+                        // 당겨도 화면(Column)이 넘치지 않는 값으로만 움직이게
+                        // 한다.
+                        final panelHeight = constraints.maxHeight * 0.75;
+                        final displayedGridHeight =
+                            _computedMaxGridViewportHeight(
+                              filterPanelOpen: false,
+                              extraReserve: _addPanelOpen ? panelHeight : 0,
+                            );
+                        _scheduleChromeMeasurement(displayedGridHeight);
 
-                      final gridColumn = Column(
-                        children: [
-                          Column(
-                            key: _chromeAboveGridKey,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const SizedBox(height: 18),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
+                        final gridColumn = Column(
+                          children: [
+                            Column(
+                              key: _chromeAboveGridKey,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 18),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: QuickActionsRow(
+                                    loading: _myTimetableLoading,
+                                    onLoadMyTimetable: _loadMyTimetable,
+                                    notificationsEnabled: _notificationsEnabled,
+                                    onNotificationsChanged: (v) => setState(
+                                      () => _notificationsEnabled = v,
+                                    ),
+                                  ),
                                 ),
-                                child: QuickActionsRow(
-                                  loading: _myTimetableLoading,
-                                  onLoadMyTimetable: _loadMyTimetable,
-                                  notificationsEnabled: _notificationsEnabled,
-                                  onNotificationsChanged: (v) =>
-                                      setState(() => _notificationsEnabled = v),
-                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            ),
+                            Padding(
+                              key: _gridWrapperKey,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
                               ),
-                              const SizedBox(height: 12),
-                            ],
-                          ),
-                          Padding(
-                            key: _gridWrapperKey,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: TimetableGrid(
-                              courses: _confirmedCourses,
-                              pendingSlot: _pendingSlot,
-                              onEmptyCellTap: _onEmptyCellTap,
-                              onRemoveCourse: _removeCourse,
-                              onCourseTap: (course) =>
-                                  _showCourseDetail(course.toCatalogItem()),
-                              today: Weekday.values[now.weekday - 1],
-                              viewportHeight: displayedGridHeight,
+                              child: TimetableGrid(
+                                courses: _confirmedCourses,
+                                pendingSlot: _pendingSlot,
+                                onEmptyCellTap: _onEmptyCellTap,
+                                onRemoveCourse: _removeCourse,
+                                onCourseTap: (course) =>
+                                    _showCourseDetail(course.toCatalogItem()),
+                                today: Weekday.values[now.weekday - 1],
+                                viewportHeight: displayedGridHeight,
+                              ),
                             ),
-                          ),
-                          // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
-                          // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
-                          SizedBox(
-                            key: _chromeBelowGridKey,
-                            height: _addPanelOpen ? 0 : 100,
-                          ),
-                        ],
-                      );
+                            // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
+                            // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
+                            SizedBox(
+                              key: _chromeBelowGridKey,
+                              height: _addPanelOpen ? 0 : 100,
+                            ),
+                          ],
+                        );
 
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          gridColumn,
-                          if (_addPanelOpen)
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              height: panelHeight,
-                              child: _buildAddPanel(),
-                            ),
-                        ],
-                      );
-                    },
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            gridColumn,
+                            if (_addPanelOpen)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                height: panelHeight,
+                                child: _buildAddPanel(),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

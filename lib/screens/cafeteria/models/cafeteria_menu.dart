@@ -39,8 +39,8 @@ class CafeteriaMenuItem {
   /// 메뉴 구성. 첫 두 개가 대표 메뉴(큰 글씨), 나머지는 곁들임으로 보여준다.
   final List<String> dishes;
 
-  /// 원 단위 가격.
-  final int price;
+  /// 원 단위 가격. 서버 응답에 가격이 없으면 null.
+  final int? price;
 
   /// 어느 식당(탭)의 메뉴인지.
   final CafeteriaVenue venue;
@@ -56,7 +56,7 @@ class CafeteriaMenuItem {
 
   String get dishesText => dishes.join(' · ');
 
-  String get priceText => '${_formatWon(price)}원';
+  String get priceText => price == null ? '가격 정보 없음' : '${_formatWon(price!)}원';
 }
 
 /// 1000 단위마다 쉼표를 넣는다 (예: 4300 -> "4,300").
