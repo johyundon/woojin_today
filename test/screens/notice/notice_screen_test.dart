@@ -196,7 +196,7 @@ void main() {
   testWidgets('"새 글 알림"은 기본 꺼짐이고, 저장된 값을 보여주며 끄면 저장된다', (tester) async {
     final prefs = SharedPreferencesAsync();
     await _pump(tester, _FakeNotices());
-    expect(find.byIcon(Icons.notifications_off), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
 
     await prefs.setBool('notice_watch_enabled', true);
     await tester.pumpWidget(const SizedBox());
@@ -205,7 +205,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.notifications_active));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.notifications_off), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
     expect(await prefs.getBool('notice_watch_enabled'), isFalse);
     expect(tester.takeException(), isNull);
   });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
 import 'ringing_bell.dart';
 
@@ -89,8 +90,9 @@ class EventRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: _PressableCard(
+            child: Pressable(
               onTap: onTap,
+              pressedOpacity: 0.75,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                 decoration: BoxDecoration(
@@ -146,10 +148,16 @@ class EventRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     // 알림 켜짐: 파란 원 + 흰 종 / 꺼짐: 흰 원 + 회색 종.
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
+                    Pressable(
                       onTap: () => onReminderToggled(!event.hasReminder),
-                      child: Container(
+                      pressedScale: 0.88,
+                      haptic: HapticFeedback.lightImpact,
+                      // 손을 떼면 살짝 커졌다가 제자리로 튕기듯 돌아온다.
+                      releaseCurve: Curves.easeOutBack,
+                      releaseDuration: const Duration(milliseconds: 260),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
@@ -183,57 +191,4 @@ String _formatTime(TimeOfDay time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
-}
-
-/// 누르는 동안 카드가 살짝 작아지고 옅어졌다가 손을 떼면 돌아오는 효과, 그리고
-/// 가벼운 진동으로 "눌렀다"는 느낌을 준다. 아주 짧게 톡 쳐도 효과가 보이도록
-/// 손을 뗀 뒤 잠깐 눌린 모양을 유지한다.
-class _PressableCard extends StatefulWidget {
-  const _PressableCard({required this.onTap, required this.child});
-
-  final VoidCallback onTap;
-  final Widget child;
-
-  @override
-  State<_PressableCard> createState() => _PressableCardState();
-}
-
-class _PressableCardState extends State<_PressableCard> {
-  static const _duration = Duration(milliseconds: 110);
-
-  bool _pressed = false;
-
-  void _setPressed(bool value) {
-    if (_pressed != value && mounted) setState(() => _pressed = value);
-  }
-
-  Future<void> _release() async {
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    _setPressed(false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _release(),
-      onTapCancel: () => _setPressed(false),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1,
-        duration: _duration,
-        curve: Curves.easeOut,
-        child: AnimatedOpacity(
-          opacity: _pressed ? 0.75 : 1,
-          duration: _duration,
-          curve: Curves.easeOut,
-          child: widget.child,
-        ),
-      ),
-    );
-  }
 }

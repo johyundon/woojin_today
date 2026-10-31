@@ -229,7 +229,7 @@ void main() {
     expect(find.text('날짜'), findsOneWidget);
   });
 
-  testWidgets('일정 추가 화면의 날짜 칸은 앱 스타일 달력 시트로 고른다', (tester) async {
+  testWidgets('일정 추가 화면의 날짜는 시트에서 시작~끝을 한 번에 고른다', (tester) async {
     await _pump(tester);
     final now = DateTime.now();
     const sunFirst = ['일', '월', '화', '수', '목', '금', '토'];
@@ -240,24 +240,55 @@ void main() {
     await tester.tap(find.text(pill(now)).first);
     await tester.pumpAndSettle();
 
-    // 영어 기본 창이 아니라 한국어 제목·연월·월요일 시작 요일이 보인다.
-    expect(find.text('시작 날짜'), findsOneWidget);
+    // 영어 기본 창이 아니라 한국어 제목·연월이 보인다.
+    expect(find.text('날짜 고르기'), findsOneWidget);
     expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
     expect(find.text('OK'), findsNothing);
 
-    // 다음 달 1일을 골라 저장하면 시작·끝 날짜가 그 날로 바뀐다.
+    // 다음 달로 넘겨 3일 → 1일(시작보다 앞이라 새 시작) → 4일을 누르면 1~4일.
     await tester.tap(find.byIcon(Icons.chevron_right).last);
     await tester.pumpAndSettle();
-    final next = DateTime(now.year, now.month + 1, 1);
-    expect(find.text('${next.year}년 ${next.month}월'), findsOneWidget);
+    final first = DateTime(now.year, now.month + 1, 1);
+    final fourth = DateTime(now.year, now.month + 1, 4);
+    await tester.tap(find.text('3').last);
+    await tester.pump();
+    expect(find.textContaining('끝나는 날짜를 골라 주세요'), findsOneWidget);
     await tester.tap(find.text('1').last);
+    await tester.pump();
+    await tester.tap(find.text('4').last);
+    await tester.pump();
+    expect(
+      find.text('${first.month}월 1일 ~ ${first.month}월 4일'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+    expect(find.text('날짜 고르기'), findsNothing);
+    expect(find.text(pill(first)), findsOneWidget);
+    expect(find.text(pill(fourth)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('날짜 시트에서 하루만 고르고 저장하면 하루짜리가 된다', (tester) async {
+    await _pump(tester);
+    final now = DateTime.now();
+    const sunFirst = ['일', '월', '화', '수', '목', '금', '토'];
+    String pill(DateTime d) => '${d.month}.${d.day} ${sunFirst[d.weekday % 7]}';
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(pill(now)).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.chevron_right).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2').last);
     await tester.pump();
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
 
-    expect(find.text('시작 날짜'), findsNothing);
-    expect(find.text(pill(next)), findsNWidgets(2));
-    expect(tester.takeException(), isNull);
+    final second = DateTime(now.year, now.month + 1, 2);
+    expect(find.text(pill(second)), findsNWidgets(2));
   });
 
   group('학사일정 연결', () {

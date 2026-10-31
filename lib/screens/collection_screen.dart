@@ -71,10 +71,12 @@ class CollectionScreen extends StatelessWidget {
     );
   }
 
-  static void _openGraduationCredit(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const GraduationCreditScreen()));
+  void _openGraduationCredit(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GraduationCreditScreen(userId2: userId2),
+      ),
+    );
   }
 
   static void _openShuttle(BuildContext context) {
@@ -141,7 +143,7 @@ class CollectionScreen extends StatelessWidget {
       icon: Icons.directions_bus_rounded,
       onTap: _openShuttle,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       label: '졸업학점',
       icon: Icons.fact_check_rounded,
       onTap: _openGraduationCredit,
