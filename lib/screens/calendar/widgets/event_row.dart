@@ -89,8 +89,9 @@ class EventRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: _PressableCard(
+            child: _Pressable(
               onTap: onTap,
+              pressedOpacity: 0.75,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                 decoration: BoxDecoration(
@@ -146,10 +147,16 @@ class EventRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     // 알림 켜짐: 파란 원 + 흰 종 / 꺼짐: 흰 원 + 회색 종.
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
+                    _Pressable(
                       onTap: () => onReminderToggled(!event.hasReminder),
-                      child: Container(
+                      pressedScale: 0.88,
+                      haptic: HapticFeedback.lightImpact,
+                      // 손을 떼면 살짝 커졌다가 제자리로 튕기듯 돌아온다.
+                      releaseCurve: Curves.easeOutBack,
+                      releaseDuration: const Duration(milliseconds: 260),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
@@ -185,23 +192,42 @@ String _formatTime(TimeOfDay time) {
   return '$h:$m';
 }
 
-/// 누르는 동안 카드가 살짝 작아지고 옅어졌다가 손을 떼면 돌아오는 효과, 그리고
+/// 누르는 동안 살짝 작아졌다가(카드는 옅어지기도 한다) 손을 떼면 돌아오는 효과, 그리고
 /// 가벼운 진동으로 "눌렀다"는 느낌을 준다. 아주 짧게 톡 쳐도 효과가 보이도록
 /// 손을 뗀 뒤 잠깐 눌린 모양을 유지한다.
-class _PressableCard extends StatefulWidget {
-  const _PressableCard({required this.onTap, required this.child});
+///
+/// 카드 안의 종 버튼처럼 [_Pressable] 안에 또 [_Pressable]이 있으면, 안쪽을 누르는
+/// 동안 바깥쪽은 눌린 모양이 되지 않는다(두 탭 인식기가 모두 눌림 신호를 받기 때문).
+class _Pressable extends StatefulWidget {
+  const _Pressable({
+    required this.onTap,
+    required this.child,
+    this.pressedScale = 0.97,
+    this.pressedOpacity = 1,
+    this.haptic = HapticFeedback.selectionClick,
+    this.releaseCurve = Curves.easeOut,
+    this.releaseDuration = const Duration(milliseconds: 110),
+  });
 
   final VoidCallback onTap;
   final Widget child;
+  final double pressedScale;
+  final double pressedOpacity;
+  final Future<void> Function() haptic;
+  final Curve releaseCurve;
+  final Duration releaseDuration;
 
   @override
-  State<_PressableCard> createState() => _PressableCardState();
+  State<_Pressable> createState() => _PressableState();
 }
 
-class _PressableCardState extends State<_PressableCard> {
-  static const _duration = Duration(milliseconds: 110);
+class _PressableState extends State<_Pressable> {
+  static const _pressDuration = Duration(milliseconds: 110);
 
   bool _pressed = false;
+
+  /// 안쪽 [_Pressable]이 이번 손가락을 가져갔으면 true(손을 떼면 풀린다).
+  bool _blockedByInner = false;
 
   void _setPressed(bool value) {
     if (_pressed != value && mounted) setState(() => _pressed = value);
@@ -212,26 +238,41 @@ class _PressableCardState extends State<_PressableCard> {
     _setPressed(false);
   }
 
+  void _blockOuter() =>
+      context.findAncestorStateOfType<_PressableState>()?._blockedByInner =
+          true;
+
+  void _unblock() => _blockedByInner = false;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _release(),
-      onTapCancel: () => _setPressed(false),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1,
-        duration: _duration,
-        curve: Curves.easeOut,
-        child: AnimatedOpacity(
-          opacity: _pressed ? 0.75 : 1,
-          duration: _duration,
-          curve: Curves.easeOut,
-          child: widget.child,
+    final duration = _pressed ? _pressDuration : widget.releaseDuration;
+    final curve = _pressed ? Curves.easeOut : widget.releaseCurve;
+    return Listener(
+      onPointerDown: (_) => _blockOuter(),
+      onPointerUp: (_) => _unblock(),
+      onPointerCancel: (_) => _unblock(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) {
+          if (!_blockedByInner) _setPressed(true);
+        },
+        onTapUp: (_) => _release(),
+        onTapCancel: () => _setPressed(false),
+        onTap: () {
+          widget.haptic();
+          widget.onTap();
+        },
+        child: AnimatedScale(
+          scale: _pressed ? widget.pressedScale : 1,
+          duration: duration,
+          curve: curve,
+          child: AnimatedOpacity(
+            opacity: _pressed ? widget.pressedOpacity : 1,
+            duration: duration,
+            curve: curve,
+            child: widget.child,
+          ),
         ),
       ),
     );

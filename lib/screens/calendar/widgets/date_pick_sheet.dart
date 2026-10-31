@@ -127,6 +127,156 @@ class _DatePickSheetState extends State<_DatePickSheet> {
   }
 }
 
+/// 시작~끝 날짜를 한 번에 고르는 바텀시트. 처음엔 지금 기간이 표시되고, 날짜를
+/// 누르면 그 날이 새 시작일이 되며, 이어서 다른 날을 누르면 끝나는 날이 된다
+/// (시작보다 앞 날을 누르면 그 날이 새 시작일). 달을 넘겨 고를 수도 있다. 시작만
+/// 고르고 저장하면 하루짜리로 본다. 저장하면 기간을, 취소하면 null을 반환한다.
+Future<DateTimeRange?> showDateRangePickSheet(
+  BuildContext context, {
+  required DateTime initialStart,
+  required DateTime initialEnd,
+  DateTime? today,
+}) {
+  return showModalBottomSheet<DateTimeRange>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (_) => _DateRangePickSheet(
+      initialStart: initialStart,
+      initialEnd: initialEnd,
+      today: today ?? DateTime.now(),
+    ),
+  );
+}
+
+class _DateRangePickSheet extends StatefulWidget {
+  const _DateRangePickSheet({
+    required this.initialStart,
+    required this.initialEnd,
+    required this.today,
+  });
+
+  final DateTime initialStart;
+  final DateTime initialEnd;
+  final DateTime today;
+
+  @override
+  State<_DateRangePickSheet> createState() => _DateRangePickSheetState();
+}
+
+class _DateRangePickSheetState extends State<_DateRangePickSheet> {
+  late DateTime _start = _dateOnly(widget.initialStart);
+
+  /// null이면 시작일만 고른 상태(끝나는 날을 고르는 중).
+  late DateTime? _end = _dateOnly(widget.initialEnd);
+  late DateTime _month = DateTime(_start.year, _start.month);
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  void _moveMonth(int delta) =>
+      setState(() => _month = DateTime(_month.year, _month.month + delta));
+
+  void _onDay(int day) {
+    final date = DateTime(_month.year, _month.month, day);
+    setState(() {
+      if (_end != null || date.isBefore(_start)) {
+        _start = date;
+        _end = null;
+      } else {
+        _end = date;
+      }
+    });
+  }
+
+  String _label(DateTime d) => '${d.month}월 ${d.day}일';
+
+  @override
+  Widget build(BuildContext context) {
+    final end = _end;
+    final summary = end == null
+        ? '${_label(_start)} ~ 끝나는 날짜를 골라 주세요'
+        : end == _start
+        ? _label(_start)
+        : '${_label(_start)} ~ ${_label(end)}';
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        10,
+        20,
+        20 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SheetGrabber(),
+          const SizedBox(height: 20),
+          const Text(
+            '날짜 고르기',
+            style: TextStyle(
+              color: AppColors.ink,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            summary,
+            style: TextStyle(
+              color: end == null ? AppColors.cobalt : const Color(0xFF6B6B70),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _MonthArrow(
+                icon: Icons.chevron_left,
+                onTap: () => _moveMonth(-1),
+              ),
+              Expanded(
+                child: Text(
+                  '${_month.year}년 ${_month.month}월',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _MonthArrow(
+                icon: Icons.chevron_right,
+                onTap: () => _moveMonth(1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          CalendarMonthGrid(
+            focusedMonth: _month,
+            events: const [],
+            selectedDay: null,
+            today: widget.today,
+            onDaySelected: _onDay,
+            rangeStart: _start,
+            rangeEnd: end ?? _start,
+          ),
+          const SizedBox(height: 16),
+          SheetButtonRow(
+            onCancel: () => Navigator.of(context).pop(),
+            onSave: () =>
+                Navigator.of(context)
+                    .pop(DateTimeRange(start: _start, end: end ?? _start)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 달 넘기기 둥근 버튼(캘린더 화면 헤더의 화살표와 같은 모양, 밝은 바탕용).
 class _MonthArrow extends StatelessWidget {
   const _MonthArrow({required this.icon, required this.onTap});

@@ -74,22 +74,17 @@ class _EventEditScreenState extends State<EventEditScreen> {
   bool get _canSave =>
       _titleController.text.trim().isNotEmpty && _rangeError == null;
 
-  Future<void> _pickDate({required bool isStart}) async {
-    final picked = await showDatePickSheet(
+  /// 날짜 칸(시작·끝 어느 쪽이든)을 누르면 시작~끝을 한 번에 고르는 시트를 연다.
+  Future<void> _pickDates() async {
+    final picked = await showDateRangePickSheet(
       context,
-      title: isStart ? '시작 날짜' : '끝나는 날짜',
-      initialDate: isStart ? _startDate : _endDate,
+      initialStart: _startDate,
+      initialEnd: _endDate,
     );
     if (picked == null) return;
     setState(() {
-      final date = _dateOnly(picked);
-      if (isStart) {
-        _startDate = date;
-        // 시작을 끝보다 뒤로 옮기면 끝도 같이 따라가게 한다.
-        if (_endDate.isBefore(date)) _endDate = date;
-      } else {
-        _endDate = date;
-      }
+      _startDate = _dateOnly(picked.start);
+      _endDate = _dateOnly(picked.end);
     });
   }
 
@@ -271,7 +266,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
                                       children: [
                                         _ValuePill(
                                           text: _dateLabel(_startDate),
-                                          onTap: () => _pickDate(isStart: true),
+                                          onTap: _pickDates,
                                         ),
                                         const Padding(
                                           padding: EdgeInsets.symmetric(
@@ -285,8 +280,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
                                         ),
                                         _ValuePill(
                                           text: _dateLabel(_endDate),
-                                          onTap: () =>
-                                              _pickDate(isStart: false),
+                                          onTap: _pickDates,
                                         ),
                                       ],
                                     ),
