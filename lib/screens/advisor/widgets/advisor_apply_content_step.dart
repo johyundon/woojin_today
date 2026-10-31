@@ -16,7 +16,7 @@ final RegExp _jamoPattern = RegExp(r'[\u1100-\u11FF\u3131-\u318E]');
 int advisorContentLength(String text) =>
     text.replaceAll(_jamoPattern, '').trim().length;
 
-/// 마지막 단계: 상담 내용 입력(온라인은 4단계째, 방문은 2단계째).
+/// 마지막 단계: 상담 내용 입력(온라인·방문 모두 4단계째).
 class AdvisorContentStep extends StatelessWidget {
   const AdvisorContentStep({
     super.key,

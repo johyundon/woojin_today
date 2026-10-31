@@ -1,0 +1,361 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	
+	
+
+
+
+
+
+<div id="profSearchPopDiv">
+		
+	<section class="pop_wrapper pop_lg_wrap">
+		<section class="pop_header">
+			<h2>상담사 검색하기</h2>
+			<a href="##" class="pop_close mfp-close" title="팝업창 닫기" id="popCloseBtn">팝업창 닫기</a>
+		</section>
+		
+		<section class="pop_content pop_lg_content">
+			<section class="section_area">
+				<h4 class="hidden">상담사 검색</h4>
+				<form id="searchForm" method="post">
+					<input type="hidden" name="pageIndex" id="pageIndex">
+					<div class="search_box">
+						<div class="search_inner">
+							<div class="search_select">
+								<div class="select_form">
+									<label class="select_common" id="labelText">이름</label>
+									
+									<select class="select_custom" id="convert-onchange-da7b9334_fnSetSearchTextNm" data-param1="this.value"></select>
+										<option value="korNm" selected="selected">이름</option>
+										<option value="staffNo" >직번</option>
+										<option value="deptNm"	>학과</option>
+									</select>
+								</div>
+								<input type="text" class="form_style"  name="korNm" id="searchText" placeholder="검색어를 입력하세요." title="검색어">
+								<input type="text" class="hidden">
+							</div>
+							
+							<button type="button" class="btn btn_search" id="convert-onclick-6db54714_fnSearchBtn">검색</button>
+						</div>
+					</div>
+				</form>
+				<div class="search_toggle_row mg_0">
+					<p class="total_count">Total: 1</p>
+				</div>
+				<div class="tbl tbl_col tbl_fixed scrollx_tbl_xs">
+					<table>
+						<caption>상담사 검색 목록</caption>
+						<colgroup>
+							<col style="width: 25%">
+							<col style="width: auto;">
+							<col style="width: 80px">
+						</colgroup>
+						<thead>
+							<tr>
+								<th scope="col">이름</th>
+								<th scope="col">학과/학부</th>
+								<th scope="col">추가</th>
+							</tr>
+						</thead>
+						<tbody>
+							
+							
+								<tr>
+									<td>김교수</td>
+									<td>AI융합학부</td>
+									<td>
+										
+										<a href="#" class="btn_round btn_sm btn_bo_positive1 wd_60 convert-onclick-d5083134_fnSetProfInfo" data-param1="1234567" data-param2="김교수">추가</a>
+									</td>
+								</tr>
+							
+							
+
+							
+						</tbody>
+					</table>
+				</div>
+				
+				<div class="paging_wrap" id="page_div">
+				</div>
+				
+			</section>
+		</section>
+		
+		<section class="pop_footer border_none"></section>
+		
+	</section>
+	
+</div>
+<script type="text/javascript" nonce="x">
+
+$(document).ready(function(event) {
+
+});
+
+
+
+function fnSearchBtn() {
+	fnGetProfList(1);
+}
+
+
+function fnGetProfList(pageNo) {
+	$('#pageIndex').val(pageNo);
+	var searchSel = $("option:selected");
+	var searchText = $("#searchText").val();
+
+	$.ajax({
+		url : "https://together.daejin.ac.kr:443/profCns/a/n/getProfSearchListPop.do"
+		, type : "post"
+		, dataType : "html"
+		, data : $('#searchForm').serialize()
+		, success : function(res) {
+			$("#profSearchPopDiv").html(res);
+			$("#searchText").attr('name',searchSel.val());
+			$("#labelText").text(searchSel.text());
+			$("#searchText").val(searchText);
+		}
+	});
+}
+
+
+
+function fnSettingLableTxt(_obj) {
+	var labelTxt = $(_obj).children('option:selected').text();
+	$(_obj).siblings('label').text(labelTxt);
+}
+
+
+
+function fnSetProfInfo(_staffNo, _korNm) {
+	$('input[name=comProfId]').val(_staffNo);
+	$('input[name=coaResrvCnlsrId]').val(_staffNo);
+	$('#cnsNm').text(_korNm);
+	$('#popCloseBtn').trigger('click');
+}
+
+function fnSetSearchTextNm(selvalue) {
+	$("#searchText").attr("name", selvalue);
+
+}
+
+</script>
+<script type="text/javascript" nonce="x">
+    $('#convert-onclick-6db54714_fnSearchBtn').on('click', function(event) {
+        event.preventDefault();
+        fnSearchBtn();
+    });
+    $('.convert-onclick-d5083134_fnSetProfInfo').on('click', function(event) {
+        event.preventDefault();
+        const param1 = $(this).data('param1');
+        const param2 = $(this).data('param2');
+        fnSetProfInfo(param1,param2);
+    });
+</script>
+<script type="text/javascript" nonce="x">
+    $('#convert-onchange-da7b9334_fnSetSearchTextNm').on('change', function(event) {
+        event.preventDefault();
+         const param1 = $(this).val();
+        fnSetSearchTextNm(param1);
+		fnSettingLableTxt(this)
+    });
+</script>
+<script type="text/javascript" nonce="x">
+    var currentPage = '1';
+    var totalCnt = '1';
+    if(totalCnt) {
+    var totalPageCount = Math.ceil(totalCnt/parseInt(5));
+     fnCreatePageingView(totalCnt, 5, 5, currentPage, totalPageCount, "page_div")
+     }
+     $('.firstPage').on('click', function() {
+         var page = $("#searchForm input[name=pageIndex]").val();
+        fnGoPageMove(1, 'cur', page, fnGetProfList, 5);
+         return false;
+     });
+     $('.prePage').on('click', function() {
+         var page = $("#searchForm input[name=pageIndex]").val();
+        fnGoPageMove(1, 'pre', page, fnGetProfList, 5);
+     });
+     $('.active').on('click', function() {
+         var page = $(this).data("page");
+        fnGoPageMove(page,'cur', page,fnGetProfList, 5);
+      });
+     $('.move').on('click', function() {
+         var page = $(this).data("page");
+         fnGoPageMove(page,'cur',page,fnGetProfList, 5);
+     });
+     $('.nextPage').on('click', function() {
+         var page = $("#searchForm input[name=pageIndex]").val();
+          fnGoPageMove(1,'next',page,fnGetProfList, 5);
+     });
+     $('.last_page').on('click', function() {
+         var total = $(this).data("total")
+         var page = $("#searchForm input[name=pageIndex]").val();
+         fnGoPageMove(total,'nextAll', page, fnGetProfList, 5);
+     });
+     $(document).on('click', 'a[href="javascript:void(0);"]', function() {
+         event.preventDefault();
+     });
+</script>

@@ -82,10 +82,10 @@ class TwinClient {
   /// 요청을 보내고 (최종 상태 코드, 최종 주소, 본문)을 돌려준다.
   /// [followRedirects]면 3xx를 직접 따라가며 각 서버의 쿠키를 주고받는다.
   Future<(int, Uri, String)> send(
-    http.Request request, {
+    http.BaseRequest request, {
     bool followRedirects = true,
   }) async {
-    var current = request;
+    http.BaseRequest current = request;
     for (var hop = 0; hop <= _maxRedirects; hop++) {
       current
         ..followRedirects = false

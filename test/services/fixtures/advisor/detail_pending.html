@@ -1,0 +1,356 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	
+	
+
+
+
+
+
+<section class="pop_wrapper pop_md_wrap">
+	<section class="pop_header">
+		<h2>상세보기</h2>
+		<a href="#" class="pop_close mfp-close hidden" title="팝업창 닫기" id="closePopBtn">팝업창 닫기</a>
+	</section>
+	
+	<section class="pop_content pop_sm_content">
+		<div class="tbl tbl_row">
+			<table class="tbl_fixed">
+				<caption>상세보기</caption>
+				<colgroup>
+					<col style="width:35%;">
+					<col style="width:65%;">
+				</colgroup>
+				<tbody>
+					<tr>
+						<th scope="row">신청일시</th>
+						<td>2026-09-24</td>
+					</tr>
+					
+					<tr>
+						<th scope="row">상태</th>
+						<td class="font_nightblue bold">상담 대기</td>
+					</tr>
+					<tr>
+						<th scope="row">신청 내용</th>
+						<td> 교수님 상담 신청드립니다. </td>
+					</tr>
+					<tr>
+						<th scope="row">나의 첨부파일</th>
+						<td>
+							
+
+							
+
+							<form action="" method ="post" enctype="multipart/form-data" id="fileUploadForm">
+								<input type="hidden" name="fimReferKeyId" value="COM000000000001">
+								<input type="hidden" name="regId" value="20230000">
+
+								<div class="attach_file_wrapper"  id="attach_file_box_Div">
+									<input type="hidden" name="CNSGB01_idx" id="CNSGB01_idx" value="1" >
+									<div class="attach_file_box">
+										
+										<input type="file" name="CNSGB01" id="CNSGB01" class="hidden convert-onchange-fnOnChangeFileNm" data-param1="this" data-param2="Y" data-param3="1" data-param4="" data-param5="CLIENT">
+										<label class="attach_file"  for="CNSGB01" id="CNSGB01_label">파일첨부</label>
+									</div>
+								</div>
+								<p class="mg_t5 font_magenta">※ 파일 첨부는 1개만 가능합니다.</p>
+							</form>
+						</td>
+					</tr>
+					
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section class="pop_footer">
+		<div>
+			
+			<button type="button" class="btn_round btn_md btn_positive1 wd_95" id="convert-onclick-25791b9b_fnClosePop">확인</button>
+		</div>
+	</section>
+</section>
+
+
+<script type="text/javascript" nonce="x">
+
+	$(document).ready(function(){
+		if($(".stdFile").length == 0){
+			$("#fileUploadForm").show();
+		}else{
+			$("#fileUploadForm").hide();
+		}
+	});
+
+
+	function fnClosePop() {
+		if( $(".attach_file_box input").length > 1 ){
+			// 파일 업로드
+			if (confirm("첨부파일을 저장하시겠습니까?")) {
+				var _url = "https://together.daejin.ac.kr:443/cnsHis/w/n/createOnCnsStdFileAttach.do";
+				$("#fileUploadForm").ajaxForm({
+					url : _url,
+					type : "POST",
+					dataType : "json",
+					success : function(res){
+						if (res.rtnCode == "0") {
+							alert("첨부파일 업로드에 성공하였습니다.");
+							$("#closePopBtn").trigger('click');
+						}else{
+							alert("첨부파일 업로드에 실패하였습니다.(2)");
+						}
+					},
+					clearForm : false,
+					resetForm : false,
+					semantic : false,
+					error : function(_xmlHttpRequest, _stateMessage, _errorObject) {
+						alert("첨부파일 업로드에 실패하였습니다.(1)");
+					}
+				});
+				$("#fileUploadForm").submit();
+			}
+		}else{
+			$("#closePopBtn").trigger('click');
+		}
+	}
+
+
+	function fnDelAddFileDataForCnsHis(objId, fileSubId, staffType) {
+		if(confirm("첨부파일을 삭제하시겠습니까?")){
+			if(isEmpty(fileSubId) == false) {
+				var basePath = sessionStorage.getItem("contextRootPath");
+				var _url = basePath+"/cmm/fms/removeFileData.do";
+				jQuery.ajax({
+					type: "POST",
+					url: _url,
+					dataType: "json",
+					data : {
+						fileSubId   : fileSubId
+					},
+					success: function(r) {
+						if (r.rtnCode == '0') {
+							if(staffType == 'CLIENT'){
+								var delObjId = objId.replace('_del','');
+								$("#"+delObjId+"_link_file_delDiv").remove();
+								$("#"+delObjId).remove();
+								$("#fileUploadForm").show();
+							}else{
+								var delObjId = objId.replace('_del','');
+								$("#"+objId).parent(".file_thumbnail").remove();
+								$("#"+delObjId).remove();
+							}
+						} else {
+							 alert("첨부파일 삭제에 실패 하였습니다.");
+							 return false;
+						}
+					},error: function(r) {
+					}
+				});
+
+			}else{
+				if(staffType == 'CLIENT'){
+					var delObjId = objId.replace('_del','');
+					$("#"+delObjId+"_link_file_delDiv").remove();
+					$("#"+delObjId).remove();
+				}else{
+					var delObjId = objId.replace('_del','');
+					$("#"+objId).parent(".file_thumbnail").remove();
+					$("#"+delObjId).remove();
+				}
+			}
+		}
+	}
+
+</script>
+<script type="text/javascript" nonce="x">
+    $('.convert-onclick-38a5851c_fn_fileDownload').on('click', function(event) {
+        event.preventDefault();
+        const param1 = $(this).data('param1');
+        const param2 = $(this).data('param2');
+        fn_fileDownload(param1,param2);
+    });
+    $('.convert-onclick-dcd54e21_fn_fileDownload').on('click', function(event) {
+        event.preventDefault();
+        const param1 = $(this).data('param1');
+        const param2 = $(this).data('param2');
+        fn_fileDownload(param1,param2);
+    });
+    $('#convert-onclick-25791b9b_fnClosePop').on('click', function(event) {
+        event.preventDefault();
+        fnClosePop();
+    });
+</script>
+<script type="text/javascript" nonce="x">
+    $('.convert-onchange-fnOnChangeFileNm').on('change', function(event) {
+        event.preventDefault();
+        const param2 = $(this).data('param2');
+        const param3 = $(this).data('param3');
+        const param4 = $(this).data('param4');
+        const param5 = $(this).data('param5');
+        fnOnChangeFileNm(this,param2,param3,param4,param5);
+    });
+</script>
+<script type="text/javascript" nonce="x">
+    $('.convert-onerror-abd14d60').on('error', function(event){
+        $(this).attr('src','https://together.daejin.ac.kr:443/contents/images/client/sub/img_nophoto.png')
+    });
+</script>

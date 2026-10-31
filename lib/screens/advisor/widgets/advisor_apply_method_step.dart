@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
-import '../services/advisor_consultation_mock_data.dart';
 import 'advisor_apply_common.dart';
 import 'advisor_apply_visit_schedule_picker.dart';
 
@@ -59,7 +58,8 @@ class AdvisorMethodStep extends StatelessWidget {
 }
 
 /// 1단계(방문 흐름): 상담교수 방식 선택 + 방문 날짜·시간 선택을 한 카드에서
-/// 처리한다(방문은 전화/이메일 단계를 거치지 않는다).
+/// 처리한다. 그 뒤 전화번호 → 이메일 → 상담 내용은 온라인과 같다(학교 방문
+/// 신청에도 전화번호·이메일이 들어간다).
 class AdvisorMethodAndScheduleStep extends StatelessWidget {
   const AdvisorMethodAndScheduleStep({
     super.key,
@@ -73,6 +73,10 @@ class AdvisorMethodAndScheduleStep extends StatelessWidget {
     required this.selectedVisitTime,
     required this.onSelectVisitDate,
     required this.onSelectVisitTime,
+    required this.times,
+    required this.timesLoading,
+    required this.timesError,
+    required this.onRetryTimes,
   });
 
   final int step;
@@ -86,10 +90,14 @@ class AdvisorMethodAndScheduleStep extends StatelessWidget {
   final ValueChanged<DateTime> onSelectVisitDate;
   final ValueChanged<String> onSelectVisitTime;
 
+  /// 고른 날짜의 상담 가능 시간과 그 조회 상태.
+  final List<String> times;
+  final bool timesLoading;
+  final String? timesError;
+  final VoidCallback onRetryTimes;
+
   @override
   Widget build(BuildContext context) {
-    final times = AdvisorConsultationMockData.visitAvailableTimes;
-
     return AdvisorApplyCard(
       children: [
         AdvisorApplyStepHeader(
@@ -114,16 +122,16 @@ class AdvisorMethodAndScheduleStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        if (times.isEmpty)
-          const AdvisorNoVisitSlotsNotice()
-        else
-          AdvisorVisitSchedulePicker(
-            times: times,
-            selectedVisitDate: selectedVisitDate,
-            selectedVisitTime: selectedVisitTime,
-            onSelectVisitDate: onSelectVisitDate,
-            onSelectVisitTime: onSelectVisitTime,
-          ),
+        AdvisorVisitSchedulePicker(
+          times: times,
+          timesLoading: timesLoading,
+          timesError: timesError,
+          onRetryTimes: onRetryTimes,
+          selectedVisitDate: selectedVisitDate,
+          selectedVisitTime: selectedVisitTime,
+          onSelectVisitDate: onSelectVisitDate,
+          onSelectVisitTime: onSelectVisitTime,
+        ),
         const SizedBox(height: 20),
         AdvisorApplyPrimaryButton(
           label: '다음',

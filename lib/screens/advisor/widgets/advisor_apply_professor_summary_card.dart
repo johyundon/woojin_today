@@ -117,7 +117,7 @@ class _SelectedProfessorLabel extends StatelessWidget {
       );
     }
 
-    return Text(
+    final name = Text(
       professor.isAdvisor
           ? '${professor.name} (지도교수)'
           : '${professor.name} (${professor.department})',
@@ -126,6 +126,20 @@ class _SelectedProfessorLabel extends StatelessWidget {
         fontSize: 17,
         fontWeight: FontWeight.w800,
       ),
+    );
+    if (professor.isAdvisor) return name;
+    // 학교 신청 화면도 지도교수가 아니면 같은 내용을 확인받는다.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        name,
+        const SizedBox(height: 2),
+        const Text(
+          '지도교수님이 아니면 상담 인정 횟수에 들어가지 않아요',
+          style: TextStyle(color: _mutedText, fontSize: 12),
+        ),
+      ],
     );
   }
 }

@@ -1,13 +1,11 @@
 import '../models/advisor_consultation_models.dart';
 
-/// "지도교수 상담" 화면의 상담 현황/신청 목데이터.
+/// "지도교수 상담" 화면의 예전 목데이터(v4 시안에서 읽은 값).
 ///
-/// *** 중요: 서버 API 없음 ***
-/// API 명세서(daejin-api-spec-reference)에 상담 인정 횟수/이력 조회나 상담
-/// 신청에 대응하는 엔드포인트가 없다. 그래서 지도교수 성함을 제외한 이
-/// 화면의 데이터는 전부 하드코딩된 목데이터로만 동작한다 — 추측으로 서버
-/// API를 만들어 호출하지 않는다. 나중에 실제 API가 생기면 이 파일만
-/// 교체하면 된다.
+/// 이제 화면은 T-WIN 실제 데이터(`AdvisorConsultationService`)를 쓴다. 이
+/// 파일에서 화면이 아직 쓰는 것은 방문 예약 가능 기간
+/// ([visitBookingWindowStart]/[visitBookingWindowEnd])뿐이고, 나머지 값은
+/// 시안 비교·디자인 확인용으로 남겨 둔다(지우지 않음).
 class AdvisorConsultationMockData {
   AdvisorConsultationMockData._();
 
@@ -72,11 +70,8 @@ class AdvisorConsultationMockData {
     ProfessorOption(name: '김정민', department: 'AI융합학부'),
   ];
 
-  // 방문 상담 예약 가능 기간 — "오늘 ~ 오늘로부터 3개월"을 전부 고를 수
-  // 있게 연다("방문 상담 가능 시간 없음" 빈 상태(v4 시안 13-8)의 "앞으로
-  // 3개월 안에..." 문구와 범위를 맞췄다). 실제 교수님 스케줄 API가 없어
-  // 날짜별로 다른 시간대를 둘 근거가 없으므로, 이 범위 안 날짜는 전부
-  // 아래 [visitAvailableTimes]를 공통으로 쓴다.
+  // 방문 상담 예약 가능 기간 — "오늘 ~ 오늘로부터 3개월"을 달력에서 고를 수
+  // 있게 연다. 고른 날짜의 실제 가능 시간은 그때 T-WIN에 묻는다.
   static DateTime visitBookingWindowStart() {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
@@ -85,8 +80,7 @@ class AdvisorConsultationMockData {
   static DateTime visitBookingWindowEnd() =>
       visitBookingWindowStart().add(const Duration(days: 90));
 
-  // 하루당 상담 가능 시간대 6개(v4 시안의 "10~17시" 구성을 그대로 씀).
-  // 비우면 "방문 상담 가능 시간 없음" 빈 상태가 뜬다.
+  // 시안의 하루 상담 가능 시간대 예시(10~17시). 화면은 쓰지 않는다.
   static const List<String> visitAvailableTimes = [
     '10:00',
     '11:00',

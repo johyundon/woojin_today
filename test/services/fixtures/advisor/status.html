@@ -1,0 +1,424 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	
+	
+
+
+
+
+
+	<div class="section_grid grid_row_lg">
+		<div class="grid_col col_xl_6 col_md_6 ">
+			<h4 class="section_tit_md">나의 상담 참여현황</h4>
+			
+				<div class="graph_grid status_counsel">
+					<ul class="counsel_division">
+						
+							
+								<li class="employment">
+									취창업상담
+									<strong>2회</strong>
+								</li>
+							
+							
+							
+							
+							
+							
+						
+							
+							
+								<li class="center">
+									학생생활센터 상담
+									<strong>0회</strong>
+								</li>
+							
+							
+							
+							
+							
+						
+							
+							
+							
+								<li class="military">
+									예비군 및 병역상담
+									<strong>0회</strong>
+								</li>
+							
+							
+							
+							
+						
+							
+							
+							
+							
+								<li class="bachelor">
+									학사상담
+									<strong>0회</strong>
+								</li>
+							
+							
+							
+						
+							
+							
+							
+							
+							
+								<li class="sexual">
+									인권침해신고센터
+									<strong>0회</strong>
+								</li>
+							
+							
+						
+							
+							
+							
+							
+							
+							
+								<li class="scholarship">
+									장학 및 학생복지상담
+									<strong>1회</strong>
+								</li>
+							
+						
+					</ul>
+					<div id="chart1">
+					</div>
+				</div>
+			
+		</div>
+
+		
+			<div class="grid_col col_xl_6 col_md_6">
+				<h4 class="section_tit_md">지도교수 상담(의무) 인정</h4>
+				<div class="graph_grid mystatus_box">
+					<div class="professor_box">
+						<p>
+							<strong id="pfcCnsCnt"></strong><br/>(책임지도교수 상담인정 횟수/졸업기준)
+						</p>
+					</div>
+					<div class="tbl tbl_col tbl_fixed">
+						<table>
+							<caption>지도교수 상담</caption>
+							<thead>
+								<tr>
+									<th scope="col"></th>
+									<th scope="row">1학년</th>
+									<th scope="row">2학년</th>
+									<th scope="row">3학년</th>
+									<th scope="row">4학년</th>
+									<th scope="row">누적</th>
+									<th scope="row">비고</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<th scope="row" class="bg_td">1학기</th>
+									<td id="term1_1">-</td>
+									<td id="term1_2">-</td>
+									<td id="term1_3">-</td>
+									<td id="term1_4">-</td>
+									<td rowspan="3"><span id="allGrdSum">0회</span></td>
+									<td rowspan="3" id="allGrdGbn">미충족</td>
+								</tr>
+								<tr>
+									<th scope="row" class="bg_td">2학기</th>
+									<td id="term2_1">-</td>
+									<td id="term2_2">-</td>
+									<td id="term2_3">-</td>
+									<td id="term2_4">-</td>
+								</tr>
+								<tr>
+									<th scope="row" class="bg_td">합계</th>
+									<td id="grd_sum_1">-</td>
+									<td id="grd_sum_2">-</td>
+									<td id="grd_sum_3">-</td>
+									<td id="grd_sum_4">-</td>
+								</tr>
+							</tbody>
+						</table>
+						<p style="color: red">* 현재까지의 책임지도교수 상담 및 대체프로그램 이수 인정 내역이 포함 된 현황</p>
+						<p>* 학칙시행세칙 제92조(졸업의 기준)에 의해 졸업 시까지 지도교수 상담을 12회 완료하여야 함
+							</br>(1,2학년 학기당 2회 = 총 8회,
+							3,4학년 학기당 1회 = 총 4회)</p>
+					</div>
+				</div>
+			</div>
+		
+	</div>
+
+<div id="graduteCnsProStatusDiv">
+</div>
+
+
+
+
+<script type="text/javascript" nonce="x">
+
+	$(document).ready(function() {
+
+		if( "LoginVO [userId=20230000, userName=홍길동, shyrCd=3, guidStaffNm=김교수, guidStaffNo=1234567, shregSt=B01021]" != "" ){
+			setGraduteCnsStatus();
+			getGraduteCnsProStatusDiv();
+		}
+	});
+
+	
+	function getGraduteCnsProStatusDiv() {
+		var _url = "https://together.daejin.ac.kr:443/mileageHis/a/n/getGraduteCnsProStatusAjax.do";
+		$.ajax({
+			 url : _url
+			, type : "post"
+			, dataType : "html"
+			, data : {
+				userId :'20230000',
+				cnsDiv : "CNSGB01",
+				genFgNm : "남",
+				shyrCd : "3",
+				showType : ""
+			}
+			, success : function(res) {
+				$("#graduteCnsProStatusDiv").empty();
+				$("#graduteCnsProStatusDiv").html(res);
+			}
+			, error : function(request, status, error) {
+			}
+		});
+	}
+
+	/* 지도교수 상담(의무)인정 cnt 셋팅 */
+	function setGraduteCnsStatus() {
+		var cntByGrade = [0, 0, 0, 0]
+			,allGrdSum = 0;
+
+		var stdShyr = "3"
+			,stdTerm = "2 ";
+
+		
+			var cnt = parseInt("3")
+				,grade = parseInt("1");
+
+			// 학년별 상담 횟수 누적
+			cntByGrade[grade-1] += cnt;
+			$("#term"+1+"_"+grade).text(cnt+'회');
+		
+			var cnt = parseInt("2")
+				,grade = parseInt("1");
+
+			// 학년별 상담 횟수 누적
+			cntByGrade[grade-1] += cnt;
+			$("#term"+2+"_"+grade).text(cnt+'회');
+		
+			var cnt = parseInt("2")
+				,grade = parseInt("2");
+
+			// 학년별 상담 횟수 누적
+			cntByGrade[grade-1] += cnt;
+			$("#term"+1+"_"+grade).text(cnt+'회');
+		
+			var cnt = parseInt("2")
+				,grade = parseInt("2");
+
+			// 학년별 상담 횟수 누적
+			cntByGrade[grade-1] += cnt;
+			$("#term"+2+"_"+grade).text(cnt+'회');
+		
+			var cnt = parseInt("1")
+				,grade = parseInt("3");
+
+			// 학년별 상담 횟수 누적
+			cntByGrade[grade-1] += cnt;
+			$("#term"+1+"_"+grade).text(cnt+'회');
+		
+
+		// 각 학년별 합계를 계산하여 합계 추가
+		for (var i = 0; i < cntByGrade.length; i++) {
+			allGrdSum += cntByGrade[i];
+			$("#grd_sum_"+(i+1)).text(cntByGrade[i] > 0 ? cntByGrade[i]+'회' : '-');
+		}
+
+		// 대체프로그램 이수 카운트 ++ >> 상담횟수 조회하는 곳에서 프로그램까지 포함함.
+		//allGrdSum += parseInt(("0")); 
+
+		// 편입학일 경우, 목표횟수가 4, 일반학생은 12회
+		var goalCnt = ("B01021" == 'B01003' ? '4' : '12');
+		$("#allGrdSum").text(allGrdSum+'회');
+		$("#pfcCnsCnt").text(allGrdSum+'/'+goalCnt+' (회)');
+
+		// 조회대상자가 4학년 2학기일 때, 목표횟수에 따라 text분기 / 4학년 2학기 이전일 경우 출력 X (하이픈)
+		if(stdShyr == '4' && stdTerm == '2'){
+			if(allGrdSum >= goalCnt){
+				$("#allGrdGbn").text('충족');
+			}else{
+				$("#allGrdGbn").text('미충족');
+			}
+		}else{
+			$("#allGrdGbn").text('-');
+		}
+	}
+
+</script>
+

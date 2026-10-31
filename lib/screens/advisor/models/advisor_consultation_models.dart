@@ -29,7 +29,9 @@ class ConsultationDetail {
   final String? answerContent;
 }
 
-/// "지도교수 상담 현황" 탭 이력 리스트 한 줄.
+/// "지도교수 상담 현황" 탭 이력 리스트 한 줄. 지금은 목데이터
+/// ([AdvisorConsultationMockData])에서만 쓴다 — 화면은 T-WIN 이력
+/// (`ConsultationRecord`)을 쓴다.
 class ConsultationHistory {
   const ConsultationHistory({
     required this.date,
@@ -55,16 +57,21 @@ class SemesterStatRow {
   final List<String> values;
 }
 
-/// 상담 신청 대상 교수 한 명. [isAdvisor]가 true면 본인의 실제 지도교수(검색
-/// 패널 첫 줄에 항상 고정)이고, 그 외에는 목데이터 속 다른 교수다.
+/// 상담 신청 대상 교수 한 명. [isAdvisor]가 true면 본인의 지도교수(검색
+/// 패널 첫 줄에 항상 고정)이고, 그 외에는 T-WIN 교수 검색 결과다.
 class ProfessorOption {
   const ProfessorOption({
     required this.name,
     required this.department,
+    this.staffNo,
     this.isAdvisor = false,
   });
 
   final String name;
   final String department;
+
+  /// T-WIN 직번. 방문 시간 조회와 신청에 쓴다. 지도교수는 상담 현황을 다
+  /// 불러오기 전까지 null일 수 있다.
+  final String? staffNo;
   final bool isAdvisor;
 }

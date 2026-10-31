@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../config/advisor_submit_config.dart';
+import '../../services/advisor_consultation_service.dart';
+import '../../services/credential_storage.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
 import '../../services/student_info_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/top_banner.dart';
 import 'widgets/advisor_apply_tab.dart';
+import 'widgets/advisor_load_states.dart';
 import 'widgets/advisor_segmented_tabs.dart';
 import 'widgets/advisor_status_tab.dart';
 
@@ -16,15 +21,20 @@ const Color _mutedLavender = Color(0xFFD7D9F5);
 /// 세그먼트 탭이 뜨고, 그 아래 흰 카드들에 탭 내용이 담긴다
 /// (우진이의 하루 v4 시안, standalone.html "13-1~13-10" 화면).
 ///
-/// 지도교수 성함만큼은 이 화면에서 유일하게 실제 연동이 있다 — 포털
-/// 로그인으로 얻은 [userId2]로 [StudentInfoService]를 호출해 조회한다(home_screen.dart와 같은
-/// 패턴). 그 외 상담 인정 횟수/학기별 표/이력/다른 교수 목록/방문 상담
-/// 가능 시간은 API 명세서에 대응 엔드포인트가 없어
-/// [AdvisorConsultationMockData]의 하드코딩된 목데이터로만 동작한다.
+/// 지도교수 성함은 포털 로그인으로 얻은 [userId2]로 [StudentInfoService]를
+/// 호출해 조회한다(home_screen.dart와 같은 패턴). 상담 인정 횟수·학기별 표·
+/// 이력·상세·교수 검색·방문 가능 시간은 저장된 학번·비밀번호로 T-WIN에
+/// 로그인해 [AdvisorConsultationService]로 받는다.
+///
+/// 상담 신청은 교수님께 진짜 요청이 가므로 [allowRealSubmit]
+/// (`kAllowRealAdvisorSubmit`)가 false면 보내지 않는다.
 class AdvisorConsultationScreen extends StatefulWidget {
   const AdvisorConsultationScreen({
     required this.userId2,
     this.studentInfoService,
+    this.consultationService,
+    this.readCredentials,
+    this.allowRealSubmit = kAllowRealAdvisorSubmit,
     super.key,
   });
 
@@ -36,6 +46,14 @@ class AdvisorConsultationScreen extends StatefulWidget {
   /// 테스트에서 [StudentInfoService]를 가짜로 바꿔 끼우려고 주입할 수 있다.
   final StudentInfoServiceBase? studentInfoService;
 
+  /// 테스트용 주입 지점들.
+  final AdvisorConsultationServiceBase? consultationService;
+  final Future<({String userId, String userPwd})?> Function()? readCredentials;
+
+  /// 실제 신청을 보낼지. 테스트에서만 바꾼다 — 앱에서는 항상 기본값
+  /// (`kAllowRealAdvisorSubmit`)을 쓴다.
+  final bool allowRealSubmit;
+
   @override
   State<AdvisorConsultationScreen> createState() =>
       _AdvisorConsultationScreenState();
@@ -45,8 +63,16 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
   int _selectedTab = 0;
 
   late final StudentInfoServiceBase _studentInfoService;
+  late final AdvisorConsultationServiceBase _consultationService =
+      widget.consultationService ?? AdvisorConsultationService();
   String? _advisorName;
   bool _advisorLoading = true;
+  StudentInfoResponse? _studentInfo;
+
+  ({String userId, String userPwd})? _credentials;
+  AdvisorOverview? _overview;
+  bool _overviewLoading = true;
+  String? _overviewError;
 
   @override
   void initState() {
@@ -54,6 +80,7 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
     _studentInfoService =
         widget.studentInfoService ?? ServiceFactory.studentInfo();
     _loadAdvisorName();
+    _loadOverview();
   }
 
   /// [widget.userId2]가 없으면(세션 정보 없음) 네트워크 호출 자체를 하지
@@ -77,6 +104,7 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
       );
       if (!mounted) return;
       setState(() {
+        _studentInfo = info;
         _advisorName = info.advisorName;
         _advisorLoading = false;
       });
@@ -88,6 +116,85 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
         _advisorLoading = false;
       });
     }
+  }
+
+  /// 저장된 학번·비밀번호로 상담 인정 현황과 이력을 받는다. [forceRefresh]면
+  /// 기기 저장분(7일)을 무시한다(당겨서 새로고침, 신청 직후).
+  Future<void> _loadOverview({bool forceRefresh = false}) async {
+    setState(() {
+      _overviewLoading = true;
+      _overviewError = null;
+    });
+    var credentials = _credentials;
+    if (credentials == null) {
+      try {
+        credentials =
+            await (widget.readCredentials ?? CredentialStorage().read)();
+      } catch (e) {
+        debugPrint('[AdvisorConsultation] 로그인 정보 읽기 실패: $e');
+      }
+      if (!mounted) return;
+      if (credentials == null) {
+        setState(() {
+          _overviewLoading = false;
+          _overviewError = '저장된 로그인 정보가 없어요. 다시 로그인해 주세요.';
+        });
+        return;
+      }
+      setState(() => _credentials = credentials);
+    }
+    try {
+      final overview = await _consultationService.fetchOverview(
+        userId: credentials.userId,
+        userPwd: credentials.userPwd,
+        forceRefresh: forceRefresh,
+      );
+      if (!mounted) return;
+      setState(() {
+        _overview = overview;
+        _overviewLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[AdvisorConsultation] 상담 현황 조회 실패: $e');
+      if (!mounted) return;
+      setState(() {
+        _overviewLoading = false;
+        _overviewError = advisorErrorMessage(e);
+      });
+      // 이미 보여주던 현황이 있으면 그대로 두고 실패만 알린다.
+      if (_overview != null) {
+        showTopBanner(
+          context,
+          title: '새로 불러오지 못했어요',
+          message: advisorErrorMessage(e),
+          icon: Icons.error_outline_rounded,
+        );
+      }
+    }
+  }
+
+  Future<ConsultationDetailInfo> _loadDetail(ConsultationRecord record) {
+    final credentials = _credentials;
+    if (credentials == null) {
+      return Future.error(StateError('로그인 정보 없음'));
+    }
+    return _consultationService.fetchDetail(
+      userId: credentials.userId,
+      userPwd: credentials.userPwd,
+      record: record,
+    );
+  }
+
+  /// 방문 신청의 학생 정보 칸. 학교 화면처럼 '학번 학과 학년 이름'.
+  String? get _studentInfoLine {
+    final info = _studentInfo;
+    final userId = _credentials?.userId;
+    if (info == null || userId == null) return null;
+    final department = info.department;
+    final grade = info.grade;
+    final name = info.name;
+    if (department == null || grade == null || name == null) return null;
+    return '$userId $department $grade $name';
   }
 
   @override
@@ -147,11 +254,24 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
               const SizedBox(height: 16),
               Expanded(
                 child: _selectedTab == 0
-                    ? const AdvisorStatusTab()
+                    ? AdvisorStatusTab(
+                        overview: _overview,
+                        loading: _overviewLoading,
+                        errorMessage: _overviewError,
+                        onRetry: _loadOverview,
+                        onRefresh: () => _loadOverview(forceRefresh: true),
+                        loadDetail: _loadDetail,
+                      )
                     : AdvisorApplyTab(
+                        service: _consultationService,
+                        credentials: _credentials,
                         advisorName: _advisorName,
                         advisorLoading: _advisorLoading,
+                        advisorStaffNo: _overview?.advisorStaffNo,
+                        studentInfoLine: _studentInfoLine,
+                        allowRealSubmit: widget.allowRealSubmit,
                         onViewStatus: () => setState(() => _selectedTab = 0),
+                        onSubmitted: () => _loadOverview(forceRefresh: true),
                       ),
               ),
             ],
