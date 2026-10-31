@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
 import 'ringing_bell.dart';
 
@@ -89,7 +90,7 @@ class EventRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: _Pressable(
+            child: Pressable(
               onTap: onTap,
               pressedOpacity: 0.75,
               child: Container(
@@ -147,7 +148,7 @@ class EventRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     // 알림 켜짐: 파란 원 + 흰 종 / 꺼짐: 흰 원 + 회색 종.
-                    _Pressable(
+                    Pressable(
                       onTap: () => onReminderToggled(!event.hasReminder),
                       pressedScale: 0.88,
                       haptic: HapticFeedback.lightImpact,
@@ -190,91 +191,4 @@ String _formatTime(TimeOfDay time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
-}
-
-/// 누르는 동안 살짝 작아졌다가(카드는 옅어지기도 한다) 손을 떼면 돌아오는 효과, 그리고
-/// 가벼운 진동으로 "눌렀다"는 느낌을 준다. 아주 짧게 톡 쳐도 효과가 보이도록
-/// 손을 뗀 뒤 잠깐 눌린 모양을 유지한다.
-///
-/// 카드 안의 종 버튼처럼 [_Pressable] 안에 또 [_Pressable]이 있으면, 안쪽을 누르는
-/// 동안 바깥쪽은 눌린 모양이 되지 않는다(두 탭 인식기가 모두 눌림 신호를 받기 때문).
-class _Pressable extends StatefulWidget {
-  const _Pressable({
-    required this.onTap,
-    required this.child,
-    this.pressedScale = 0.97,
-    this.pressedOpacity = 1,
-    this.haptic = HapticFeedback.selectionClick,
-    this.releaseCurve = Curves.easeOut,
-    this.releaseDuration = const Duration(milliseconds: 110),
-  });
-
-  final VoidCallback onTap;
-  final Widget child;
-  final double pressedScale;
-  final double pressedOpacity;
-  final Future<void> Function() haptic;
-  final Curve releaseCurve;
-  final Duration releaseDuration;
-
-  @override
-  State<_Pressable> createState() => _PressableState();
-}
-
-class _PressableState extends State<_Pressable> {
-  static const _pressDuration = Duration(milliseconds: 110);
-
-  bool _pressed = false;
-
-  /// 안쪽 [_Pressable]이 이번 손가락을 가져갔으면 true(손을 떼면 풀린다).
-  bool _blockedByInner = false;
-
-  void _setPressed(bool value) {
-    if (_pressed != value && mounted) setState(() => _pressed = value);
-  }
-
-  Future<void> _release() async {
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    _setPressed(false);
-  }
-
-  void _blockOuter() =>
-      context.findAncestorStateOfType<_PressableState>()?._blockedByInner =
-          true;
-
-  void _unblock() => _blockedByInner = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final duration = _pressed ? _pressDuration : widget.releaseDuration;
-    final curve = _pressed ? Curves.easeOut : widget.releaseCurve;
-    return Listener(
-      onPointerDown: (_) => _blockOuter(),
-      onPointerUp: (_) => _unblock(),
-      onPointerCancel: (_) => _unblock(),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) {
-          if (!_blockedByInner) _setPressed(true);
-        },
-        onTapUp: (_) => _release(),
-        onTapCancel: () => _setPressed(false),
-        onTap: () {
-          widget.haptic();
-          widget.onTap();
-        },
-        child: AnimatedScale(
-          scale: _pressed ? widget.pressedScale : 1,
-          duration: duration,
-          curve: curve,
-          child: AnimatedOpacity(
-            opacity: _pressed ? widget.pressedOpacity : 1,
-            duration: duration,
-            curve: curve,
-            child: widget.child,
-          ),
-        ),
-      ),
-    );
-  }
 }

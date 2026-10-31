@@ -4,6 +4,8 @@ import '../../services/notice_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/pressable.dart';
+import '../calendar/widgets/ringing_bell.dart';
 import '../../widgets/mascot_sticker.dart';
 import 'models/notice_item.dart';
 import 'services/notice_read_storage.dart';
@@ -130,7 +132,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        GestureDetector(
+                        Pressable.icon(
                           onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width: 40,
@@ -181,7 +183,8 @@ class _NoticeScreenState extends State<NoticeScreen> {
                             const SizedBox(width: 8),
                             // 시안에는 없지만 기존 "새 글 알림 받기" 기능을 남긴
                             // 작은 종 버튼.
-                            GestureDetector(
+                            // 켜는 순간 종이 흔들리며 울린다.
+                            Pressable.icon(
                               onTap: () => _onNotifyToggled(!_notifyEnabled),
                               child: Container(
                                 width: 30,
@@ -190,12 +193,15 @@ class _NoticeScreenState extends State<NoticeScreen> {
                                   color: AppColors.cobaltDeep,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  _notifyEnabled
-                                      ? Icons.notifications_active
-                                      : Icons.notifications_off,
-                                  size: 16,
-                                  color: Colors.white,
+                                child: Center(
+                                  child: RingingBell(
+                                    active: _notifyEnabled,
+                                    size: 16,
+                                    activeColor: Colors.white,
+                                    inactiveColor: Colors.white.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -374,9 +380,12 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
-      child: Container(
+      pressedScale: 0.92,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         alignment: Alignment.center,
         decoration: BoxDecoration(

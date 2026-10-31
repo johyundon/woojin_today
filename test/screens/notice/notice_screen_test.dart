@@ -198,7 +198,7 @@ void main() {
     expect(find.byIcon(Icons.notifications_active), findsOneWidget);
     await tester.tap(find.byIcon(Icons.notifications_active));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.notifications_off), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
