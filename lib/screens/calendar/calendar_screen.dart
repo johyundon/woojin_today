@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../services/academic_schedule_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/weekday_labels.dart';
 import 'event_edit_screen.dart';
 import 'models/calendar_event.dart';
+import 'services/academic_schedule_merge.dart';
 import 'services/calendar_event_storage.dart';
 import '../home/widgets/home_bottom_nav.dart';
 import 'widgets/calendar_month_grid.dart';
@@ -20,13 +23,18 @@ enum _ReminderResult { ok, denied, past }
 /// "캘린더" 화면(v4 리디자인). 코발트 헤더에서 달을 넘기고, 흰 패널의 월간
 /// 격자에서 날짜를 고르면 그날의 일정이 시간순 카드로 아래에 나온다.
 ///
-/// 학사일정 API 연동이 없어(`kUseMockApi = true`) 일정은 최초 1회 하드코딩된
-/// 샘플로 시드되지만, 알림(로컬 푸시)을 걸 수 있어야 해서 이후로는
-/// [CalendarEventStorage]로 기기 로컬에 저장된다 — 저장이 없으면 앱을 껐다
-/// 켰을 때 "화면상 꺼진 토글인데 전에 걸어둔 알림은 그대로 울리는" 불일치가
-/// 생긴다.
+/// 학사일정은 보고 있는 달을 학교 홈페이지에서 받아([AcademicScheduleService],
+/// 달별 하루 캐시) 저장된 일정에 합친다([mergeAcademicSchedule]). 예전에 넣어 둔
+/// 샘플 일정은 이때 빠진다([_buildSampleEvents]는 남겨 두었지만 쓰지 않는다).
+/// 알림(로컬 푸시)을 걸 수 있어야 해서 일정은 [CalendarEventStorage]로 기기에
+/// 저장된다 — 저장이 없으면 앱을 껐다 켰을 때 "화면상 꺼진 토글인데 전에 걸어둔
+/// 알림은 그대로 울리는" 불일치가 생긴다. 받기에 실패하면 저장된 일정을 그대로
+/// 보여주고 안내만 띄운다.
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({this.onTabTap, super.key});
+  const CalendarScreen({this.onTabTap, this.scheduleService, super.key});
+
+  /// 테스트용 주입 지점.
+  final AcademicScheduleServiceBase? scheduleService;
 
   /// 하단 탭 바를 눌렀을 때 호출된다(홈이 그 탭 화면으로 바꿔 준다). 없으면 이전
   /// 화면으로 돌아가기만 한다.
@@ -39,6 +47,8 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   final _storage = CalendarEventStorage();
   final _notifications = NotificationService.instance;
+  late final AcademicScheduleServiceBase _scheduleService =
+      widget.scheduleService ?? ServiceFactory.academicSchedule();
 
   DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime? _selectedDate = DateTime(
@@ -57,22 +67,49 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _loadEvents() async {
     final saved = await _storage.loadAll();
-    if (saved.isNotEmpty) {
-      setState(() {
-        _events = saved;
-        _loaded = true;
-      });
-      return;
-    }
-    // 최초 실행 — 샘플 데이터로 시드하고 바로 저장해둔다(그래야 알림을
-    // 걸었을 때 다음 실행에서도 그 상태가 유지된다).
-    final seed = _buildSampleEvents();
-    await _storage.saveAll(seed);
     if (!mounted) return;
+    // 예전 샘플 일정은 학사일정을 못 받더라도 바로 빼고 알림도 취소한다.
+    final samples = saved.where((e) => e.id.startsWith('sample-')).toList();
     setState(() {
-      _events = seed;
+      _events = saved.where((e) => !samples.contains(e)).toList();
       _loaded = true;
     });
+    if (samples.isNotEmpty) {
+      for (final event in samples) {
+        await _cancelReminders(event);
+      }
+      await _persist();
+    }
+    await _syncMonth(_focusedMonth);
+  }
+
+  /// [month]의 학사일정을 받아 저장된 일정에 합치고, 빠진 일정의 알림은 취소하고,
+  /// 마감일이 바뀐 일정의 알림은 다시 건다. 실패하면 저장된 일정을 그대로 둔다.
+  Future<void> _syncMonth(DateTime month) async {
+    final List<AcademicScheduleItem> fetched;
+    try {
+      fetched = await _scheduleService.fetchMonth(month.year, month.month);
+    } on AcademicScheduleException {
+      if (mounted && month == _focusedMonth) {
+        _showMessage('학사일정을 불러오지 못했어요. 저장된 일정만 보여드려요');
+      }
+      return;
+    }
+    if (!mounted) return;
+    final merged = mergeAcademicSchedule(
+      current: _events,
+      fetched: fetched,
+      year: month.year,
+      month: month.month,
+    );
+    setState(() => _events = merged.events);
+    for (final event in merged.removed) {
+      await _cancelReminders(event);
+    }
+    for (final event in merged.changed) {
+      await _syncReminder(event);
+    }
+    await _persist();
   }
 
   Future<void> _persist() => _storage.saveAll(_events);
@@ -126,6 +163,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         isTodayMonth ? now.day : 1,
       );
     });
+    _syncMonth(month);
   }
 
   void _onDaySelected(int day) {
@@ -508,6 +546,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 /// 실행 시점의 현재 달로 맞춘다. 제목 중 일부는 스크린샷에서 말줄임표로 잘려
 /// 원문을 확인할 수 없어 그럴듯한 학사일정 제목으로 추정했다(아래 각 추정
 /// 항목에 주석으로 표시).
+// 실제 학사일정으로 바꾼 뒤로는 쓰지 않지만, 사용자 요청으로 지우지 않고 남겨 둔다.
+// ignore: unused_element
 List<CalendarEvent> _buildSampleEvents() {
   final now = DateTime.now();
   var nextId = 0;

@@ -1,4 +1,5 @@
 import '../config/mock_mode.dart';
+import 'academic_schedule_service.dart';
 import 'cafeteria_menu_service.dart';
 import 'course_catalog_service.dart';
 import 'fakes/fake_course_catalog_service.dart';
@@ -11,7 +12,7 @@ import 'student_info_service.dart';
 import 'twin_rank_service.dart';
 
 /// `kUseMockApi`에 따라 실제 서비스 또는 `services/fakes/`의 가짜 서비스를
-/// 돌려주는 생성 지점을 한 곳으로 모은 팩토리. 로그인, 학번 찾기, 학생 정보, 학식, 학과 등수, 공지는
+/// 돌려주는 생성 지점을 한 곳으로 모은 팩토리. 로그인, 학번 찾기, 학생 정보, 학식, 학과 등수, 공지, 학사일정은
 /// `kUseMockApi`와 상관없이 항상 실제 서비스를 쓴다.
 ///
 /// 캐싱/싱글톤화는 하지 않는다 — 호출할 때마다 새 인스턴스를 만들어, 기존
@@ -39,6 +40,11 @@ class ServiceFactory {
   /// 공지(학사·마일리지장학)는 공개 게시판이라 `kUseMockApi`와 상관없이 항상 실제
   /// 서버를 부른다(1시간 캐시로 요청을 줄인다).
   static NoticeServiceBase notice() => NoticeService();
+
+  /// 학사일정은 공개 페이지라 `kUseMockApi`와 상관없이 항상 실제 서버를 부른다
+  /// (달별 하루 캐시로 요청을 줄인다).
+  static AcademicScheduleServiceBase academicSchedule() =>
+      AcademicScheduleService();
 
   static PortalLoginServiceBase portalLogin() => PortalLoginService();
 

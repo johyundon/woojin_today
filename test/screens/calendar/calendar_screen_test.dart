@@ -14,6 +14,7 @@ import 'package:daejin_app/screens/calendar/calendar_screen.dart';
 import 'package:daejin_app/screens/calendar/models/calendar_event.dart';
 import 'package:daejin_app/screens/calendar/services/calendar_event_storage.dart';
 import 'package:daejin_app/screens/calendar/widgets/ringing_bell.dart';
+import 'package:daejin_app/services/academic_schedule_service.dart';
 
 /// 테스트에는 알림 플러그인이 없어서, 권한 요청이 "Android/iOS가 아닌 플랫폼"
 /// 분기(항상 허용)로 가도록 아무 구현도 없는 가짜 플랫폼을 꽂아 둔다.
@@ -35,11 +36,60 @@ Future<void> _withIosPlatform(Future<void> Function() body) async {
   }
 }
 
-Future<void> _pump(WidgetTester tester) async {
+/// 학교 서버 대신 [items] 중 요청한 달에 걸친 일정만 돌려주는 가짜 학사일정 서비스.
+class _FakeSchedule implements AcademicScheduleServiceBase {
+  _FakeSchedule([this.items = const [], this.fail = false]);
+
+  final List<AcademicScheduleItem> items;
+  final bool fail;
+  final requested = <String>[];
+
+  @override
+  Future<List<AcademicScheduleItem>> fetchMonth(
+    int year,
+    int month, {
+    bool forceRefresh = false,
+  }) async {
+    requested.add('$year-$month');
+    if (fail) throw const AcademicScheduleException('fail');
+    final start = DateTime(year, month, 1);
+    final end = DateTime(year, month + 1, 0);
+    return items
+        .where((i) => !i.end.isBefore(start) && !i.start.isAfter(end))
+        .toList();
+  }
+}
+
+/// 예전 샘플 일정과 같은 날짜·제목의 이번 달 학사일정(기존 테스트가 기대는 값).
+List<AcademicScheduleItem> _thisMonthSchedule() {
+  final now = DateTime.now();
+  AcademicScheduleItem item(int startDay, int endDay, String title) =>
+      AcademicScheduleItem(
+        start: DateTime(now.year, now.month, startDay),
+        end: DateTime(now.year, now.month, endDay),
+        title: title,
+      );
+  return [
+    item(1, 4, '2026학년도 2학기 수강신청 변경'),
+    item(6, 7, '2026학년도 2학기 수강정정 기간'),
+    item(8, 11, '2027학년도 대학입학전형 수시모집 원서접수'),
+    item(14, 15, '왕방축제'),
+    item(17, 19, '수료생 재심사 등록'),
+    item(20, 23, '수료생 재심사 등록'),
+    item(21, 21, '수업평가 참여 기간'),
+    item(28, 28, '2학기 수업일수 1/4선'),
+  ];
+}
+
+Future<void> _pump(WidgetTester tester, {_FakeSchedule? schedule}) async {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+  await tester.pumpWidget(
+    MaterialApp(
+      home: CalendarScreen(scheduleService: schedule ?? _FakeSchedule()),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -70,10 +120,10 @@ void main() {
     expect(find.byIcon(Icons.add), findsOneWidget);
   });
 
-  testWidgets('샘플 일정이 있는 날을 누르면 그날 일정 카드가 보인다', (tester) async {
-    await _pump(tester);
+  testWidgets('학사일정이 있는 날을 누르면 그날 일정 카드가 보인다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
 
-    // 샘플 데이터: 이번 달 14~15일 "왕방축제".
+    // 이번 달 14~15일 "왕방축제".
     await tester.tap(find.text('14').first);
     await tester.pumpAndSettle();
 
@@ -85,9 +135,9 @@ void main() {
   });
 
   testWidgets('일정이 없는 날은 안내 문구가 나온다', (tester) async {
-    await _pump(tester);
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
 
-    // 샘플 일정이 없는 날(예: 12일).
+    // 학사일정이 없는 날(예: 12일).
     await tester.tap(find.text('12').first);
     await tester.pumpAndSettle();
 
@@ -112,11 +162,11 @@ void main() {
   });
 
   testWidgets('일정이 많아 스크롤해도 달력 격자와 날짜 줄은 제자리에 있다', (tester) async {
-    await _pump(tester);
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
     final now = DateTime.now();
 
-    // 샘플 데이터: 17~19일/20~23일 "수료생 재심사 등록" 등 여러 날짜에 걸친
-    // 일정이 있고, 21일에는 일정이 2개 겹친다.
+    // 17~19일/20~23일 "수료생 재심사 등록" 등 여러 날짜에 걸친 일정이 있고,
+    // 21일에는 일정이 2개 겹친다.
     await tester.tap(find.text('21').first);
     await tester.pumpAndSettle();
 
@@ -133,7 +183,7 @@ void main() {
   });
 
   testWidgets('학사일정 카드를 누르면 상세 팝업이 뜨고, 삭제/수정 버튼은 없다', (tester) async {
-    await _pump(tester);
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
 
     await tester.tap(find.text('14').first);
     await tester.pumpAndSettle();
@@ -149,6 +199,64 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  group('학사일정 연결', () {
+    testWidgets('저장된 샘플 일정은 빠지고 받아온 학사일정이 저장된다', (tester) async {
+      final now = DateTime.now();
+      await CalendarEventStorage().saveAll([
+        CalendarEvent(
+          id: 'sample-1',
+          startDate: DateTime(now.year, now.month, 12),
+          endDate: DateTime(now.year, now.month, 12),
+          label: '학사일정',
+          title: '가짜 샘플 일정',
+          color: Colors.blue,
+        ),
+      ]);
+      final schedule = _FakeSchedule(_thisMonthSchedule());
+      await _pump(tester, schedule: schedule);
+
+      expect(schedule.requested, ['${now.year}-${now.month}']);
+      await tester.tap(find.text('12').first);
+      await tester.pumpAndSettle();
+      expect(find.text('가짜 샘플 일정'), findsNothing);
+
+      final saved = await CalendarEventStorage().loadAll();
+      expect(saved.any((e) => e.id.startsWith('sample-')), isFalse);
+      expect(saved.any((e) => e.title == '왕방축제'), isTrue);
+    });
+
+    testWidgets('달을 넘기면 그 달 학사일정을 받는다', (tester) async {
+      final schedule = _FakeSchedule();
+      await _pump(tester, schedule: schedule);
+      final now = DateTime.now();
+      final next = DateTime(now.year, now.month + 1);
+
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+      expect(schedule.requested.last, '${next.year}-${next.month}');
+    });
+
+    testWidgets('받기에 실패하면 저장된 일정을 그대로 두고 안내한다', (tester) async {
+      final now = DateTime.now();
+      await CalendarEventStorage().saveAll([
+        CalendarEvent(
+          id: 'school-${now.year}${now.month.toString().padLeft(2, '0')}12-저장된 학사일정',
+          startDate: DateTime(now.year, now.month, 12),
+          endDate: DateTime(now.year, now.month, 12),
+          label: '학사일정',
+          title: '저장된 학사일정',
+          color: Colors.blue,
+        ),
+      ]);
+      await _pump(tester, schedule: _FakeSchedule(const [], true));
+
+      expect(find.textContaining('학사일정을 불러오지 못했어요'), findsOneWidget);
+      await tester.tap(find.text('12').first);
+      await tester.pumpAndSettle();
+      expect(find.text('저장된 학사일정'), findsOneWidget);
+    });
+  });
+
   group('학사일정 알림', () {
     /// 학사일정(종일) 하나를 저장해 두고 [selectDay]를 선택한 채로 연다.
     Future<void> pumpWithAcademicEvent(
@@ -157,9 +265,14 @@ void main() {
       required DateTime end,
     }) async {
       final today = DateTime.now();
+      final item = AcademicScheduleItem(
+        start: start,
+        end: end,
+        title: '수강신청 변경 기간',
+      );
       await CalendarEventStorage().saveAll([
         CalendarEvent(
-          id: 'sample-9',
+          id: item.id,
           startDate: start,
           endDate: end,
           label: '학사일정',
@@ -167,7 +280,7 @@ void main() {
           color: Colors.purple,
         ),
       ]);
-      await _pump(tester);
+      await _pump(tester, schedule: _FakeSchedule([item]));
       // 오늘이 일정 기간 안이면 이미 선택돼 있다. 아니면 시작일을 눌러 연다.
       final todayDate = DateTime(today.year, today.month, today.day);
       if (todayDate.isBefore(start) || todayDate.isAfter(end)) {
@@ -617,7 +730,13 @@ void main() {
       tester.view.physicalSize = const Size(360 * 3, 640 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CalendarScreen(
+            scheduleService: _FakeSchedule(_thisMonthSchedule()),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('14').first);
