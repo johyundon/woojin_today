@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'credential_storage.dart';
+import 'notice_background.dart';
 import 'notification_service.dart';
 import 'session_cache.dart';
 import 'terms_acceptance_storage.dart';
@@ -14,6 +15,7 @@ import 'terms_acceptance_storage.dart';
 /// - 기기 저장소(저장한 시간표, 캘린더 일정, 공지 읽음 등)
 /// - 예전 방식 저장소의 캐시(학과 등수 평점, 공지 목록, 학식, 학사일정)
 /// - 예약된 알림 전체(캘린더 일정, 강의시간)
+/// - 앱이 꺼져 있을 때의 새 공지 확인 작업([NoticeBackground])
 ///
 /// 기기 저장소는 학번별 약관 동의·온보딩 완료 기록
 /// ([TermsAcceptanceStorage.isKeptOnLogout])만 남기고 전부 지운다 — 같은 학생이
@@ -31,6 +33,7 @@ Future<void> clearUserDataOnLogout({
   CredentialStorage? credentialStorage,
   SharedPreferencesAsync? prefs,
   Future<void> Function()? cancelNotifications,
+  Future<void> Function()? cancelNoticeBackground,
 }) async {
   SessionCache.clear();
   await _run('자격증명', (credentialStorage ?? CredentialStorage()).clear);
@@ -47,6 +50,10 @@ Future<void> clearUserDataOnLogout({
   await _run(
     '예약 알림',
     cancelNotifications ?? NotificationService.instance.cancelAll,
+  );
+  await _run(
+    '새 공지 확인 작업',
+    cancelNoticeBackground ?? const NoticeBackground().stop,
   );
 }
 

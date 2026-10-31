@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screens/notice/models/notice_item.dart';
+import 'notice_background.dart';
 import 'notice_service.dart';
 import 'notification_service.dart';
 import 'service_factory.dart';
@@ -15,7 +16,8 @@ typedef NoticeAlert = Future<void> Function({
 
 /// 앱을 열거나 다시 돌아올 때 새 공지가 올라왔는지 확인한다.
 ///
-/// 서버가 없는 앱이라 앱이 꺼져 있을 때는 확인하지 못한다. 학교 페이지의 "새글"
+/// 알림이 켜져 있으면 앱이 꺼져 있을 때도 몇 시간마다 OS가 앱을 깨워 확인한다
+/// ([NoticeBackground]). 학교 페이지의 "새글"
 /// 표시는 며칠 동안 붙어 있어 같은 공지로 알림이 여러 번 갈 수 있으므로, 대신
 /// 지난번에 본 공지 목록을 기기에 저장해 두고 그 목록에 없던 공지만 새 공지로 본다.
 /// 처음 실행할 때는 지금 있는 공지를 모두 본 것으로 저장하고 알림을 보내지 않는다.
@@ -28,9 +30,11 @@ class NoticeWatcher {
     NoticeServiceBase? service,
     SharedPreferencesAsync? prefs,
     NoticeAlert? alert,
+    NoticeBackground? background,
   }) : _service = service ?? ServiceFactory.notice(),
        _prefsArg = prefs,
-       _alert = alert ?? NotificationService.instance.showNoticeAlert;
+       _alert = alert ?? NotificationService.instance.showNoticeAlert,
+       _background = background ?? const NoticeBackground();
 
   /// 지금까지 확인한 공지([NoticeItem.key]).
   static const _seenKey = 'notice_watch_seen';
@@ -55,6 +59,7 @@ class NoticeWatcher {
   late final SharedPreferencesAsync _prefs =
       _prefsArg ?? SharedPreferencesAsync();
   final NoticeAlert _alert;
+  final NoticeBackground _background;
 
   Future<bool> isEnabled() async {
     try {
@@ -64,11 +69,28 @@ class NoticeWatcher {
     }
   }
 
+  /// 켜면 앱이 꺼져 있을 때의 확인 작업도 등록하고, 끄면 취소한다.
   Future<void> setEnabled(bool enabled) async {
     try {
       await _prefs.setBool(_enabledKey, enabled);
     } catch (e) {
       debugPrint('[NoticeWatcher] 알림 설정 저장 실패: $e');
+    }
+    try {
+      enabled ? await _background.start() : await _background.stop();
+    } catch (e) {
+      debugPrint('[NoticeWatcher] 백그라운드 확인 등록/취소 실패: $e');
+    }
+  }
+
+  /// 앱 시작 시 부른다. 알림이 켜져 있으면 백그라운드 확인 작업이 등록돼 있게
+  /// 한다(이 기능이 생기기 전에 알림을 켜 둔 사용자도 등록되도록).
+  Future<void> restoreBackground() async {
+    if (!await isEnabled()) return;
+    try {
+      await _background.start();
+    } catch (e) {
+      debugPrint('[NoticeWatcher] 백그라운드 확인 등록 실패: $e');
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
+import 'package:daejin_app/services/notice_background.dart';
 import 'package:daejin_app/services/notice_service.dart';
 import 'package:daejin_app/services/notice_watcher.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,8 +41,20 @@ class _FakeNotices implements NoticeServiceBase {
       throw UnimplementedError();
 }
 
+/// OS에 등록/취소한 기록만 남기는 가짜 백그라운드 작업.
+class _FakeBackground implements NoticeBackground {
+  final calls = <String>[];
+
+  @override
+  Future<void> start() async => calls.add('start');
+
+  @override
+  Future<void> stop() async => calls.add('stop');
+}
+
 void main() {
   late _FakeNotices service;
+  late _FakeBackground background;
   late List<String> alerts;
   late NoticeWatcher watcher;
 
@@ -49,10 +62,12 @@ void main() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     service = _FakeNotices();
+    background = _FakeBackground();
     alerts = [];
     watcher = NoticeWatcher(
       service: service,
       prefs: SharedPreferencesAsync(),
+      background: background,
       alert: ({required id, required title, required body}) async =>
           alerts.add('$title|$body'),
     );
@@ -110,5 +125,22 @@ void main() {
     await watcher.check();
     await watcher.clearPending();
     expect(await watcher.hasPending(), isFalse);
+  });
+
+  test('알림을 켜면 백그라운드 확인을 등록하고, 끄면 취소한다', () async {
+    await watcher.setEnabled(true);
+    await watcher.setEnabled(false);
+    expect(background.calls, ['start', 'stop']);
+    expect(await watcher.isEnabled(), isFalse);
+  });
+
+  test('앱 시작 시 알림이 켜져 있을 때만 백그라운드 확인을 다시 등록한다', () async {
+    await watcher.restoreBackground();
+    expect(background.calls, isEmpty);
+
+    await watcher.setEnabled(true);
+    background.calls.clear();
+    await watcher.restoreBackground();
+    expect(background.calls, ['start']);
   });
 }

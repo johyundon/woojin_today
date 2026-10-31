@@ -27,8 +27,8 @@ import 'widgets/notice_list_card.dart';
 /// 숨겼다([_visibleTags]).
 ///
 /// "새 글 알림 받기" 토글(작은 종 버튼)은 기기에 저장된다. 켜 두면 앱을 열거나
-/// 다시 돌아올 때 새 공지가 있으면 알림을 띄운다([NoticeWatcher]). 서버가 없어
-/// 앱이 꺼져 있을 때는 확인하지 못한다. 켤 때 알림 권한을 묻고, 기본은 꺼짐이다.
+/// 다시 돌아올 때, 그리고 앱이 꺼져 있을 때도 몇 시간마다 새 공지가 있으면 알림을
+/// 띄운다([NoticeWatcher]). 켤 때 알림 권한을 묻고, 기본은 꺼짐이다.
 /// 이 화면을 열면 홈 종 아이콘의 "새 공지" 점을 지운다.
 class NoticeScreen extends StatefulWidget {
   const NoticeScreen({
@@ -376,7 +376,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
       context,
       icon: Icons.notifications_active_rounded,
       title: '새 공지 알림을 켰어요',
-      message: '앱을 열 때 새 공지가 있으면 알려드릴게요.',
+      message: '새 공지가 올라오면 알려드릴게요.',
     );
     await _watcher.setEnabled(true);
   }

@@ -1,5 +1,5 @@
 // 로그아웃 정리(clearUserDataOnLogout)가 자동 로그인 정보, 기기 저장소(두 저장
-// 방식 모두), 예약 알림을 모두 지우는지 확인한다.
+// 방식 모두), 예약 알림, 새 공지 백그라운드 확인 작업을 모두 지우는지 확인한다.
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +12,7 @@ import 'package:daejin_app/services/logout_cleaner.dart';
 import 'package:daejin_app/services/terms_acceptance_storage.dart';
 
 void main() {
-  test('자격증명·기기 저장소·예약 알림을 전부 지운다', () async {
+  test('자격증명·기기 저장소·예약 알림·공지 확인 작업을 전부 지운다', () async {
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
     SharedPreferencesAsyncPlatform.instance =
@@ -25,16 +25,19 @@ void main() {
     await prefs.setStringList('daejin_read_notices', ['a']);
     await prefs.setBool('daejin_terms_accepted', true);
     var notificationsCancelled = false;
+    var noticeBackgroundCancelled = false;
 
     await clearUserDataOnLogout(
       credentialStorage: credentials,
       prefs: prefs,
       cancelNotifications: () async => notificationsCancelled = true,
+      cancelNoticeBackground: () async => noticeBackgroundCancelled = true,
     );
 
     expect(await credentials.read(), isNull);
     expect(await prefs.getKeys(), isEmpty);
     expect(notificationsCancelled, isTrue);
+    expect(noticeBackgroundCancelled, isTrue);
   });
 
   test('학번별 약관 동의·온보딩 기록은 남겨 다시 로그인해도 또 보지 않는다', () async {
@@ -66,6 +69,7 @@ void main() {
     await clearUserDataOnLogout(
       prefs: prefs,
       cancelNotifications: () async => throw Exception('알림 취소 실패'),
+      cancelNoticeBackground: () async {},
     );
 
     expect(await prefs.getKeys(), isEmpty);
@@ -84,6 +88,7 @@ void main() {
     await clearUserDataOnLogout(
       prefs: SharedPreferencesAsync(),
       cancelNotifications: () async {},
+      cancelNoticeBackground: () async {},
     );
 
     // 앱을 끄지 않고 다시 읽어도(같은 메모리 캐시) 남아 있지 않다.
