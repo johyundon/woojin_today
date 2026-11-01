@@ -60,6 +60,7 @@ Future<void> _pump(
   WidgetTester tester,
   SyllabusServiceBase service, {
   bool withSession = true,
+  CourseCatalogItem course = _course,
 }) async {
   tester.view.physicalSize = const Size(780, 1688);
   tester.view.devicePixelRatio = 2;
@@ -67,7 +68,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     MaterialApp(
       home: SyllabusScreen(
-        course: _course,
+        course: course,
         year: 2026,
         semester: 2,
         jsessionId: withSession ? 'j' : null,
@@ -102,6 +103,34 @@ void main() {
     expect(evaluation, findsOneWidget);
     // 0% 항목은 빠진다.
     expect(find.textContaining('토의/토론'), findsNothing);
+  });
+
+  testWidgets('정원이 있는 과목(과목 추가 목록)도 정원과 연구실을 둘 다 보여준다', (
+    tester,
+  ) async {
+    const withCapacity = CourseCatalogItem(
+      seq: 1,
+      courseCode: '922601',
+      section: '01',
+      courseName: 'AI시대의컴퓨팅사고',
+      courseType: '교필',
+      credit: 2,
+      targetGrade: '1',
+      professor: '김가상',
+      rawSchedule: '수11:30-13:30',
+      room: '',
+      isClosed: false,
+      capacity: 40,
+      waitlistCount: 0,
+      enrollmentRatio: '30/40',
+    );
+    await _pump(tester, _FakeService([_detail]), course: withCapacity);
+    await tester.pumpAndSettle();
+
+    expect(find.text('정원'), findsOneWidget);
+    expect(find.text('40명'), findsOneWidget);
+    expect(find.text('연구실'), findsOneWidget);
+    expect(find.text('가상관 101 호'), findsOneWidget);
   });
 
   testWidgets('실패하면 안내와 다시 시도, 다시 시도가 성공하면 내용이 나온다', (tester) async {
