@@ -20,6 +20,7 @@ class PlannedCourse {
     required this.room,
     required this.enrollmentRatio,
     this.note,
+    this.department,
   });
 
   final String courseCode;
@@ -33,6 +34,9 @@ class PlannedCourse {
   final String room;
   final String enrollmentRatio;
   final String? note;
+
+  /// 개설학과. 예전에 저장한 시간표에는 없어서 null일 수 있다.
+  final String? department;
 
   /// "과목코드-분반" — 시간표 안에서 과목을 구분/중복 제거하는 키.
   String get key => '$courseCode-$section';
@@ -58,6 +62,7 @@ class PlannedCourse {
       waitlistCount: 0,
       enrollmentRatio: enrollmentRatio,
       note: note,
+      department: department,
     );
   }
 
@@ -74,6 +79,7 @@ class PlannedCourse {
       room: item.room,
       enrollmentRatio: item.enrollmentRatio,
       note: item.note,
+      department: item.department,
     );
   }
 
@@ -89,6 +95,7 @@ class PlannedCourse {
     'room': room,
     'enrollmentRatio': enrollmentRatio,
     'note': note,
+    'department': department,
   };
 
   factory PlannedCourse.fromJson(Map<String, dynamic> json) {
@@ -104,6 +111,7 @@ class PlannedCourse {
       room: json['room'] as String,
       enrollmentRatio: json['enrollmentRatio'] as String,
       note: json['note'] as String?,
+      department: json['department'] as String?,
     );
   }
 }

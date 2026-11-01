@@ -7,6 +7,7 @@ import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:daejin_app/services/session_cache.dart';
+import 'package:daejin_app/services/syllabus_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -57,7 +58,36 @@ const _course = CourseCatalogItem(
   enrollmentRatio: '',
 );
 
-Future<void> _pump(WidgetTester tester, _FakeService service) async {
+/// 강의계획서 요청을 기록만 하고 빈 강의계획서를 돌려준다.
+class _FakeSyllabus implements SyllabusServiceBase {
+  final requested = <CourseCatalogItem>[];
+
+  @override
+  Future<SyllabusDetail> fetchSyllabus({
+    required CourseCatalogItem course,
+    required int year,
+    required int semester,
+    required String jsessionId,
+    required String wmonid,
+    required String userId2,
+  }) async {
+    requested.add(course);
+    final reason = SyllabusService.categoryQuery(course) == null
+        ? SyllabusService.unavailableReason(course)
+        : null;
+    if (reason != null) throw SyllabusUnavailableException(reason);
+    return const SyllabusDetail(
+      topInfo: [(label: '수업장소', value: '가상관 999')],
+      sections: [SyllabusSection(title: '1. 수업의 개요와 유용성', bodyText: '가상 개요')],
+    );
+  }
+}
+
+Future<void> _pump(
+  WidgetTester tester,
+  _FakeService service, {
+  SyllabusServiceBase? syllabus,
+}) async {
   tester.view.physicalSize = const Size(780, 1688);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
@@ -71,6 +101,7 @@ Future<void> _pump(WidgetTester tester, _FakeService service) async {
         courseCatalogService: FakeCourseCatalogService(),
         myTimetableService: service,
         savedTimetableStorage: _FakeStorage(),
+        syllabusService: syllabus,
         now: () => DateTime(2026, 10, 26, 9), // 월요일
       ),
     ),
@@ -123,5 +154,67 @@ void main() {
     expect(service.calls, 2);
     expect(find.text('내 시간표를 불러오지 못했어요.'), findsNothing);
     expect(find.text('가상자료구조'), findsWidgets);
+  });
+
+  group('시간표 과목 → 상세보기 → 강의계획서', () {
+    Future<void> openSyllabus(WidgetTester tester) async {
+      await tester.tap(find.text('가상자료구조').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('강의계획서 보기'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('개설학과가 있는 내 시간표 과목은 학과 행이 보이고 강의계획서가 열린다', (
+      tester,
+    ) async {
+      final syllabus = _FakeSyllabus();
+      const course = CourseCatalogItem(
+        seq: 1,
+        courseCode: '900101',
+        section: '01',
+        courseName: '가상자료구조',
+        courseType: '전필',
+        credit: 3,
+        targetGrade: '',
+        professor: '김가상',
+        rawSchedule: '월10:00-11:15,수10:00-11:15',
+        room: '가상관 101',
+        isClosed: false,
+        capacity: 0,
+        waitlistCount: 0,
+        enrollmentRatio: '',
+        department: '컴퓨터공학전공',
+      );
+      await _pump(
+        tester,
+        _FakeService([const MyTimetableResponse(courses: [course])]),
+        syllabus: syllabus,
+      );
+
+      await tester.tap(find.text('가상자료구조').first);
+      await tester.pumpAndSettle();
+      expect(find.text('컴퓨터공학전공'), findsOneWidget);
+      await tester.tap(find.text('강의계획서 보기'));
+      await tester.pumpAndSettle();
+
+      expect(syllabus.requested.single.department, '컴퓨터공학전공');
+      expect(find.text('가상 개요'), findsOneWidget);
+    });
+
+    testWidgets('학과 정보가 없는 전공 과목은 다시 불러오라고 안내한다', (tester) async {
+      final syllabus = _FakeSyllabus();
+      await _pump(
+        tester,
+        _FakeService([
+          const MyTimetableResponse(courses: [_course]),
+        ]),
+        syllabus: syllabus,
+      );
+
+      await openSyllabus(tester);
+
+      expect(find.textContaining('학과 정보가 없어'), findsOneWidget);
+      expect(find.text('다시 시도'), findsNothing);
+    });
   });
 }

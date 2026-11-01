@@ -23,6 +23,7 @@ class CourseCatalogItem {
     required this.waitlistCount,
     required this.enrollmentRatio,
     this.note,
+    this.department,
   });
 
   final int seq;
@@ -42,6 +43,10 @@ class CourseCatalogItem {
   final int waitlistCount;
   final String enrollmentRatio;
   final String? note;
+
+  /// 개설학과(예: "컴퓨터공학전공"). 내 시간표 응답에만 있고 개설과목 조회엔
+  /// 없다. 강의계획서 목록을 학과별로 부를 때 학과 코드로 바꿔 쓴다.
+  final String? department;
 }
 
 /// "네트워크 연결 실패"와 "서버는 응답했지만 비정상(status != 200)"과

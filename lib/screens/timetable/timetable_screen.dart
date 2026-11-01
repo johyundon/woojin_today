@@ -7,6 +7,7 @@ import '../../services/my_timetable_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
+import '../../services/syllabus_service.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
 import '../home/widgets/home_bottom_nav.dart';
@@ -54,6 +55,7 @@ class TimetableScreen extends StatefulWidget {
     this.userId2,
     this.courseCatalogService,
     this.myTimetableService,
+    this.syllabusService,
     this.savedTimetableStorage,
     this.notificationService,
     this.classReminderSettings,
@@ -68,6 +70,7 @@ class TimetableScreen extends StatefulWidget {
   /// 테스트에서 mock 주입용. [HomeScreen]과 동일한 패턴.
   final CourseCatalogServiceBase? courseCatalogService;
   final MyTimetableServiceBase? myTimetableService;
+  final SyllabusServiceBase? syllabusService;
   final SavedTimetableStorage? savedTimetableStorage;
   final NotificationService? notificationService;
   final ClassReminderSettings? classReminderSettings;
@@ -158,7 +161,17 @@ class _TimetableScreenState extends State<TimetableScreen>
         onViewSyllabus: () {
           Navigator.of(context).pop();
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => SyllabusScreen(course: item)),
+            MaterialPageRoute(
+              builder: (_) => SyllabusScreen(
+                course: item,
+                year: _year,
+                semester: _semester,
+                jsessionId: widget.jsessionId,
+                wmonid: widget.wmonid,
+                userId2: widget.userId2,
+                syllabusService: widget.syllabusService,
+              ),
+            ),
           );
         },
       ),

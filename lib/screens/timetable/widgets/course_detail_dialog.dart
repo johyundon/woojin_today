@@ -7,9 +7,9 @@ import '../timetable_colors.dart';
 
 /// 과목 상세 다이얼로그(상태 6). "닫기" / "강의계획서 보기" 두 버튼.
 ///
-/// 원본 디자인(상태 6)에는 "학과" 행도 있지만, [CourseCatalogItem]에는 학과
-/// 필드가 없어(개설과목 조회 응답에 없는 값) 그 행은 뺐다 — 없는 데이터를
-/// 지어내지 않기 위함.
+/// 원본 디자인(상태 6)의 "학과" 행은 개설학과([CourseCatalogItem.department])가
+/// 있을 때만 보여준다. 내 시간표에서 불러온 과목에만 있고, 개설과목 검색 결과나
+/// 예전에 저장한 시간표에는 없다 — 없는 데이터를 지어내지 않기 위함.
 class CourseDetailDialog extends StatelessWidget {
   const CourseDetailDialog({
     super.key,
@@ -49,6 +49,9 @@ class CourseDetailDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+            if (course.department case final department?
+                when department.isNotEmpty)
+              _Row('학과', department),
             _Row('교수', course.professor),
             _Row('이수구분', course.courseType),
             _Row('학점', formatCredit(course.credit)),

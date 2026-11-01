@@ -249,6 +249,7 @@ class MyTimetableService implements MyTimetableServiceBase {
           waitlistCount: 0,
           enrollmentRatio: '',
           note: cells[9].isEmpty ? null : cells[9],
+          department: cells[8].isEmpty ? null : cells[8],
         ),
       );
     }

@@ -9,6 +9,7 @@ import 'notice_service.dart';
 import 'portal_login_service.dart';
 import 'student_id_service.dart';
 import 'student_info_service.dart';
+import 'syllabus_service.dart';
 import 'twin_rank_service.dart';
 
 /// `kUseMockApi`에 따라 실제 서비스 또는 `services/fakes/`의 가짜 서비스를
@@ -52,6 +53,10 @@ class ServiceFactory {
   /// (달별 하루 캐시로 요청을 줄인다).
   static AcademicScheduleServiceBase academicSchedule() =>
       AcademicScheduleService();
+
+  /// 강의계획서는 공개 데이터지만 실제 내용을 보여줘야 하므로 항상 실제 서버를
+  /// 부른다(목록·상세를 앱 실행 동안 저장해 요청을 줄인다).
+  static SyllabusServiceBase syllabus() => SyllabusService();
 
   static PortalLoginServiceBase portalLogin() => PortalLoginService();
 
