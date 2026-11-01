@@ -4,6 +4,7 @@ import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
 import '../../services/my_timetable_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
 import '../../widgets/pressable.dart';
@@ -16,6 +17,8 @@ import 'models/ai_recommend_answers.dart';
 import 'models/planned_course.dart';
 import 'models/saved_timetable.dart';
 import 'services/ai_recommend_service.dart';
+import 'services/class_reminder_planner.dart';
+import 'services/class_reminder_settings.dart';
 import 'services/saved_timetable_storage.dart';
 import 'syllabus_screen.dart';
 import 'saved_timetables_screen.dart';
@@ -36,6 +39,7 @@ part 'timetable_course_mixin.dart';
 part 'timetable_semester_mixin.dart';
 part 'timetable_save_load_mixin.dart';
 part 'timetable_grid_resize_mixin.dart';
+part 'timetable_reminder_mixin.dart';
 
 /// "시간표 짜기" 화면. 홈 화면의 "시간표를 짜볼까요?" 추천 카드에서 진입한다.
 ///
@@ -51,6 +55,8 @@ class TimetableScreen extends StatefulWidget {
     this.courseCatalogService,
     this.myTimetableService,
     this.savedTimetableStorage,
+    this.notificationService,
+    this.classReminderSettings,
     this.now,
     this.onTabTap,
   });
@@ -63,6 +69,8 @@ class TimetableScreen extends StatefulWidget {
   final CourseCatalogServiceBase? courseCatalogService;
   final MyTimetableServiceBase? myTimetableService;
   final SavedTimetableStorage? savedTimetableStorage;
+  final NotificationService? notificationService;
+  final ClassReminderSettings? classReminderSettings;
   final DateTime Function()? now;
 
   /// 하단 탭 바를 눌렀을 때 호출된다(홈이 그 탭 화면으로 바꿔 준다). 없으면 이전
@@ -80,12 +88,8 @@ class _TimetableScreenState extends State<TimetableScreen>
         TimetableCourseMixin,
         TimetableSemesterMixin,
         TimetableSaveLoadMixin,
-        TimetableGridResizeMixin {
-  // TODO: 실제 수업 시간 알림(로컬 알림 스케줄링)은 구현돼 있지 않다. 이
-  // 토글은 디자인(상태 1~10 공통 헤더)에 맞춘 UI 상태만 갖고 있다 — 알림
-  // 관련 패키지/권한 처리는 이번 작업 범위 밖이라 추측으로 구현하지 않았다.
-  bool _notificationsEnabled = true;
-
+        TimetableGridResizeMixin,
+        TimetableReminderMixin {
   @override
   void initState() {
     super.initState();
@@ -102,6 +106,7 @@ class _TimetableScreenState extends State<TimetableScreen>
     _semester = current.semester;
 
     _loadSavedCount();
+    _loadReminderSetting();
     if (_hasSession) {
       _loadCatalog();
     }
@@ -231,9 +236,8 @@ class _TimetableScreenState extends State<TimetableScreen>
                                     loading: _myTimetableLoading,
                                     onLoadMyTimetable: _loadMyTimetable,
                                     notificationsEnabled: _notificationsEnabled,
-                                    onNotificationsChanged: (v) => setState(
-                                      () => _notificationsEnabled = v,
-                                    ),
+                                    onNotificationsChanged:
+                                        _onNotificationsToggled,
                                   ),
                                 ),
                                 Padding(

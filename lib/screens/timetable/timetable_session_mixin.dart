@@ -18,7 +18,18 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
   late int _semester;
   final _headerKey = GlobalKey();
 
-  List<PlannedCourse> _confirmedCourses = [];
+  List<PlannedCourse> _confirmedCoursesValue = [];
+
+  /// 그리드에 확정된 과목. 새 목록을 넣을 때마다 [_onConfirmedCoursesChanged]가
+  /// 불려 강의시간 알림을 다시 맞춘다(과목 추가/삭제·불러오기 등 모든 경로 공통).
+  List<PlannedCourse> get _confirmedCourses => _confirmedCoursesValue;
+  set _confirmedCourses(List<PlannedCourse> courses) {
+    _confirmedCoursesValue = courses;
+    _onConfirmedCoursesChanged();
+  }
+
+  /// [TimetableReminderMixin]이 구현한다.
+  void _onConfirmedCoursesChanged();
   List<CourseCatalogItem> _catalog = [];
   bool _catalogLoading = false;
   String? _catalogError;
