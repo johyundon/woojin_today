@@ -89,7 +89,34 @@ class _TimetableScreenState extends State<TimetableScreen>
         TimetableSemesterMixin,
         TimetableSaveLoadMixin,
         TimetableGridResizeMixin,
-        TimetableReminderMixin {
+        TimetableReminderMixin,
+        SingleTickerProviderStateMixin {
+  // 과목 추가 패널이 아래에서 미끄러져 올라오고 내려가게 하는 애니메이션.
+  // 닫히는 동안에도 패널을 남겨 두었다가, 다 내려간 뒤에 탭 바를 다시 보인다.
+  late final AnimationController _addPanelController =
+      AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 340),
+        reverseDuration: const Duration(milliseconds: 240),
+      )..addStatusListener((_) {
+        if (mounted) setState(() {});
+      });
+  late final Animation<Offset> _addPanelOffset =
+      Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _addPanelController,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        ),
+      );
+
+  bool get _addPanelShown => _addPanelOpen || !_addPanelController.isDismissed;
+
+  void _setAddPanelOpen(bool open) {
+    setState(() => _addPanelOpen = open);
+    open ? _addPanelController.forward() : _addPanelController.reverse();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -119,6 +146,7 @@ class _TimetableScreenState extends State<TimetableScreen>
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _addPanelController.dispose();
     super.dispose();
   }
 
@@ -174,7 +202,7 @@ class _TimetableScreenState extends State<TimetableScreen>
       // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
       backgroundColor: Colors.white,
       extendBody: true,
-      bottomNavigationBar: _addPanelOpen
+      bottomNavigationBar: _addPanelShown
           ? null
           : HomeBottomNav(selectedIndex: 0, onTap: _onTabTap),
       body: ColoredBox(
@@ -195,8 +223,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                   onSave: _openSaveDialog,
                   onOpenSavedList: _openSavedList,
                   onAutoFill: _openAiRecommendWizard,
-                  onAddCourse: () =>
-                      setState(() => _addPanelOpen = !_addPanelOpen),
+                  onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),
                 ),
               ),
               Expanded(
@@ -281,13 +308,19 @@ class _TimetableScreenState extends State<TimetableScreen>
                           fit: StackFit.expand,
                           children: [
                             gridColumn,
-                            if (_addPanelOpen)
+                            if (_addPanelShown)
                               Positioned(
                                 left: 0,
                                 right: 0,
                                 bottom: 0,
                                 height: panelHeight,
-                                child: _buildAddPanel(),
+                                child: IgnorePointer(
+                                  ignoring: !_addPanelOpen,
+                                  child: SlideTransition(
+                                    position: _addPanelOffset,
+                                    child: _buildAddPanel(),
+                                  ),
+                                ),
                               ),
                           ],
                         );
@@ -321,7 +354,7 @@ class _TimetableScreenState extends State<TimetableScreen>
           ..sort();
 
     return CourseAddPanel(
-      onClose: () => setState(() => _addPanelOpen = false),
+      onClose: () => _setAddPanelOpen(false),
       searchFilterBar: SearchFilterBar(
         controller: _searchController,
         focusNode: _searchFocusNode,
