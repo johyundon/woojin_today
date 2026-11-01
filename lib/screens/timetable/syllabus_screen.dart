@@ -304,10 +304,6 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
                                 // 내 시간표에서 온 과목은 정원 값이 없다(0).
                                 if (course.capacity > 0)
                                   _MetaCell('정원', '${course.capacity}명'),
-                                // 연구실은 정원과 상관없이, 강의계획서에 값이
-                                // 있으면 항상 보여준다.
-                                if (_detail?.info('연구실') case final room?)
-                                  _MetaCell('연구실', room),
                               ],
                             ),
                           ),

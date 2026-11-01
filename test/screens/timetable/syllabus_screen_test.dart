@@ -91,11 +91,12 @@ void main() {
     expect(find.textContaining('본 교과목은'), findsOneWidget);
     expect(find.text('주별 수업계획'), findsOneWidget);
     expect(find.text('학습 평가방법'), findsOneWidget);
-    // 강의계획서 값으로 채운 위쪽 정보. 정원(0)은 숨기고 연구실을 보여준다.
+    // 강의계획서 값으로 채운 위쪽 정보. 정원(0)과 연구실은 보여주지 않는다.
     expect(find.text('가상관 310 강의실'), findsOneWidget);
     expect(find.text('2.0학점 · 1학년'), findsOneWidget);
     expect(find.text('정원'), findsNothing);
-    expect(find.text('가상관 101 호'), findsOneWidget);
+    expect(find.text('연구실'), findsNothing);
+    expect(find.text('가상관 101 호'), findsNothing);
 
     await tester.tap(find.text('학습 평가방법'));
     await tester.pumpAndSettle();
@@ -105,7 +106,7 @@ void main() {
     expect(find.textContaining('토의/토론'), findsNothing);
   });
 
-  testWidgets('정원이 있는 과목(과목 추가 목록)도 정원과 연구실을 둘 다 보여준다', (
+  testWidgets('정원이 있는 과목(과목 추가 목록)은 정원을 보여주고 연구실은 보여주지 않는다', (
     tester,
   ) async {
     const withCapacity = CourseCatalogItem(
@@ -129,8 +130,8 @@ void main() {
 
     expect(find.text('정원'), findsOneWidget);
     expect(find.text('40명'), findsOneWidget);
-    expect(find.text('연구실'), findsOneWidget);
-    expect(find.text('가상관 101 호'), findsOneWidget);
+    expect(find.text('연구실'), findsNothing);
+    expect(find.text('가상관 101 호'), findsNothing);
   });
 
   testWidgets('실패하면 안내와 다시 시도, 다시 시도가 성공하면 내용이 나온다', (tester) async {
