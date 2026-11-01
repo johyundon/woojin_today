@@ -229,6 +229,62 @@ void main() {
     });
   });
 
+  group('분류 목록에 없을 때 개설학과 전공 목록에서 다시 찾기', () {
+    // 일선 목록(B41020)은 비어 있고, 학과 전공 목록에 과목이 있는 서버.
+    MockClient server(List<Uri> requested) => MockClient((request) async {
+      requested.add(request.url);
+      if (!request.url.path.endsWith('Blsn020302.jsp')) {
+        return _euckr('syllabus_detail_anonymized.html');
+      }
+      return request.url.query.contains('B41020')
+          ? http.Response('<html><body><table></table></body></html>', 200)
+          : _euckr('syllabus_list_anonymized.html');
+    });
+
+    Future<SyllabusDetail> open(SyllabusService service, {String? dept}) =>
+        service.fetchSyllabus(
+          course: _course(type: '일선', department: dept),
+          year: 2026,
+          semester: 2,
+          jsessionId: 'J',
+          wmonid: 'W',
+          userId2: 'U',
+        );
+
+    test('일선 목록에 없으면 개설학과 목록을 한 번 더 부르고 상세를 연다', () async {
+      final requested = <Uri>[];
+      final detail = await open(
+        SyllabusService(client: server(requested)),
+        dept: 'AI빅데이터전공',
+      );
+
+      expect(requested.map((u) => u.query), [
+        'fhd_yyyy=2026&fhd_shtm=2&ic_kwa=B41020',
+        'fhd_yyyy=2026&fhd_shtm=2&ic_kwa=B41005&ic_kwa_1=AA0816%20',
+        'fhd_00=922601&fhd_01=01&fhd_02=2026&fhd_03=2&fhd_04=1234567',
+      ]);
+      expect(detail.info('담당교수'), '김가상');
+    });
+
+    test('다시 열면 두 목록과 상세 모두 저장된 것을 쓴다', () async {
+      final requested = <Uri>[];
+      final service = SyllabusService(client: server(requested));
+      await open(service, dept: 'AI빅데이터전공');
+      await open(service, dept: 'AI빅데이터전공');
+
+      expect(requested, hasLength(3));
+    });
+
+    test('개설학과를 모르면 분류 목록만 보고 Unavailable', () async {
+      final requested = <Uri>[];
+      await expectLater(
+        open(SyllabusService(client: server(requested))),
+        throwsA(isA<SyllabusUnavailableException>()),
+      );
+      expect(requested, hasLength(1));
+    });
+  });
+
   group('상세 읽기(parseDetail)', () {
     late SyllabusDetail detail;
     setUpAll(() async {

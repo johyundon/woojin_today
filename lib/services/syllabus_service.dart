@@ -165,12 +165,15 @@ class SyllabusService implements SyllabusServiceBase {
     if (type.startsWith('교필')) return 'ic_kwa=B41001';
     if (type.startsWith('교직')) return 'ic_kwa=B41004';
     if (type.startsWith('일선')) return 'ic_kwa=B41020';
-    if (type.startsWith('전')) {
-      final code = kDepartmentCodes[course.department?.trim()];
-      if (code == null) return null;
-      return 'ic_kwa=B41005&ic_kwa_1=$code%20';
-    }
+    if (type.startsWith('전')) return departmentQuery(course);
     return null;
+  }
+
+  /// 개설학과의 전공 목록 쿼리. 학과를 모르면 null.
+  static String? departmentQuery(CourseCatalogItem course) {
+    final code = kDepartmentCodes[course.department?.trim()];
+    if (code == null) return null;
+    return 'ic_kwa=B41005&ic_kwa_1=$code%20';
   }
 
   /// [categoryQuery]가 null일 때 사용자에게 보여줄 이유.
@@ -208,17 +211,14 @@ class SyllabusService implements SyllabusServiceBase {
         'JSESSIONID=$jsessionId; user_id=$userId2; userId=$userId2; '
         '$_fixedCookieFields; WMONID=$wmonid';
 
-    final listKey = '$year:$semester:$category';
-    var links = _listCache[listKey];
-    if (links == null) {
-      final listUri = Uri.parse(
-        '${_base}Blsn020302.jsp?fhd_yyyy=$year&fhd_shtm=$semester&$category',
-      );
-      links = parseList(await _get(listUri, cookie));
-      _listCache[listKey] = links;
+    final key = '${course.courseCode}-${course.section}';
+    var href = (await _links(year, semester, category, cookie))[key];
+    // 일선처럼 다른 학과 전공을 듣는 과목은 분류 목록이 아니라 개설학과의
+    // 전공 목록에 있다(2026-11-01 실제 일선 과목에서 확인). 이때만 한 번 더 찾는다.
+    final department = departmentQuery(course);
+    if (href == null && department != null && department != category) {
+      href = (await _links(year, semester, department, cookie))[key];
     }
-
-    final href = links['${course.courseCode}-${course.section}'];
     if (href == null) {
       throw const SyllabusUnavailableException('강의계획서 목록에 이 과목이 없어요.');
     }
@@ -229,6 +229,24 @@ class SyllabusService implements SyllabusServiceBase {
     final detail = parseDetail(await _get(detailUri, cookie));
     _detailCache[detailUri.toString()] = detail;
     return detail;
+  }
+
+  /// 학기·분류별 목록({"과목코드-분반": 상세 링크}). 한 번 받은 목록은 재사용한다.
+  Future<Map<String, String>> _links(
+    int year,
+    int semester,
+    String category,
+    String cookie,
+  ) async {
+    final listKey = '$year:$semester:$category';
+    final cached = _listCache[listKey];
+    if (cached != null) return cached;
+    final listUri = Uri.parse(
+      '${_base}Blsn020302.jsp?fhd_yyyy=$year&fhd_shtm=$semester&$category',
+    );
+    final links = parseList(await _get(listUri, cookie));
+    _listCache[listKey] = links;
+    return links;
   }
 
   Future<String> _get(Uri uri, String cookie) async {
