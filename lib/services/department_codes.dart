@@ -55,3 +55,27 @@ const Map<String, String> kDepartmentCodes = {
   '한국학과': 'CC0871',
   '국제경영학과': 'CC0872',
 };
+
+/// 학생 정보의 학과 이름을 [kDepartmentCodes]의 이름으로 맞춘다. 못 맞추면 null.
+///
+/// 글자가 똑같으면 그대로 쓰고, 아니면 끝의 "학과/과/전공/학부"를 뗀 이름끼리
+/// 비교한다(예: "컴퓨터공학과" → "컴퓨터공학전공"). 맞는 학과가 둘 이상이면
+/// (예: "건축공학" → 건축공학과/건축공학전공) 어느 쪽인지 몰라 null.
+String? matchDepartmentName(String? name) {
+  final trimmed = name?.replaceAll(' ', '') ?? '';
+  if (trimmed.isEmpty) return null;
+  if (kDepartmentCodes.containsKey(trimmed)) return trimmed;
+  final bases = _departmentBases(trimmed);
+  final matches = kDepartmentCodes.keys
+      .where((k) => _departmentBases(k).any(bases.contains))
+      .toList();
+  return matches.length == 1 ? matches.single : null;
+}
+
+/// 이름 자체와, 끝말을 하나 뗀 이름들.
+Set<String> _departmentBases(String name) => {
+  name,
+  for (final suffix in const ['학과', '과', '전공', '학부'])
+    if (name.endsWith(suffix) && name.length > suffix.length)
+      name.substring(0, name.length - suffix.length),
+};
