@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'host_cookie_jar.dart';
@@ -100,10 +99,6 @@ abstract class PortalLoginServiceBase {
 /// 대진대 포털 로그인(1단계 `login.do`, 필요시 2단계 `LinkPortal.jsp` 폴백)을
 /// 호출한다.
 class PortalLoginService implements PortalLoginServiceBase {
-  // ⚠️ 임시 디버그 기록: 마지막 로그인 시도의 홉 요약과 check.do 응답.
-  // 디버그 실행에서만 채워지고 비밀번호·쿠키 값은 넣지 않는다. 확인 후 삭제.
-  static final List<String> debugLog = [];
-
   static const _loginUrl = 'https://www.daejin.ac.kr/subLogin/daejin/login.do';
   static final _homepage = Uri.parse('https://www.daejin.ac.kr/');
   static const _fallbackUrl =
@@ -165,12 +160,10 @@ class PortalLoginService implements PortalLoginServiceBase {
     }
 
     try {
-      if (kDebugMode) debugLog.clear();
       final step1 = await _step1(client, cookieJar, hostJar, userId, userPwd);
       if (step1.failReason != null) {
         return step1;
       }
-      if (kDebugMode) await _debugCheckPwdChange(client, cookieJar);
       if (step1.userId2 != null) {
         return PortalLoginResult(
           success: true,
@@ -301,46 +294,6 @@ class PortalLoginService implements PortalLoginServiceBase {
     return userId2;
   }
 
-  /// ⚠️ 임시: 1단계 직후(www 세션 쿠키 상태)에 check.do를 한 번 불러 응답을
-  /// [debugLog]에 남긴다. 실패해도 로그인에는 영향을 주지 않는다.
-  Future<void> _debugCheckPwdChange(
-    http.Client client,
-    Map<String, String> cookieJar,
-  ) async {
-    try {
-      final request =
-          http.Request(
-              'POST',
-              Uri.parse('https://www.daejin.ac.kr/pwdChangeNtcn/check.do'),
-            )
-            ..followRedirects = false
-            ..headers['Content-Type'] =
-                'application/x-www-form-urlencoded;charset=UTF-8'
-            ..headers['X-Requested-With'] = 'XMLHttpRequest'
-            ..headers['Referer'] = 'https://www.daejin.ac.kr/'
-            ..headers['User-Agent'] = _userAgent
-            ..headers['Cookie'] = cookieJar.entries
-                .map((e) => '${e.key}=${e.value}')
-                .join('; ')
-            ..body = 'siteId=daejin&fnctId=subLogin';
-      final response = await http.Response.fromStream(
-        await client.send(request).timeout(const Duration(seconds: 15)),
-      );
-      final body = utf8.decode(response.bodyBytes, allowMalformed: true);
-      debugLog.add(
-        '[check.do] cookies=${cookieJar.keys.join(',')} '
-        'status=${response.statusCode} '
-        'type=${response.headers['content-type']} '
-        'location=${response.headers['location']}',
-      );
-      debugLog.add(
-        '[check.do body] ${body.length > 6000 ? body.substring(0, 6000) : body}',
-      );
-    } catch (e) {
-      debugLog.add('[check.do] 실패: $e');
-    }
-  }
-
   String? _extractUidFromLocations(List<String> locations) {
     for (final location in locations) {
       if (location.contains('uid%253D')) {
@@ -427,15 +380,6 @@ class PortalLoginService implements PortalLoginServiceBase {
       // 따라가면 세션 수립이 끝나기 전에 체인을 끝낸 걸로 착각해서, 이후
       // dreams2 API 호출이 전부 미인증 취급을 받는 버그로 이어졌다.
       final metaRefreshUrl = isRedirect ? null : _extractMetaRefreshUrl(body);
-      if (kDebugMode) {
-        debugLog.add(
-          '[hop] ${request.method} ${request.url} -> ${response.statusCode} '
-          'location=$location meta=$metaRefreshUrl '
-          'cookies=${hopSetCookies.map((c) => c.split('=').first).join(',')} '
-          'notice=${_passwordNoticePattern.hasMatch(body)} '
-          'title=${RegExp(r'<title>([^<]*)</title>', caseSensitive: false).firstMatch(body)?.group(1)?.trim()}',
-        );
-      }
 
       if (!isRedirect && metaRefreshUrl == null) {
         return _RedirectChainResult(
