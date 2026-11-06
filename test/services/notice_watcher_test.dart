@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
+import 'package:daejin_app/screens/notice/services/notice_read_storage.dart';
 import 'package:daejin_app/services/notice_background.dart';
 import 'package:daejin_app/services/notice_service.dart';
 import 'package:daejin_app/services/notice_watcher.dart';
@@ -9,12 +10,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
-NoticeItem _n(String title, {NoticeTag tag = NoticeTag.academic}) => NoticeItem(
+NoticeItem _n(
+  String title, {
+  NoticeTag tag = NoticeTag.academic,
+  bool isNew = false,
+}) => NoticeItem(
   title: title,
   author: '학사팀',
   date: '2026.10.31',
   viewCount: 0,
   tag: tag,
+  isNew: isNew,
 );
 
 class _FakeNotices implements NoticeServiceBase {
@@ -142,5 +148,32 @@ void main() {
     background.calls.clear();
     await watcher.restoreBackground();
     expect(background.calls, ['start']);
+  });
+
+  group('hasUnread (공지사항 화면의 "새 글"과 같은 기준)', () {
+    test('처음 켰을 때도 게시판 새 글 표시가 있고 안 읽었으면 true', () async {
+      service.academic = [_n('새 학사공지', isNew: true), _n('예전 공지')];
+      await watcher.check(); // 처음 기록이라 hasPending은 false
+      expect(await watcher.hasPending(), isFalse);
+      expect(await watcher.hasUnread(), isTrue);
+    });
+
+    test('새 글을 모두 읽으면 false', () async {
+      final fresh = _n('새 학사공지', isNew: true);
+      service.academic = [fresh];
+      await NoticeReadStorage(prefs: SharedPreferencesAsync())
+          .save({fresh.key});
+      expect(await watcher.hasUnread(), isFalse);
+    });
+
+    test('새 글 표시가 없으면 false', () async {
+      expect(await watcher.hasUnread(), isFalse);
+    });
+
+    test('한 게시판이 실패해도 다른 게시판의 새 글은 찾는다', () async {
+      service.failMileage = true;
+      service.academic = [_n('새 학사공지', isNew: true)];
+      expect(await watcher.hasUnread(), isTrue);
+    });
   });
 }

@@ -172,9 +172,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// 점을 갱신한다. 실패해도 조용히 넘어간다([NoticeWatcher.check]).
   Future<void> _checkNotices() async {
     await _noticeWatcher.check();
-    final pending = await _noticeWatcher.hasPending();
-    if (mounted && pending != _hasNewNotice) {
-      setState(() => _hasNewNotice = pending);
+    await _refreshNoticeDot();
+  }
+
+  /// 종 아이콘의 점: 마지막으로 공지사항 화면을 연 뒤 새로 들어온 공지가 있거나,
+  /// 게시판에 새 글 표시가 붙은 공지 중 아직 열어 보지 않은 것이 있으면 켠다
+  /// (공지사항 화면의 "새 글 N개"와 같은 기준).
+  Future<void> _refreshNoticeDot() async {
+    final show =
+        await _noticeWatcher.hasPending() || await _noticeWatcher.hasUnread();
+    if (mounted && show != _hasNewNotice) {
+      setState(() => _hasNewNotice = show);
     }
   }
 
@@ -347,12 +355,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Navigator.of(context).push(_collectionRoute());
   }
 
-  /// 공지사항 화면이 열리면서 새 공지 표시를 지우므로 점도 바로 끈다.
+  /// 공지사항 화면이 열리면서 새 공지 표시를 지우므로 점도 바로 끄고, 돌아오면
+  /// 안 읽은 새 글이 남았는지 다시 본다.
   Future<void> _openNotice() async {
     setState(() => _hasNewNotice = false);
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => NoticeScreen(watcher: _noticeWatcher)),
     );
+    // 공지사항 화면에서 다 읽지 않았으면 점을 다시 켠다.
+    await _refreshNoticeDot();
   }
 
   /// 길찾기: 앞 수업 건물(있으면)에서 다음 수업 건물까지 채운 채 지도를 연다.

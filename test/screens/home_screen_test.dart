@@ -453,6 +453,57 @@ void main() {
     expect(bellDot(), isFalse);
     expect(await watcher.hasPending(), isFalse);
   });
+  testWidgets('처음 켰을 때도 안 읽은 새 글이 있으면 점이 켜지고, 읽지 않고 돌아오면 다시 켜진다', (
+    tester,
+  ) async {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final notices = _FakeNotices()
+      ..items = [
+        NoticeItem(
+          title: '게시판 새 글',
+          author: '학사팀',
+          date: '2026.10.31',
+          viewCount: 0,
+          tag: NoticeTag.academic,
+          isNew: true,
+        ),
+      ];
+    final watcher = NoticeWatcher(
+      service: notices,
+      prefs: SharedPreferencesAsync(),
+      alert: ({required id, required title, required body}) async {},
+    );
+    final bell = find.byWidgetPredicate(
+      (w) =>
+          w is HomeV7IconButton &&
+          w.asset == HomeV7IconButton.notificationsAsset,
+    );
+    bool bellDot() => tester.widget<HomeV7IconButton>(bell).dot;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          weatherService: WeatherService(
+            client: MockClient((_) async => http.Response(_fixtureJson, 200)),
+          ),
+          noticeWatcher: watcher,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // 처음 확인이라 "새로 들어온 공지"는 없지만 게시판 새 글을 안 읽었다.
+    expect(await watcher.hasPending(), isFalse);
+    expect(bellDot(), isTrue);
+
+    await tester.tap(bell);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(bellDot(), isFalse);
+
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(bellDot(), isTrue, reason: '아직 그 글을 열어 보지 않았다');
+  });
 }
 
 NoticeItem _notice(String title) => NoticeItem(

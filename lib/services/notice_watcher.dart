@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screens/notice/models/notice_item.dart';
+import '../screens/notice/services/notice_read_storage.dart';
 import 'notice_background.dart';
 import 'notice_service.dart';
 import 'notification_service.dart';
@@ -31,7 +32,9 @@ class NoticeWatcher {
     SharedPreferencesAsync? prefs,
     NoticeAlert? alert,
     NoticeBackground? background,
+    NoticeReadStorage? readStorage,
   }) : _service = service ?? ServiceFactory.notice(),
+       _readStorageArg = readStorage,
        _prefsArg = prefs,
        _alert = alert ?? NotificationService.instance.showNoticeAlert,
        _background = background ?? const NoticeBackground();
@@ -60,6 +63,7 @@ class NoticeWatcher {
       _prefsArg ?? SharedPreferencesAsync();
   final NoticeAlert _alert;
   final NoticeBackground _background;
+  final NoticeReadStorage? _readStorageArg;
 
   Future<bool> isEnabled() async {
     try {
@@ -114,6 +118,28 @@ class NoticeWatcher {
 
   /// 새 공지를 확인하고, 알림이 켜져 있으면 알림을 띄운다. 새 공지 목록을 돌려준다.
   /// 어떤 실패도 밖으로 던지지 않는다(홈 화면을 막지 않기 위해).
+  /// 공지사항 화면과 같은 기준의 "안 읽은 새 글"이 있는지. 게시판이 새 글
+  /// 표시([NoticeItem.isNew])를 붙였고 아직 열어 보지 않은 공지가 하나라도 있으면
+  /// true. 홈 종 아이콘의 점에 쓴다. 공지 목록은 저장분(1시간)을 써서 보통 학교에
+  /// 새로 묻지 않는다. 로그인이 필요한 게시판은 건너뛰고, 실패하면 false.
+  Future<bool> hasUnread() async {
+    try {
+      final read = await (_readStorageArg ?? NoticeReadStorage()).load();
+      for (final board in NoticeBoard.values) {
+        if (board.requiresLogin) continue;
+        try {
+          final items = await _service.fetchNotices(board);
+          if (items.any((n) => n.isNew && !read.contains(n.key))) return true;
+        } catch (e) {
+          debugPrint('[NoticeWatcher] ${board.name} 안 읽은 공지 확인 실패: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('[NoticeWatcher] 안 읽은 공지 확인 실패: $e');
+    }
+    return false;
+  }
+
   Future<List<NoticeItem>> check() async {
     try {
       final current = <NoticeItem>[];
