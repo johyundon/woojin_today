@@ -1,6 +1,6 @@
 part of 'timetable_screen.dart';
 
-/// 빈 셀 탭, 과목 추가/삭제, AI 시간표 자동 생성 진입 등 확정 과목
+/// 빈 셀 탭, 과목 추가, AI 시간표 자동 생성 진입 등 확정 과목
 /// 목록(_confirmedCourses)을 직접 조작하는 책임.
 mixin TimetableCourseMixin on TimetableSessionMixin {
   void _onEmptyCellTap(Weekday day, int startHour) {
@@ -9,14 +9,6 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
 
   void _clearPendingSlot() {
     setState(() => _pendingSlot = null);
-  }
-
-  void _removeCourse(PlannedCourse course) {
-    setState(() {
-      _confirmedCourses = _confirmedCourses
-          .where((c) => c.key != course.key)
-          .toList();
-    });
   }
 
   void _addCourse(CourseCatalogItem item) {
@@ -54,16 +46,23 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
       return;
     }
 
+    final profile = await _loadAiRecommendProfile();
+    if (!stepContext.mounted) return;
+
     await Navigator.of(stepContext).push(
       MaterialPageRoute(
         builder: (_) => AiRecommendResultScreen(
           candidates: generateTimetableCandidates(
             catalog: _catalog,
             answers: answers,
+            profile: profile,
           ),
           answers: answers,
-          onRegenerate: () async =>
-              generateTimetableCandidates(catalog: _catalog, answers: answers),
+          onRegenerate: () async => generateTimetableCandidates(
+            catalog: _catalog,
+            answers: answers,
+            profile: profile,
+          ),
           onConfirm: (chosen) {
             setState(() => _confirmedCourses = chosen);
             // 결과 화면 + 설문 화면을 모두 닫고 시간표 화면으로 돌아간다.
@@ -78,5 +77,44 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
         ),
       ),
     );
+  }
+
+  /// 자동 생성이 참고할 내 학과 전공 목록과 학년. 학생 정보는 홈에서 이미
+  /// 불러와 저장돼 있어 보통 새 요청이 없고, 학과별 개설과목은 학기마다 한
+  /// 번만 학교에 묻고 기기에 저장한다. 못 구하면 학과·학년을 가리지 않는다.
+  Future<AiRecommendProfile> _loadAiRecommendProfile() async {
+    final userId2 = widget.userId2;
+    if (!_hasFullSession || userId2 == null) {
+      return const AiRecommendProfile();
+    }
+    try {
+      final info = await SessionCache.getStudentInfo(
+        widget.studentInfoService ?? ServiceFactory.studentInfo(),
+        userId2: userId2,
+      );
+      final grade = int.tryParse(
+        RegExp(r'[1-4]').firstMatch(info.grade ?? '')?.group(0) ?? '',
+      );
+      final deptName = matchDepartmentName(info.department);
+      final deptCode = deptName == null ? null : kDepartmentCodes[deptName];
+      Set<String>? majors;
+      if (deptCode != null) {
+        final dept = await SessionCache.getCourseCatalog(
+          _courseCatalogService,
+          year: _year,
+          semester: _semester,
+          jsessionId: widget.jsessionId!,
+          wmonid: widget.wmonid!,
+          icKwa: 'B41005',
+          icKwa1: deptCode,
+          userId: userId2,
+        );
+        if (dept.isNotEmpty) majors = {for (final i in dept) i.courseCode};
+      }
+      return AiRecommendProfile(myMajorCourseCodes: majors, myGrade: grade);
+    } catch (e) {
+      debugPrint('[AiRecommend] 내 학과·학년 읽기 실패: $e');
+      return const AiRecommendProfile();
+    }
   }
 }

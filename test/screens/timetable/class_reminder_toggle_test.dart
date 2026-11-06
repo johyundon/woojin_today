@@ -191,7 +191,7 @@ void main() {
     expect(await ClassReminderSettings().isEnabled(), isFalse);
   });
 
-  testWidgets('저장된 켜짐 상태로 다시 열면 켜져 있고, 과목을 지우면 다시 예약한다', (tester) async {
+  testWidgets('저장된 켜짐 상태로 다시 열면 켜져 있고 불러온 시간표로 다시 예약한다', (tester) async {
     await ClassReminderSettings().setEnabled(true);
     final notifications = _FakeNotifications();
     await _pump(tester, notifications);
@@ -199,12 +199,5 @@ void main() {
     // 앱을 다시 연 것과 같다: 권한을 다시 묻지 않고, 불러온 시간표로 맞춘다.
     expect(_switchValue(tester), isTrue);
     expect(notifications.calls, ['cancelAll', 'schedule', 'schedule']);
-    notifications.calls.clear();
-
-    // 과목 블록의 X로 과목을 지우면 전부 취소하고, 남은 과목이 없어 예약은 없다.
-    await tester.tap(find.byIcon(Icons.close).first);
-    await tester.pumpAndSettle();
-
-    expect(notifications.calls, ['cancelAll']);
   });
 }
