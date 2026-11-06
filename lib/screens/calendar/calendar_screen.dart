@@ -208,28 +208,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
       await showReminderPastDialog(context, attemptedAt: attemptedAt);
     }
     // 시간 정보가 없는 일정(학사일정 등)은 언제 울리는지 팝업으로 알려준다. 여러 날
-    // 일정은 시작일과 마감일 둘 다, 시작일이 이미 지났으면 남은 마감일만 나온다.
+    // 일정은 시작일·마감 하루 전·마감일 중 아직 안 지난 것만 나온다.
     if (outcome.result == _ReminderResult.ok && event.isAllDay && mounted) {
       await showReminderSetDialog(context, dates: outcome.scheduled);
     }
   }
 
   /// [event]에 걸려 있던 알림 예약을 전부 취소한다(시작일 알림과, 여러 날 일정의
-  /// 마감일 알림).
+  /// 마감 하루 전·마감일 알림).
   Future<void> _cancelReminders(CalendarEvent event) async {
-    await _notifications.cancelReminder(event.id);
-    await _notifications.cancelReminder('${event.id}#end');
+    for (final kind in ReminderKind.values) {
+      await _notifications.cancelReminder('${event.id}${kind.idSuffix}');
+    }
   }
 
   /// [event]의 알림을 폰에 (다시) 예약하거나, 알림이 꺼져 있으면 예약을 취소한다.
-  /// 울려야 할 시각([CalendarEvent.reminderAts]) 중 아직 안 지난 것만 건다 — 하나라도
+  /// 울려야 할 알림([CalendarEvent.reminders]) 중 아직 안 지난 것만 건다 — 하나라도
   /// 걸리면 성공이고, 건 시각들을 [scheduled]로 돌려준다. 전부 지났으면
   /// [_ReminderResult.past], 권한이 없으면 안내 메시지를 띄우고
   /// [_ReminderResult.denied]를 돌려준다. 실패하면 호출한 쪽이 알림 상태를 되돌린다.
   Future<({_ReminderResult result, List<DateTime> scheduled})> _syncReminder(
     CalendarEvent event,
   ) async {
-    final all = event.reminderAts;
+    final all = event.reminders;
     if (all.isEmpty) {
       await _cancelReminders(event);
       return (result: _ReminderResult.ok, scheduled: const <DateTime>[]);
@@ -248,16 +249,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final now = DateTime.now();
     final scheduled = <DateTime>[];
     await _cancelReminders(event);
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].isBefore(now)) continue;
+    for (final reminder in all) {
+      if (reminder.at.isBefore(now)) continue;
       await _notifications.scheduleReminder(
-        // 첫 번째는 시작일, 두 번째는 마감일 알림 — 따로 취소할 수 있게 번호를 나눈다.
-        eventId: i == 0 ? event.id : '${event.id}#end',
+        // 시작일·마감 하루 전·마감일 알림을 따로 취소할 수 있게 번호를 나눈다.
+        eventId: '${event.id}${reminder.kind.idSuffix}',
         title: event.title,
-        body: '${event.label} · ${event.reminderOffset!.label}',
-        scheduledAt: all[i],
+        body: reminder.body,
+        scheduledAt: reminder.at,
       );
-      scheduled.add(all[i]);
+      scheduled.add(reminder.at);
     }
     return (
       result: scheduled.isEmpty ? _ReminderResult.past : _ReminderResult.ok,

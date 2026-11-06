@@ -64,52 +64,126 @@ void main() {
     });
   });
 
-  group('reminderAts (여러 날 일정)', () {
-    CalendarEvent multiDay({required String id, ReminderOffset? offset}) =>
-        CalendarEvent(
-          id: id,
-          startDate: DateTime(2026, 10, 14),
-          endDate: DateTime(2026, 10, 15),
-          label: '학사일정',
-          title: '왕방축제',
-          color: Colors.purple,
-          reminderOffset: offset,
-        );
+  group('reminders (여러 날 일정)', () {
+    CalendarEvent event({
+      String id = 'sample-1',
+      required DateTime start,
+      required DateTime end,
+      String title = '왕방축제',
+      ReminderOffset? offset = ReminderOffset.atStart,
+    }) => CalendarEvent(
+      id: id,
+      startDate: start,
+      endDate: end,
+      label: '학사일정',
+      title: title,
+      color: Colors.purple,
+      reminderOffset: offset,
+    );
 
-    test('여러 날 학사일정은 시작일과 마감일 오전 9시, 두 번이다', () {
-      final event = multiDay(id: 'sample-1', offset: ReminderOffset.atStart);
-      expect(event.isMultiDay, isTrue);
-      expect(event.reminderAts, [
+    test('11/1~11/30 신청 기간은 시작·마감 하루 전·마감일 오전 9시, 세 번이다', () {
+      final reminders = event(
+        start: DateTime(2026, 11, 1),
+        end: DateTime(2026, 11, 30),
+        title: '2026학년도 겨울계절학기 수강신청',
+      ).reminders;
+
+      expect(reminders.map((r) => r.at), [
+        DateTime(2026, 11, 1, 9, 0),
+        DateTime(2026, 11, 29, 9, 0),
+        DateTime(2026, 11, 30, 9, 0),
+      ]);
+      expect(reminders.map((r) => r.kind), [
+        ReminderKind.start,
+        ReminderKind.dayBeforeEnd,
+        ReminderKind.end,
+      ]);
+      expect(reminders.map((r) => r.body), [
+        '오늘부터 시작 · 11월 30일까지',
+        '내일 마감 · 11월 30일',
+        '오늘 마감',
+      ]);
+    });
+
+    test('신청·납부 같은 말이 없으면 "마감" 대신 "끝나요"라고 한다', () {
+      final reminders = event(
+        start: DateTime(2026, 12, 21),
+        end: DateTime(2027, 2, 28),
+        title: '동계방학',
+      ).reminders;
+
+      expect(reminders.map((r) => r.body), [
+        '오늘부터 시작 · 2월 28일까지',
+        '내일 끝나요 · 2월 28일',
+        '오늘 끝나요',
+      ]);
+      // 달·해가 바뀌어도 하루 전은 정확히 그 전날이다.
+      expect(reminders[1].at, DateTime(2027, 2, 27, 9, 0));
+    });
+
+    test('2일짜리는 하루 전이 시작일과 겹쳐서 시작·마감 두 번이다', () {
+      final reminders = event(
+        start: DateTime(2026, 10, 14),
+        end: DateTime(2026, 10, 15),
+      ).reminders;
+
+      expect(reminders.map((r) => r.at), [
         DateTime(2026, 10, 14, 9, 0),
         DateTime(2026, 10, 15, 9, 0),
       ]);
     });
 
-    test('"10분 전"이면 두 알림 모두 그만큼 앞당겨진다', () {
-      final event = multiDay(id: 'sample-1', offset: ReminderOffset.tenMinutes);
-      expect(event.reminderAts, [
+    test('3일짜리부터 하루 전 알림이 생긴다', () {
+      final reminders = event(
+        start: DateTime(2026, 10, 14),
+        end: DateTime(2026, 10, 16),
+      ).reminders;
+
+      expect(reminders.map((r) => r.kind), ReminderKind.values);
+    });
+
+    test('"10분 전"이면 모든 알림이 그만큼 앞당겨진다', () {
+      final reminders = event(
+        start: DateTime(2026, 10, 14),
+        end: DateTime(2026, 10, 16),
+        offset: ReminderOffset.tenMinutes,
+      ).reminders;
+
+      expect(reminders.map((r) => r.at), [
         DateTime(2026, 10, 14, 8, 50),
         DateTime(2026, 10, 15, 8, 50),
+        DateTime(2026, 10, 16, 8, 50),
       ]);
     });
 
-    test('내가 만든 일정은 여러 날이어도 시작일 한 번만이다', () {
-      final event = multiDay(id: 'local-1', offset: ReminderOffset.atStart);
-      expect(event.reminderAts, [DateTime(2026, 10, 14, 9, 0)]);
+    test('내가 만든 일정은 여러 날이어도 시작일 한 번이고 문구도 그대로다', () {
+      final reminders = event(
+        id: 'local-1',
+        start: DateTime(2026, 11, 1),
+        end: DateTime(2026, 11, 30),
+      ).reminders;
+
+      expect(reminders.single.at, DateTime(2026, 11, 1, 9, 0));
+      expect(reminders.single.body, '학사일정 · 정각');
     });
 
     test('하루짜리 학사일정은 한 번이고, 알림이 꺼져 있으면 없다', () {
-      final single = CalendarEvent(
+      final single = event(
         id: 'sample-2',
-        startDate: DateTime(2026, 10, 14),
-        endDate: DateTime(2026, 10, 14),
-        label: '학사일정',
+        start: DateTime(2026, 10, 14),
+        end: DateTime(2026, 10, 14),
         title: '수강정정',
-        color: Colors.blue,
-        reminderOffset: ReminderOffset.atStart,
       );
       expect(single.reminderAts, [DateTime(2026, 10, 14, 9, 0)]);
-      expect(multiDay(id: 'sample-1').reminderAts, isEmpty);
+      expect(single.reminders.single.kind, ReminderKind.start);
+      expect(
+        event(
+          start: DateTime(2026, 11, 1),
+          end: DateTime(2026, 11, 30),
+          offset: null,
+        ).reminders,
+        isEmpty,
+      );
     });
   });
 

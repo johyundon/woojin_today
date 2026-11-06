@@ -13,6 +13,27 @@ enum ReminderOffset {
   final int minutes;
 }
 
+/// 여러 날 학사일정의 알림 종류.
+enum ReminderKind {
+  /// 시작일(하루짜리 일정·내가 만든 일정은 이것 하나뿐).
+  start(''),
+
+  /// 마감 하루 전. 기간이 3일 이상일 때만(2일짜리는 시작일과 겹침).
+  dayBeforeEnd('#before'),
+
+  /// 마감일.
+  end('#end');
+
+  const ReminderKind(this.idSuffix);
+
+  /// 알림 예약 번호에 붙이는 꼬리. 시작은 일정 id 그대로, 나머지는 따로
+  /// 취소할 수 있게 구분한다(`#end`는 예전에 건 알림과 같은 번호).
+  final String idSuffix;
+}
+
+/// 실제로 걸 알림 하나: 울릴 시각, 종류, 알림 본문.
+typedef ScheduledReminder = ({DateTime at, ReminderKind kind, String body});
+
 /// 종일 일정(시작 시간 없음)의 알림을 계산할 때 "시작 시각"으로 보는 시각.
 const TimeOfDay allDayReminderAnchor = TimeOfDay(hour: 9, minute: 0);
 
@@ -87,15 +108,49 @@ class CalendarEvent {
   /// 시작일 기준 알림 시각(알림이 꺼져 있으면 null).
   DateTime? get reminderAt => _reminderOn(startDate);
 
-  /// 실제로 울려야 할 알림 시각 전부. 사용자가 만든 일정은 시작일 한 번이고,
-  /// 여러 날에 걸친 학사일정은 시작일과 마감일(끝나는 날) 두 번이다 — 시작과 마감이
-  /// 둘 다 중요한데 매일 울리면 기간이 긴 일정에서 너무 많아서다.
-  List<DateTime> get reminderAts {
+  /// 실제로 울려야 할 알림 시각 전부([reminders]의 시각).
+  List<DateTime> get reminderAts => [for (final r in reminders) r.at];
+
+  /// 실제로 걸 알림 전부. 사용자가 만든 일정과 하루짜리 일정은 시작일 한 번이다.
+  /// 여러 날에 걸친 학사일정은 시작일, 마감 하루 전(3일 이상일 때), 마감일까지
+  /// 최대 세 번이다 — 매일 울리면 긴 일정에서 너무 많고, 마감 당일 한 번만으로는
+  /// 신청·납부를 처리하기 빠듯해서다. 본문으로 어느 알림인지 구분한다.
+  List<ScheduledReminder> get reminders {
     final first = reminderAt;
     if (first == null) return const [];
-    if (isUserEvent || !isMultiDay) return [first];
-    return [first, _reminderOn(endDate)!];
+    if (isUserEvent || !isMultiDay) {
+      return [
+        (
+          at: first,
+          kind: ReminderKind.start,
+          body: '$label · ${reminderOffset!.label}',
+        ),
+      ];
+    }
+    final endDay = '${endDate.month}월 ${endDate.day}일';
+    final deadline = _deadlinePattern.hasMatch(title);
+    final days = DateTime(endDate.year, endDate.month, endDate.day)
+        .difference(DateTime(startDate.year, startDate.month, startDate.day))
+        .inDays;
+    return [
+      (at: first, kind: ReminderKind.start, body: '오늘부터 시작 · $endDay까지'),
+      if (days >= 2)
+        (
+          at: _reminderOn(endDate.subtract(const Duration(days: 1)))!,
+          kind: ReminderKind.dayBeforeEnd,
+          body: deadline ? '내일 마감 · $endDay' : '내일 끝나요 · $endDay',
+        ),
+      (
+        at: _reminderOn(endDate)!,
+        kind: ReminderKind.end,
+        body: deadline ? '오늘 마감' : '오늘 끝나요',
+      ),
+    ];
   }
+
+  /// 제목에 이 말이 있으면 "마감"으로, 없으면(방학·시험 기간 등) "끝나요"로 쓴다.
+  /// 학교 일정 제목이 다양해 완벽한 구분은 아니다.
+  static final _deadlinePattern = RegExp('신청|등록|납부|제출|접수');
 
   Map<String, dynamic> toJson() => {
     'id': id,

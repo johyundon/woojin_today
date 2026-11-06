@@ -70,13 +70,17 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
 
   /// 알림 줄 문구. 시간 정보가 없는 종일 일정(학사일정 등)의 "정각" 알림은 오전 9시에
   /// 울리므로 "정각"이라고만 쓰지 않고 언제 울리는지 그대로 보여준다. 여러 날에 걸친
-  /// 학사일정은 시작일과 마감일, 두 번 울린다.
+  /// 학사일정은 시작일과 마감일(3일 이상이면 마감 전날도) 울린다.
   String get _reminderText {
     final offset = event.reminderOffset;
     if (offset == null) return '알림 없음';
     if (event.isAllDay && offset == ReminderOffset.atStart) {
       if (!event.isMultiDay) return '당일 오전 9시';
-      return event.isUserEvent ? '시작일 오전 9시' : '시작일·마감일 오전 9시';
+      if (event.isUserEvent) return '시작일 오전 9시';
+      final hasDayBefore = event.reminders.any(
+        (r) => r.kind == ReminderKind.dayBeforeEnd,
+      );
+      return hasDayBefore ? '시작일·마감 전날·마감일 오전 9시' : '시작일·마감일 오전 9시';
     }
     return offset.label;
   }

@@ -446,6 +446,35 @@ void main() {
       });
     });
 
+    testWidgets('여러 날(내일~5일 뒤): 시작·마감 전날·마감일 세 날짜가 나온다', (tester) async {
+      await _withIosPlatform(() async {
+        final start = day(1);
+        final before = day(4);
+        final end = day(5);
+        await pumpWithAcademicEvent(tester, start: start, end: end);
+
+        await tester.tap(find.byIcon(Icons.notifications_none));
+        await tester.pumpAndSettle();
+
+        String next(DateTime prev, DateTime d) =>
+            prev.month == d.month ? '${d.day}일' : md(d);
+        expect(
+          find.text(
+            '${md(start)}, ${next(start, before)}, ${next(before, end)} '
+            '오전 9시에\n알림이 울립니다',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('확인'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('수강신청 변경 기간'));
+        await tester.pumpAndSettle();
+        expect(find.text('시작일·마감 전날·마감일 오전 9시'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     testWidgets('이미 시작된 일정(어제~내일): 시작일은 지났으니 마감일(내일)만 걸린다', (tester) async {
       await _withIosPlatform(() async {
         final end = day(1);
