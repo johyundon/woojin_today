@@ -5,23 +5,26 @@ import '../theme/app_colors.dart';
 import '../widgets/app_checkbox_row.dart';
 import '../widgets/mascot_sticker.dart';
 import '../widgets/primary_button.dart';
-import 'onboarding_screen.dart';
+import 'post_login_route.dart';
 import 'terms_detail_screen.dart';
 
 /// 이용약관 동의 화면 (Figma node 6:4).
 ///
-/// v4 리디자인부터 로그인 "이후"에 최초 1회만 보여주는 화면으로 옮겨졌다
-/// (관련 결정: onboarding_screen.dart, login_screen.dart). 그래서 로그인에서
-/// 받은 세션 쿠키를 그대로 들고 있다가, 동의가 끝나면 온보딩 화면으로
+/// v4 리디자인부터 로그인 "이후"에 학번별로 최초 1회만 보여주는 화면으로
+/// 옮겨졌다(언제 보여줄지는 post_login_route.dart). 그래서 로그인에서 받은
+/// 세션 쿠키를 그대로 들고 있다가, 동의가 끝나면 다음 화면(보통 온보딩)으로
 /// 넘겨준다.
 class TermsAgreementScreen extends StatefulWidget {
   const TermsAgreementScreen({
     super.key,
+    required this.userId,
     this.jsessionId,
     this.wmonid,
     this.userId2,
   });
 
+  /// 동의 기록을 저장할 학번.
+  final String userId;
   final String? jsessionId;
   final String? wmonid;
   final String? userId2;
@@ -52,17 +55,18 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
   }
 
   Future<void> _onSubmit() async {
-    await TermsAcceptanceStorage().markAccepted();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OnboardingScreen(
-          jsessionId: widget.jsessionId,
-          wmonid: widget.wmonid,
-          userId2: widget.userId2,
-        ),
-      ),
+    await TermsAcceptanceStorage().markAccepted(widget.userId);
+    // 온보딩을 이미 끝낸 사람(약관 버전이 바뀌어 다시 동의한 경우)은 온보딩
+    // 없이 바로 넘어가도록, 다음 화면은 로그인 후 공통 규칙으로 고른다.
+    final next = await postLoginScreen(
+      userId: widget.userId,
+      jsessionId: widget.jsessionId,
+      wmonid: widget.wmonid,
+      userId2: widget.userId2,
     );
+    if (!mounted) return;
+    Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (_) => next));
   }
 
   @override

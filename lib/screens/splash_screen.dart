@@ -8,12 +8,12 @@ import '../services/service_factory.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import 'login_screen.dart';
-import 'student_id_login_complete_screen.dart';
+import 'post_login_route.dart';
 
 /// 스플래시 화면 ("우진이의 하루" v4 리디자인).
 /// 코발트 배경 + 마스코트를 2초간 보여주는 동안, 저장된 로그인 자격증명이
 /// 있으면 조용히 재로그인을 시도한다. 성공하면 로그인 화면을 거치지
-/// 않고 바로 로그인 완료 화면으로, 저장된 값이 없거나 재로그인에 실패하면
+/// 않고 로그인 후 화면(post_login_route.dart)으로, 저장된 값이 없거나 재로그인에 실패하면
 /// 로그인 화면으로 이동한다.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -63,11 +63,17 @@ class _SplashScreenState extends State<SplashScreen> {
     await minDisplay;
     if (!mounted) return;
     if (loginSucceeded && result != null) {
-      _goToLoginComplete(
+      // 보통은 바로 로그인 완료 화면이지만, 약관 버전이 바뀌었거나 온보딩을
+      // 끝내지 않은 학번이면 그 화면부터 보여준다.
+      final next = await postLoginScreen(
+        userId: credentials.userId,
         jsessionId: result.jsessionId,
         wmonid: result.wmonid,
         userId2: result.userId2,
       );
+      if (!mounted) return;
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (_) => next));
     } else {
       _goToLogin();
     }
@@ -86,23 +92,6 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.of(
       context,
     ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
-  }
-
-  void _goToLoginComplete({
-    String? jsessionId,
-    String? wmonid,
-    String? userId2,
-  }) {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => StudentIdLoginCompleteScreen(
-          jsessionId: jsessionId,
-          wmonid: wmonid,
-          userId2: userId2,
-        ),
-      ),
-    );
   }
 
   @override

@@ -4,18 +4,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'credential_storage.dart';
 import 'notification_service.dart';
 import 'session_cache.dart';
+import 'terms_acceptance_storage.dart';
 
 /// 로그아웃할 때 기기에 남은 이 사용자의 데이터를 전부 지운다.
 ///
 /// 같은 기기로 다른 학생이 로그인할 수 있으므로 다음을 모두 비운다.
 /// - 자동 로그인용 학번·비밀번호(키체인)
 /// - 학생정보·시간표·개설과목 임시 기억([SessionCache])
-/// - 기기 저장소 전체(저장한 시간표, 캘린더 일정, 공지 읽음, 약관 동의)
+/// - 기기 저장소(저장한 시간표, 캘린더 일정, 공지 읽음 등)
 /// - 예전 방식 저장소의 캐시(학과 등수 평점, 공지 목록, 학식, 학사일정)
 /// - 예약된 알림 전체(캘린더 일정, 강의시간)
 ///
-/// 기기 저장소는 키를 하나씩 지우지 않고 통째로 비운다 — 지금 저장하는 값이
-/// 전부 사용자 데이터라서다. 사용자와 무관한 기기 설정을 저장하게 되면 이
+/// 기기 저장소는 학번별 약관 동의·온보딩 완료 기록
+/// ([TermsAcceptanceStorage.isKeptOnLogout])만 남기고 전부 지운다 — 같은 학생이
+/// 다시 로그인했을 때 약관·온보딩을 또 보지 않게 하려는 것이고, 이 기록에는
+/// 학번과 "봤다"는 표시만 있다. 사용자와 무관한 기기 설정을 저장하게 되면 이
 /// 부분을 다시 봐야 한다.
 ///
 /// 저장 방식이 두 가지라 둘 다 지운다. 캐시들은 예전 방식([SharedPreferences])으로
@@ -34,7 +37,13 @@ Future<void> clearUserDataOnLogout({
   await _run('캐시 저장소', () async {
     await (await SharedPreferences.getInstance()).clear();
   });
-  await _run('기기 저장소', (prefs ?? SharedPreferencesAsync()).clear);
+  await _run('기기 저장소', () async {
+    final p = prefs ?? SharedPreferencesAsync();
+    final toRemove = (await p.getKeys())
+        .where((k) => !TermsAcceptanceStorage.isKeptOnLogout(k))
+        .toSet();
+    if (toRemove.isNotEmpty) await p.clear(allowList: toRemove);
+  });
   await _run(
     '예약 알림',
     cancelNotifications ?? NotificationService.instance.cancelAll,

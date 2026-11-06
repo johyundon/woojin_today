@@ -9,6 +9,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'package:daejin_app/services/credential_storage.dart';
 import 'package:daejin_app/services/logout_cleaner.dart';
+import 'package:daejin_app/services/terms_acceptance_storage.dart';
 
 void main() {
   test('자격증명·기기 저장소·예약 알림을 전부 지운다', () async {
@@ -34,6 +35,24 @@ void main() {
     expect(await credentials.read(), isNull);
     expect(await prefs.getKeys(), isEmpty);
     expect(notificationsCancelled, isTrue);
+  });
+
+  test('학번별 약관 동의·온보딩 기록은 남겨 다시 로그인해도 또 보지 않는다', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final prefs = SharedPreferencesAsync();
+    final terms = TermsAcceptanceStorage(prefs: prefs);
+    await terms.markAccepted('20211476');
+    await terms.markOnboardingCompleted('20211476');
+    await prefs.setString('daejin_saved_timetables', '[]');
+
+    await clearUserDataOnLogout(prefs: prefs, cancelNotifications: () async {});
+
+    expect(await terms.hasAccepted('20211476'), isTrue);
+    expect(await terms.hasCompletedOnboarding('20211476'), isTrue);
+    expect(await prefs.getString('daejin_saved_timetables'), isNull);
   });
 
   test('한 단계가 실패해도 나머지는 계속 지운다', () async {
