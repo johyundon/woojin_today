@@ -367,3 +367,21 @@ Future<void> sendFile({
     client.close(force: true);
   }
 }
+
+/// 탐색으로 받은 호스트 이름("기기이름.local.")을 IPv4 주소로 바꾼다.
+/// 안드로이드는 ".local" 이름을 직접 못 찾는 경우가 있어서 미리 바꿔 두고,
+/// 이미 IP이거나 바꾸지 못하면 받은 값을 그대로 쓴다(IPv6 링크 로컬
+/// 주소는 연결에 추가 정보가 필요해 피한다).
+Future<String> resolvePeerHost(String host) async {
+  if (InternetAddress.tryParse(host) != null) return host;
+  try {
+    final found = await InternetAddress.lookup(
+      host,
+      type: InternetAddressType.IPv4,
+    ).timeout(const Duration(seconds: 3));
+    if (found.isNotEmpty) return found.first.address;
+  } catch (_) {
+    // 아래에서 원래 이름으로 시도한다.
+  }
+  return host;
+}

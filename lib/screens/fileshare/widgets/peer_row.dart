@@ -11,11 +11,23 @@ class PeerRow extends StatelessWidget {
     required this.peer,
     required this.color,
     required this.onSend,
+    this.progress,
   });
 
   final nsd.Service peer;
   final Color color;
   final VoidCallback onSend;
+
+  /// 이 사람에게 보내는 중이면 0~1(0은 상대 수락을 기다리는 중), 아니면
+  /// null. 보내는 중엔 버튼을 막아 같은 사람에게 겹쳐 보내지 않게 한다.
+  final double? progress;
+
+  String get _buttonLabel {
+    final p = progress;
+    if (p == null) return '보내기';
+    if (p <= 0) return '수락 대기';
+    return '${(p * 100).round()}%';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,15 +69,16 @@ class PeerRow extends StatelessWidget {
           ),
           Pressable(
             onTap: onSend,
+            enabled: progress == null,
             pressedScale: 0.93,
             child: Material(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(
-                  '보내기',
-                  style: TextStyle(
+                  _buttonLabel,
+                  style: const TextStyle(
                     color: AppColors.cobalt,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,

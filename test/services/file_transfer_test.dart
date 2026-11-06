@@ -231,6 +231,21 @@ void main() {
     );
   });
 
+  group('resolvePeerHost', () {
+    test('이미 IP면 그대로', () async {
+      expect(await resolvePeerHost('192.168.0.7'), '192.168.0.7');
+    });
+    test('이름은 IPv4 주소로 바꾼다', () async {
+      expect(await resolvePeerHost('localhost'), '127.0.0.1');
+    });
+    test('못 찾는 이름은 원래 값을 돌려준다', () async {
+      expect(
+        await resolvePeerHost('no-such-host.invalid'),
+        'no-such-host.invalid',
+      );
+    });
+  });
+
   group('sanitizeFileName', () {
     test('경로와 위험 문자를 없앤다', () {
       expect(sanitizeFileName('a/b/c.pdf'), 'c.pdf');

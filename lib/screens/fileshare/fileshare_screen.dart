@@ -12,8 +12,10 @@ import '../../services/file_transfer.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/top_banner.dart';
 import 'fileshare_colors.dart';
 import 'received_file.dart';
+import 'widgets/incoming_offer_dialog.dart';
 import 'widgets/peer_row.dart';
 import 'widgets/radar_view.dart';
 import 'widgets/received_file_row.dart';
@@ -42,15 +44,14 @@ const Color _cardTint = Color(0xFFEEF2FD);
 /// 참고 스크린샷은 발견된 사람마다 이름/학과/학번을 보여주지만, 실제
 /// mDNS 광고 이름은 로그인한 학생 이름이 아니라 [_deviceLabel](임의
 /// 번호가 붙은 앱 이름)이라 그 정보를 그대로 보여줄 수 없다 — 지어내지
-/// 않고 광고된 이름 그대로("우진이의 하루 - 1234" 식)만 보여준다. 같은
-/// 이유로 사람별 "보내기" 버튼도 그 사람에게만 보내는 실제 전송이 아니라
-/// (특정 상대 타겟 전송은 아직 없음, 아래 "1단계" 설명 참고) 전체
-/// "내 파일 보내기"와 같은 동작(파일 선택 → OS 공유 시트)을 그대로 쓴다.
+/// 않고 광고된 이름 그대로("우진이의 하루 - 1234" 식)만 보여준다.
 ///
-/// 지금은 "서로 찾기" + 받는 창구([FileTransferServer]) 열기까지 — 켜면
-/// 창구가 연 실제 번호를 광고한다. 받기/거절을 묻는 화면과 사람별 실제
-/// 보내기는 다음 단계라, 그 전까지 창구는 모든 요청을 거절하고 보내기/
-/// 받기는 아래 설명대로 OS 공유 시트/공유 수신으로 별도 동작한다.
+/// **찾은 사람과 직접 주고받기**: 켜면 받는 창구([FileTransferServer])를
+/// 열고 그 실제 번호를 광고한다. 사람별 "보내기"는 파일을 골라 그
+/// 사람에게 바로 보내고([sendFile]), 받는 쪽은 "받기/거절" 창
+/// ([showIncomingOfferDialog])에서 수락해야만 저장된다. 받은 파일은 아래
+/// "받은 파일" 목록에 같이 쌓인다. 아래의 OS 공유 시트/공유 수신은 이와
+/// 별개로 그대로 동작한다(하단 "내 파일 보내기" 버튼, 다른 앱에서 받기).
 ///
 /// **보내기/받기는 실제로 동작한다**(둘 다 사용자 요청으로 추가):
 /// - 보내기: [FilePicker]로 기기에서 파일을 고르면, OS가 원래 제공하는
@@ -133,9 +134,14 @@ class _FileShareScreenState extends State<FileShareScreen> {
   nsd.Discovery? _discovery;
 
   /// 다른 기기가 파일을 보내 올 받는 창구. 켜져 있는 동안만 열려 있다.
-  /// 받기/거절을 묻는 화면은 아직 없어서(2단계) 지금은 모든 요청을
-  /// 거절한다 — 묻지 않고 남의 파일을 저장하지 않기 위해서다.
   FileTransferServer? _transferServer;
+
+  /// "받기/거절" 창이 떠 있는지. 한 번에 하나만 묻고, 그동안 온 다른
+  /// 요청은 바로 거절한다(창이 겹치면 시간 초과로 엉뚱한 창이 닫힐 수 있음).
+  bool _offerDialogOpen = false;
+
+  /// 사람(광고 이름)별 보내기 진행률. 0은 상대 수락 대기 중.
+  final Map<String, double> _sendProgress = {};
 
   @override
   void initState() {
@@ -219,7 +225,8 @@ class _FileShareScreenState extends State<FileShareScreen> {
       saveDirectory: Directory(
         '${Directory.systemTemp.path}${Platform.pathSeparator}daejinshare_inbox',
       ),
-      onOffer: (_) async => false,
+      onOffer: _onIncomingOffer,
+      onReceived: _onTransferReceived,
     );
     // 바로 기록해 둔다 — 등록이 끝나기 전에 토글을 꺼도
     // [_stopAdvertisingAndDiscovery]가 이 창구를 닫을 수 있게.
@@ -300,6 +307,105 @@ class _FileShareScreenState extends State<FileShareScreen> {
     }
   }
 
+  Future<bool> _onIncomingOffer(FileOffer offer) async {
+    if (!mounted || _offerDialogOpen) return false;
+    _offerDialogOpen = true;
+    try {
+      return await showIncomingOfferDialog(context, offer);
+    } finally {
+      _offerDialogOpen = false;
+    }
+  }
+
+  void _onTransferReceived(ReceivedTransfer transfer) {
+    if (!mounted) return;
+    final entry = ReceivedFile(
+      file: SharedMediaFile(
+        path: transfer.file.path,
+        type: SharedMediaType.file,
+      ),
+      receivedAt: DateTime.now(),
+    )..sizeBytes = transfer.offer.sizeBytes;
+    setState(() => _receivedFiles.insert(0, entry));
+    showTopBanner(
+      context,
+      title: '파일을 받았어요',
+      message: transfer.offer.fileName,
+      icon: Icons.download_done,
+    );
+  }
+
+  /// 파일을 골라 [peer]에게 바로 보낸다. 상대가 수락할 때까지 기다린 뒤
+  /// 내용을 보내고, 결과는 위쪽 배너로 알린다.
+  Future<void> _sendToPeer(nsd.Service peer) async {
+    final key = peer.name ?? '';
+    final host = peer.host;
+    final port = peer.port;
+    if (host == null || port == null) {
+      showTopBanner(
+        context,
+        title: '보낼 수 없어요',
+        message: '상대 기기 주소를 아직 못 찾았어요. 잠시 뒤 다시 해 주세요.',
+      );
+      return;
+    }
+
+    final PlatformFile? picked;
+    try {
+      picked = await FilePicker.pickFile();
+    } catch (e) {
+      if (!mounted) return;
+      showTopBanner(context, title: '파일을 선택하지 못했어요', message: '$e');
+      return;
+    }
+    final path = picked?.path;
+    if (picked == null || path == null || !mounted) return;
+
+    setState(() => _sendProgress[key] = 0);
+    var lastPercent = -1;
+    try {
+      await sendFile(
+        host: await resolvePeerHost(host),
+        port: port,
+        file: File(path),
+        fileName: picked.name,
+        senderName: _deviceLabel,
+        onProgress: (sent, total) {
+          // 조각마다 다시 그리지 않고 1% 바뀔 때만 그린다.
+          final percent = total == 0 ? 100 : sent * 100 ~/ total;
+          if (percent == lastPercent || !mounted) return;
+          lastPercent = percent;
+          setState(() => _sendProgress[key] = max(percent, 1) / 100);
+        },
+      );
+      if (!mounted) return;
+      showTopBanner(
+        context,
+        title: '보냈어요',
+        message: '${picked.name} → $key',
+        icon: Icons.check,
+      );
+    } on FileTransferException catch (e) {
+      if (!mounted) return;
+      showTopBanner(context, title: '보내지 못했어요', message: _failureText(e));
+    } finally {
+      if (mounted) setState(() => _sendProgress.remove(key));
+    }
+  }
+
+  static String _failureText(FileTransferException e) {
+    switch (e.failure) {
+      case FileTransferFailure.declined:
+        return '상대가 거절했거나 답하지 않았어요.';
+      case FileTransferFailure.tooLarge:
+        return '파일이 너무 커요(최대 200MB).';
+      case FileTransferFailure.network:
+        return '상대 기기에 연결하지 못했어요. 같은 와이파이인지 확인해 주세요.';
+      case FileTransferFailure.rejected:
+        return '전송 중 문제가 생겼어요. 다시 시도해 주세요.';
+    }
+  }
+
   void _onDiscoveryChanged() {
     if (mounted) setState(() {});
   }
@@ -323,8 +429,7 @@ class _FileShareScreenState extends State<FileShareScreen> {
 
   /// 기기에서 파일을 고른 뒤 OS의 실제 "공유하기" 시트로 넘긴다. 취소/실패는
   /// 조용히 처리하되(사용자가 그냥 마음을 바꾼 흔한 경우), 공유 시트 자체를
-  /// 못 띄운 경우에만 스낵바로 알린다. 레이더의 사람별 "보내기"도 특정
-  /// 상대에게 보내는 실제 전송이 없어 이 동작을 그대로 재사용한다.
+  /// 못 띄운 경우에만 스낵바로 알린다.
   Future<void> _sendFile() async {
     final PlatformFile? picked;
     try {
@@ -628,7 +733,8 @@ class _FileShareScreenState extends State<FileShareScreen> {
             child: PeerRow(
               peer: peers[i],
               color: avatarColors[i % avatarColors.length],
-              onSend: _sendFile,
+              onSend: () => _sendToPeer(peers[i]),
+              progress: _sendProgress[peers[i].name ?? ''],
             ),
           ),
       ],
