@@ -3,6 +3,7 @@
 import 'package:daejin_app/screens/timetable/models/saved_timetable.dart';
 import 'package:daejin_app/screens/timetable/services/saved_timetable_storage.dart';
 import 'package:daejin_app/screens/timetable/timetable_screen.dart';
+import 'package:daejin_app/screens/timetable/widgets/course_block.dart';
 import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
@@ -129,6 +130,25 @@ void main() {
     expect(find.text('이번 학기에 수강신청한 과목이 없어요.'), findsNothing);
   });
 
+  testWidgets('시간표 과목 칸에는 빼기(×) 버튼이 없다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+      ]),
+    );
+
+    final block = find.ancestor(
+      of: find.text('가상자료구조').first,
+      matching: find.byType(CourseBlock),
+    );
+    expect(block, findsWidgets);
+    expect(
+      find.descendant(of: block.first, matching: find.byIcon(Icons.close)),
+      findsNothing,
+    );
+  });
+
   testWidgets('수강 과목이 없으면 빈 상태 안내를 보여준다', (tester) async {
     final service = _FakeService([const MyTimetableResponse(courses: [])]);
 
@@ -164,9 +184,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('개설학과가 있는 내 시간표 과목은 학과 행이 보이고 강의계획서가 열린다', (
-      tester,
-    ) async {
+    testWidgets('개설학과가 있는 내 시간표 과목은 학과 행이 보이고 강의계획서가 열린다', (tester) async {
       final syllabus = _FakeSyllabus();
       const course = CourseCatalogItem(
         seq: 1,
@@ -187,7 +205,9 @@ void main() {
       );
       await _pump(
         tester,
-        _FakeService([const MyTimetableResponse(courses: [course])]),
+        _FakeService([
+          const MyTimetableResponse(courses: [course]),
+        ]),
         syllabus: syllabus,
       );
 

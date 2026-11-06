@@ -1,6 +1,6 @@
 part of 'timetable_screen.dart';
 
-/// 빈 셀 탭, 과목 추가/삭제, AI 시간표 자동 생성 진입 등 확정 과목
+/// 빈 셀 탭, 과목 추가, AI 시간표 자동 생성 진입 등 확정 과목
 /// 목록(_confirmedCourses)을 직접 조작하는 책임.
 mixin TimetableCourseMixin on TimetableSessionMixin {
   void _onEmptyCellTap(Weekday day, int startHour) {
@@ -9,14 +9,6 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
 
   void _clearPendingSlot() {
     setState(() => _pendingSlot = null);
-  }
-
-  void _removeCourse(PlannedCourse course) {
-    setState(() {
-      _confirmedCourses = _confirmedCourses
-          .where((c) => c.key != course.key)
-          .toList();
-    });
   }
 
   void _addCourse(CourseCatalogItem item) {

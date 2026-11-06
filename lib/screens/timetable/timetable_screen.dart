@@ -294,7 +294,6 @@ class _TimetableScreenState extends State<TimetableScreen>
                               courses: _confirmedCourses,
                               pendingSlot: _pendingSlot,
                               onEmptyCellTap: _onEmptyCellTap,
-                              onRemoveCourse: _removeCourse,
                               onCourseTap: (course) =>
                                   _showCourseDetail(course.toCatalogItem()),
                               today: Weekday.values[now.weekday - 1],

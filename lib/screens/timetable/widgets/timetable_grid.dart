@@ -29,7 +29,6 @@ class TimetableGrid extends StatelessWidget {
     required this.courses,
     required this.pendingSlot,
     required this.onEmptyCellTap,
-    required this.onRemoveCourse,
     required this.onCourseTap,
     this.today,
     this.viewportHeight = 320,
@@ -38,7 +37,6 @@ class TimetableGrid extends StatelessWidget {
   final List<PlannedCourse> courses;
   final PendingSlot? pendingSlot;
   final void Function(Weekday day, int startHour) onEmptyCellTap;
-  final ValueChanged<PlannedCourse> onRemoveCourse;
   final ValueChanged<PlannedCourse> onCourseTap;
 
   /// 오늘 요일. 월~금 밖(주말)이면 null — 요일 헤더에서 오늘 칸만 강조
@@ -165,7 +163,6 @@ class TimetableGrid extends StatelessWidget {
       height: height,
       child: CourseBlock(
         layout: layout,
-        onRemove: () => onRemoveCourse(layout.course),
         onTap: () => onCourseTap(layout.course),
       ),
     );

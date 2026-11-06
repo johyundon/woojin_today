@@ -4,20 +4,11 @@ import '../../../widgets/pressable.dart';
 import '../grid_layout.dart';
 import '../timetable_colors.dart';
 
-/// 그리드 위의 색깔 강의 블록 하나. 우상단 ×로 (로컬) 삭제.
-///
-/// 주의: 이 ×는 "내가 짜고 있는 시간표 초안"에서만 빼는 것이다 — 실제 수강신청
-/// 내역을 바꾸는 API는 명세서에 없어 호출하지 않는다.
+/// 그리드 위의 색깔 강의 블록 하나. 누르면 과목 상세가 열린다.
 class CourseBlock extends StatelessWidget {
-  const CourseBlock({
-    super.key,
-    required this.layout,
-    required this.onRemove,
-    required this.onTap,
-  });
+  const CourseBlock({super.key, required this.layout, required this.onTap});
 
   final CourseBlockLayout layout;
-  final VoidCallback onRemove;
   final VoidCallback onTap;
 
   @override
@@ -34,8 +25,7 @@ class CourseBlock extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // 칸이 좁아(약 58) ×를 오른쪽 아래 구석에 띄워 과목명 폭을 뺏지
-            // 않는다 — 과목명이 길면 2줄까지 보인다.
+            // 과목명이 길면 2줄까지 보인다.
             Padding(
               padding: const EdgeInsets.all(5),
               child: Column(
@@ -77,21 +67,6 @@ class CourseBlock extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-            Positioned(
-              bottom: 3,
-              right: 3,
-              child: Pressable.icon(
-                onTap: onRemove,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 10),
-                ),
               ),
             ),
           ],
