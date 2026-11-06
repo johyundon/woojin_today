@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../services/course_catalog_service.dart';
+import '../../services/department_codes.dart';
 import '../../services/service_factory.dart';
+import '../../services/session_cache.dart';
+import '../../services/student_info_service.dart';
 import '../../services/syllabus_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
@@ -23,6 +26,7 @@ class SyllabusScreen extends StatefulWidget {
     this.wmonid,
     this.userId2,
     this.syllabusService,
+    this.studentInfoService,
   });
 
   final CourseCatalogItem course;
@@ -34,6 +38,9 @@ class SyllabusScreen extends StatefulWidget {
 
   /// 테스트에서 가짜 서비스를 넣기 위한 옵션.
   final SyllabusServiceBase? syllabusService;
+
+  /// 테스트에서 가짜 학생 정보(내 학과)를 넣기 위한 옵션.
+  final StudentInfoServiceBase? studentInfoService;
 
   @override
   State<SyllabusScreen> createState() => _SyllabusScreenState();
@@ -72,9 +79,13 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
       _loading = true;
       _error = null;
     });
+    final myDepartment = await _myDepartmentIfNeeded(userId2);
+    final course = myDepartment == null
+        ? widget.course
+        : widget.course.withDepartment(myDepartment);
     try {
       final detail = await _service.fetchSyllabus(
-        course: widget.course,
+        course: course,
         year: widget.year,
         semester: widget.semester,
         jsessionId: jsessionId,
@@ -90,7 +101,11 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.message;
+        // 내 학과 목록에서 찾았는데 없으면 다른 학과 전공 과목이다.
+        _error = myDepartment == null
+            ? e.message
+            : '$myDepartment 전공 목록에 없는 과목이에요.\n'
+                  '다른 학과 전공 과목은 아직 강의계획서를 열 수 없어요.';
         _unavailable = true;
       });
     } catch (e) {
@@ -100,6 +115,29 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
         _loading = false;
         _error = '강의계획서를 불러오지 못했어요.';
       });
+    }
+  }
+
+  /// 개설학과를 모르는 전공 과목("과목 추가" 목록에서 고른 과목)이면, 로그인한
+  /// 학생의 학과 이름을 돌려준다. 학생들이 주로 고르는 과목이 자기 전공이라
+  /// 그 학과 전공 목록에서 먼저 찾는다. 해당 없거나 못 읽으면 null.
+  ///
+  /// 학생 정보는 홈에서 이미 불러와 [SessionCache]에 있으므로 보통 새 요청이 없다.
+  Future<String?> _myDepartmentIfNeeded(String userId2) async {
+    final course = widget.course;
+    final hasDepartment = (course.department?.trim() ?? '').isNotEmpty;
+    if (hasDepartment || !course.courseType.trim().startsWith('전')) {
+      return null;
+    }
+    try {
+      final info = await SessionCache.getStudentInfo(
+        widget.studentInfoService ?? ServiceFactory.studentInfo(),
+        userId2: userId2,
+      );
+      return matchDepartmentName(info.department);
+    } catch (e) {
+      debugPrint('[Syllabus] 내 학과 읽기 실패: $e');
+      return null;
     }
   }
 
@@ -323,7 +361,6 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
   }
 }
 
-
 /// 디자인의 5칸에 맞춰 강의계획서 절을 고르고 글로 옮긴다. 제목은 실제
 /// 강의계획서의 절 제목(번호 제외)을 쓴다. 내용이 없으면 "내용 없음".
 List<(String, String)> _syllabusSections(SyllabusDetail detail) {
@@ -338,8 +375,9 @@ List<(String, String)> _syllabusSections(SyllabusDetail detail) {
   final competencies = detail.section('3-1)')?.competencies ?? const [];
   final weeks = detail.section('10.')?.weeks ?? const [];
   // 반영비율 0%인 평가요소는 실제로 쓰지 않으므로 뺀다.
-  final evaluations = (detail.section('7.')?.evaluations ?? const [])
-      .where((e) => e.ratio != '0%');
+  final evaluations = (detail.section('7.')?.evaluations ?? const []).where(
+    (e) => e.ratio != '0%',
+  );
 
   return [
     (
