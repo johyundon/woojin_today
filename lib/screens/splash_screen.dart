@@ -17,7 +17,15 @@ import 'post_login_route.dart';
 /// 않고 로그인 후 화면(post_login_route.dart)으로, 저장된 값이 없거나 재로그인에 실패하면
 /// 로그인 화면으로 이동한다.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({
+    super.key,
+    this.portalLoginService,
+    this.credentialStorage,
+  });
+
+  /// 테스트에서 가짜를 넣기 위한 값. 없으면 실제 서비스를 쓴다.
+  final PortalLoginServiceBase? portalLoginService;
+  final CredentialStorage? credentialStorage;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -39,7 +47,8 @@ class _SplashScreenState extends State<SplashScreen> {
     // Future.delayed를 쓰면 위젯이 일찍 dispose돼도 타이머가 계속 남는다).
     final minDisplay = _startMinDisplayTimer();
 
-    final credentials = await CredentialStorage().read();
+    final storage = widget.credentialStorage ?? CredentialStorage();
+    final credentials = await storage.read();
     if (credentials == null) {
       await minDisplay;
       _goToLogin();
@@ -49,7 +58,8 @@ class _SplashScreenState extends State<SplashScreen> {
     var loginSucceeded = false;
     PortalLoginResult? result;
     try {
-      final portalLoginService = ServiceFactory.portalLogin();
+      final portalLoginService =
+          widget.portalLoginService ?? ServiceFactory.portalLogin();
       result = await portalLoginService.login(
         userId: credentials.userId,
         userPwd: credentials.userPwd,
@@ -76,9 +86,32 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
       Navigator.of(context)
           .pushReplacement(MaterialPageRoute(builder: (_) => next));
-    } else {
-      _goToLogin();
+      return;
     }
+
+    // 비밀번호를 학교에서 바꿨거나 계정이 없어진 경우. 저장된 값으로 또 시도하면
+    // 앱을 켤 때마다 틀린 비밀번호가 학교에 쌓여 계정이 잠길 수 있으므로 지우고,
+    // 로그인 화면에서 다시 입력하게 한다. 네트워크 오류 등은 비밀번호와 상관없어
+    // 지우지 않는다.
+    final reason = result?.failReason;
+    if (reason == '비밀번호오류' || reason == '계정없음') {
+      try {
+        await storage.clear();
+      } catch (e) {
+        debugPrint('[Splash] 저장된 계정 지우기 실패: $e');
+      }
+      final remaining = result?.remainingAttempts;
+      _goToLogin(
+        userId: reason == '비밀번호오류' ? credentials.userId : null,
+        notice: reason == '비밀번호오류'
+            ? '저장된 비밀번호로 로그인하지 못했어요. 비밀번호를 바꿨다면 새 비밀번호로 '
+                  '다시 로그인해 주세요.'
+                  '${remaining != null ? ' ($remaining회 더 틀리면 계정이 잠길 수 있어요)' : ''}'
+            : '저장된 학번으로 로그인하지 못했어요. 다시 로그인해 주세요.',
+      );
+      return;
+    }
+    _goToLogin();
   }
 
   Future<void> _startMinDisplayTimer() {
@@ -89,11 +122,13 @@ class _SplashScreenState extends State<SplashScreen> {
     return completer.future;
   }
 
-  void _goToLogin() {
+  void _goToLogin({String? userId, String? notice}) {
     if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(initialUserId: userId, notice: notice),
+      ),
+    );
   }
 
   @override

@@ -16,7 +16,13 @@ import 'student_id_find_screen.dart';
 /// 화면을 한 번 거치고, 이미 동의한 적이 있으면 바로 로그인 완료 화면으로
 /// 넘어간다.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.initialUserId, this.notice});
+
+  /// 학번 칸에 미리 채워 둘 값(자동 로그인이 비밀번호 오류로 실패했을 때).
+  final String? initialUserId;
+
+  /// 처음 열 때 오류 칸에 보여줄 안내(자동 로그인 실패 이유).
+  final String? notice;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -31,6 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _autoLogin = true;
 
   final _portalLoginService = ServiceFactory.portalLogin();
+
+  @override
+  void initState() {
+    super.initState();
+    _idController.text = widget.initialUserId ?? '';
+    _errorMessage = widget.notice;
+  }
 
   @override
   void dispose() {
