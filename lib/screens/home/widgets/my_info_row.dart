@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../home_colors.dart';
 
-/// "내 정보" 모달의 한 줄: 라임 아이콘 칸 + 라벨 + 값을 연한 회색 칸에 담는다.
+/// "내 정보" 모달의 한 줄: 연한 파랑 아이콘 칸 + 라벨 + 값을 연한 회색 칸에 담는다.
 class MyInfoRow extends StatelessWidget {
   const MyInfoRow({
     super.key,
@@ -23,8 +23,8 @@ class MyInfoRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F8),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
@@ -32,10 +32,10 @@ class MyInfoRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.lime,
+              color: AppColors.blueSoft,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, size: 20, color: AppColors.ink),
+            child: Icon(icon, size: 20, color: AppColors.blue),
           ),
           const SizedBox(width: 12),
           Expanded(

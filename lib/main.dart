@@ -28,14 +28,27 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '우진이의 하루',
       debugShowCheckedModeBanner: false,
+      // v7: 밝은 바탕에 파랑 포인트. 화면마다 색을 직접 정해 두었고, 테마는
+      // 따로 정하지 않은 글자·입력칸·팝업·글자 선택 손잡이의 기본값을 맞춘다.
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         fontFamily: 'Pretendard',
-        scaffoldBackgroundColor: AppColors.background,
+        scaffoldBackgroundColor: AppColors.canvas,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.accent,
-          brightness: Brightness.dark,
+          seedColor: AppColors.blue,
+          brightness: Brightness.light,
+          primary: AppColors.blue,
+          surface: Colors.white,
+          onSurface: AppColors.textStrong,
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: AppColors.blue,
+          selectionHandleColor: AppColors.blue,
+        ),
+        dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.white,
         ),
       ),
       home: const SplashScreen(),

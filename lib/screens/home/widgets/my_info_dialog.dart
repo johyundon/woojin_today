@@ -39,7 +39,7 @@ class MyInfoDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: colors.cardSurface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -49,15 +49,15 @@ class MyInfoDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.lime,
-                borderRadius: BorderRadius.circular(20),
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
                 '내 정보',
                 style: TextStyle(
-                  color: AppColors.ink,
+                  color: AppColors.blueText,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -70,7 +70,7 @@ class MyInfoDialog extends StatelessWidget {
                 onTap: () => Navigator.of(context).pop(),
                 pressedScale: 0.96,
                 child: Material(
-                  color: AppColors.ink,
+                  color: AppColors.blue,
                   borderRadius: BorderRadius.circular(16),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 15),
@@ -103,7 +103,10 @@ class MyInfoDialog extends StatelessWidget {
             child: SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.blue,
+              ),
             ),
           ),
         ),
@@ -126,7 +129,7 @@ class MyInfoDialog extends StatelessWidget {
             height: 56,
             alignment: Alignment.center,
             decoration: const BoxDecoration(
-              color: AppColors.cobalt,
+              color: AppColors.blue,
               shape: BoxShape.circle,
             ),
             child: hasName
@@ -194,8 +197,8 @@ class MyInfoDialog extends StatelessWidget {
       Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F8),
-          borderRadius: BorderRadius.circular(18),
+          color: AppColors.fill,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
@@ -203,10 +206,10 @@ class MyInfoDialog extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.blushPink,
+                color: const Color(0xFFFDECEC),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppColors.ink, size: 22),
+              child: Icon(icon, color: Color(0xFFE62B34), size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -241,7 +244,7 @@ class MyInfoDialog extends StatelessWidget {
   }
 }
 
-/// 오류 안내 아래의 복구 버튼(라임). 텍스트 버튼 대신 눈에 띄게 보여준다.
+/// 오류 안내 아래의 복구 버튼(연한 파랑). 텍스트 버튼 대신 눈에 띄게 보여준다.
 class _ActionButton extends StatelessWidget {
   const _ActionButton({required this.label, required this.onTap});
 
@@ -256,7 +259,7 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         pressedScale: 0.96,
         child: Material(
-          color: AppColors.lime,
+          color: AppColors.blueSoft,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -264,7 +267,7 @@ class _ActionButton extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.ink,
+                color: AppColors.blueText,
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),

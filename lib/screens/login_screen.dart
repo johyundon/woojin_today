@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/credential_storage.dart';
 import '../services/portal_login_service.dart';
@@ -268,270 +269,275 @@ class _LoginScreenState extends State<LoginScreen> {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     // 키가 작은 화면(예 360x640)에서는 제목을 가리지 않도록 마스코트를 줄인다.
     final compact = MediaQuery.sizeOf(context).height < 740;
-    return Scaffold(
-      // 키보드 뒤쪽 빈 공간(둥근 키보드 양옆)에 파랑이 비치지 않도록 바탕은
-      // 흰색으로 두고, 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      // 디자인에서 흰 카드가 화면 맨 밑(홈 인디케이터 뒤)까지 꽉 채워져 있어서
-      // 바깥 SafeArea는 아래쪽을 비우고, 카드 안쪽 여백으로 안전 영역을 띄운다.
-      body: ColoredBox(
-        color: AppColors.blue,
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            // 제목 영역이 가운데로 몰리지 않고 화면 폭을 다 쓰게 한다.
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(26, 14, 26, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.blueSoft,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.verified_rounded,
-                              size: 13,
-                              color: AppColors.blue,
-                            ),
-                            SizedBox(width: 3),
-                            Text(
-                              '대진대 재학생 인증',
-                              style: TextStyle(
-                                color: AppColors.blue,
-                                fontSize: 12,
-                                height: 1.4,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        '반가워!\n학교 계정으로\n로그인',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          height: 1.4,
-                          letterSpacing: -1.6,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // 마스코트가 흰 카드 위로 걸쳐 보이도록 카드와 같은 Stack에
-              // 넣고 카드보다 나중에 그린다. 카드 윗변 기준이라 화면 높이가
-              // 달라도 카드에 발을 걸친 모양이 유지된다.
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    padding: EdgeInsets.fromLTRB(
-                      22,
-                      32,
-                      22,
-                      bottomInset + 10 > 44 ? bottomInset + 10 : 44,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(36),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x0F000000),
-                          offset: Offset(0, -4),
-                          blurRadius: 20,
-                        ),
-                      ],
-                    ),
+    // 파란 머리 화면이라 상태 표시줄 글자(시계·배터리)를 흰색으로 그린다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        // 키보드 뒤쪽 빈 공간(둥근 키보드 양옆)에 파랑이 비치지 않도록 바탕은
+        // 흰색으로 두고, 파랑은 body 영역에만 깐다.
+        backgroundColor: Colors.white,
+        // 디자인에서 흰 카드가 화면 맨 밑(홈 인디케이터 뒤)까지 꽉 채워져 있어서
+        // 바깥 SafeArea는 아래쪽을 비우고, 카드 안쪽 여백으로 안전 영역을 띄운다.
+        body: ColoredBox(
+          color: AppColors.blue,
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              // 제목 영역이 가운데로 몰리지 않고 화면 폭을 다 쓰게 한다.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(26, 14, 26, 16),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _LoginField(
-                          icon: Icons.badge_rounded,
-                          label: '학번',
-                          controller: _idController,
-                          valueStyle: const TextStyle(
-                            color: AppColors.textStrong,
-                            fontSize: 16,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.blueSoft,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified_rounded,
+                                size: 13,
+                                color: AppColors.blue,
+                              ),
+                              SizedBox(width: 3),
+                              Text(
+                                '대진대 재학생 인증',
+                                style: TextStyle(
+                                  color: AppColors.blue,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          '반가워!\n학교 계정으로\n로그인',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
                             height: 1.4,
-                            letterSpacing: 0.48,
+                            letterSpacing: -1.6,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        _LoginField(
-                          icon: Icons.lock_rounded,
-                          label: '비밀번호',
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          valueStyle: TextStyle(
-                            color: AppColors.textStrong,
-                            fontSize: _obscurePassword ? 17 : 16,
-                            height: 1.4,
-                            letterSpacing: _obscurePassword ? 3.4 : 0.48,
-                            fontWeight: _obscurePassword
-                                ? FontWeight.w800
-                                : FontWeight.w700,
+                      ],
+                    ),
+                  ),
+                ),
+                // 마스코트가 흰 카드 위로 걸쳐 보이도록 카드와 같은 Stack에
+                // 넣고 카드보다 나중에 그린다. 카드 윗변 기준이라 화면 높이가
+                // 달라도 카드에 발을 걸친 모양이 유지된다.
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.fromLTRB(
+                        22,
+                        32,
+                        22,
+                        bottomInset + 10 > 44 ? bottomInset + 10 : 44,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(36),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            offset: Offset(0, -4),
+                            blurRadius: 20,
                           ),
-                          trailing: Pressable.icon(
-                            onTap: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _LoginField(
+                            icon: Icons.badge_rounded,
+                            label: '학번',
+                            controller: _idController,
+                            valueStyle: const TextStyle(
+                              color: AppColors.textStrong,
+                              fontSize: 16,
+                              height: 1.4,
+                              letterSpacing: 0.48,
+                              fontWeight: FontWeight.w700,
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 19,
-                                color: AppColors.textSub,
+                          ),
+                          const SizedBox(height: 12),
+                          _LoginField(
+                            icon: Icons.lock_rounded,
+                            label: '비밀번호',
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            valueStyle: TextStyle(
+                              color: AppColors.textStrong,
+                              fontSize: _obscurePassword ? 17 : 16,
+                              height: 1.4,
+                              letterSpacing: _obscurePassword ? 3.4 : 0.48,
+                              fontWeight: _obscurePassword
+                                  ? FontWeight.w800
+                                  : FontWeight.w700,
+                            ),
+                            trailing: Pressable.icon(
+                              onTap: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  size: 19,
+                                  color: AppColors.textSub,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(6, 18, 6, 0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Pressable.effect(
-                                    child: SizedBox(
-                                      width: 44,
-                                      height: 26,
-                                      child: FittedBox(
-                                        child: Switch(
-                                          value: _autoLogin,
-                                          materialTapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                          activeTrackColor: AppColors.blue,
-                                          activeThumbColor: Colors.white,
-                                          inactiveTrackColor:
-                                              AppColors.checkLine,
-                                          inactiveThumbColor: Colors.white,
-                                          trackOutlineColor:
-                                              const WidgetStatePropertyAll(
-                                                Colors.transparent,
-                                              ),
-                                          onChanged: (v) =>
-                                              setState(() => _autoLogin = v),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(6, 18, 6, 0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Pressable.effect(
+                                      child: SizedBox(
+                                        width: 44,
+                                        height: 26,
+                                        child: FittedBox(
+                                          child: Switch(
+                                            value: _autoLogin,
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
+                                            activeTrackColor: AppColors.blue,
+                                            activeThumbColor: Colors.white,
+                                            inactiveTrackColor:
+                                                AppColors.checkLine,
+                                            inactiveThumbColor: Colors.white,
+                                            trackOutlineColor:
+                                                const WidgetStatePropertyAll(
+                                                  Colors.transparent,
+                                                ),
+                                            onChanged: (v) =>
+                                                setState(() => _autoLogin = v),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Text(
-                                    '자동 로그인',
-                                    style: TextStyle(
-                                      color: AppColors.textStrong,
-                                      fontSize: 13,
-                                      height: 1.4,
-                                      fontWeight: FontWeight.w700,
+                                    const SizedBox(width: 10),
+                                    const Text(
+                                      '자동 로그인',
+                                      style: TextStyle(
+                                        color: AppColors.textStrong,
+                                        fontSize: 13,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Pressable(
+                                  onTap: _onFindStudentId,
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 4),
+                                    child: Text(
+                                      '학번 찾기',
+                                      style: TextStyle(
+                                        color: AppColors.textBody,
+                                        fontSize: 12,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
-                              Pressable(
-                                onTap: _onFindStudentId,
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 4),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 14),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 1),
+                                  child: Icon(
+                                    Icons.error_rounded,
+                                    size: 15,
+                                    color: _errorRed,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
                                   child: Text(
-                                    '학번 찾기',
-                                    style: TextStyle(
-                                      color: AppColors.textBody,
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: _errorRed,
                                       fontSize: 12,
                                       height: 1.4,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          ],
+                          SizedBox(height: _errorMessage != null ? 28 : 73),
+                          _LoginButton(
+                            isLoading: _isLoading,
+                            onPressed: _onSubmit,
                           ),
-                        ),
-                        if (_errorMessage != null) ...[
                           const SizedBox(height: 14),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(top: 1),
-                                child: Icon(
-                                  Icons.error_rounded,
-                                  size: 15,
-                                  color: _errorRed,
-                                ),
+                          const Center(
+                            child: Text(
+                              '로그인이 안 되면 학생지원처로 문의해 주세요',
+                              style: TextStyle(
+                                color: AppColors.textSub,
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w600,
                               ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: _errorRed,
-                                    fontSize: 12,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        SizedBox(height: _errorMessage != null ? 28 : 73),
-                        _LoginButton(
-                          isLoading: _isLoading,
-                          onPressed: _onSubmit,
-                        ),
-                        const SizedBox(height: 14),
-                        const Center(
-                          child: Text(
-                            '로그인이 안 되면 학생지원처로 문의해 주세요',
-                            style: TextStyle(
-                              color: AppColors.textSub,
-                              fontSize: 12,
-                              height: 1.4,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // 마스코트. 키보드가 올라와 있는 동안은 입력창을 가리지
-                  // 않도록 숨긴다. 그림이 탭을 가로채지 않게 IgnorePointer로 감싼다.
-                  if (!keyboardOpen)
-                    Positioned(
-                      right: 5,
-                      // 그림 높이(폭의 약 1.2배)에서 카드에 걸치는 만큼을 뺀 위치.
-                      top: compact ? -146 : -227,
-                      child: IgnorePointer(
-                        child: MascotSticker(
-                          width: compact ? 150 : 232,
-                          angle: 0.0873,
-                        ),
+                        ],
                       ),
                     ),
-                ],
-              ),
-            ],
+                    // 마스코트. 키보드가 올라와 있는 동안은 입력창을 가리지
+                    // 않도록 숨긴다. 그림이 탭을 가로채지 않게 IgnorePointer로 감싼다.
+                    if (!keyboardOpen)
+                      Positioned(
+                        right: 5,
+                        // 그림 높이(폭의 약 1.2배)에서 카드에 걸치는 만큼을 뺀 위치.
+                        top: compact ? -146 : -227,
+                        child: IgnorePointer(
+                          child: MascotSticker(
+                            width: compact ? 150 : 232,
+                            angle: 0.0873,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

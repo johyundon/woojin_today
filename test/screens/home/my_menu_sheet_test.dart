@@ -9,7 +9,7 @@ import 'package:daejin_app/screens/home/widgets/my_menu_sheet.dart';
 import 'package:daejin_app/theme/app_colors.dart';
 
 void main() {
-  testWidgets('다크 테마에서도 메뉴 글자가 흰색이 아니라 잉크색이다', (tester) async {
+  testWidgets('다크 테마에서도 메뉴 글자가 흰색이 아니라 진한 글자색이다', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(brightness: Brightness.dark),
@@ -22,7 +22,7 @@ void main() {
 
     for (final label in ['내 정보', '이용약관']) {
       final text = tester.widget<Text>(find.text(label));
-      expect(text.style?.color, AppColors.ink, reason: label);
+      expect(text.style?.color, AppColors.textStrong, reason: label);
     }
     expect(
       tester.widget<Text>(find.text('로그아웃')).style?.color,

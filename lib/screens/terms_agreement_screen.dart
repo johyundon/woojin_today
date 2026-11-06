@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
@@ -75,159 +76,165 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return Scaffold(
-      backgroundColor: AppColors.blue,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: 242,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // 마스코트 → 글자 순서로 겹친다.
-                  const Positioned(
-                    right: 6,
-                    top: 8,
-                    child: MascotSticker(width: 156, angle: 0.1222),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 42, 24, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.blueSoft,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            '시작하기',
-                            style: TextStyle(
-                              color: AppColors.blue,
-                              fontSize: 12,
-                              height: 1.4,
-                              fontWeight: FontWeight.w800,
+    // 파란 머리 화면이라 상태 표시줄 글자(시계·배터리)를 흰색으로 그린다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.blue,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: 242,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 마스코트 → 글자 순서로 겹친다.
+                    const Positioned(
+                      right: 6,
+                      top: 8,
+                      child: MascotSticker(width: 156, angle: 0.1222),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 42, 24, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.blueSoft,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text(
+                              '시작하기',
+                              style: TextStyle(
+                                color: AppColors.blue,
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          '이용약관에\n동의해 주세요',
+                          const SizedBox(height: 12),
+                          const Text(
+                            '이용약관에\n동의해 주세요',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 29,
+                              height: 1.4,
+                              letterSpacing: -1.16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(
+                    22,
+                    28,
+                    22,
+                    bottomInset + 10 > 44 ? bottomInset + 10 : 44,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(36),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        offset: Offset(0, -4),
+                        blurRadius: 20,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '서비스 이용을 위해 아래 약관을 확인하고 모두 동의해주세요',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 29,
+                            color: AppColors.textSub,
+                            fontSize: 13,
                             height: 1.4,
-                            letterSpacing: -1.16,
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(
-                  22,
-                  28,
-                  22,
-                  bottomInset + 10 > 44 ? bottomInset + 10 : 44,
-                ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      offset: Offset(0, -4),
-                      blurRadius: 20,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(
-                        '서비스 이용을 위해 아래 약관을 확인하고 모두 동의해주세요',
-                        style: TextStyle(
-                          color: AppColors.textSub,
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      decoration: BoxDecoration(
-                        color: _allChecked
-                            ? AppColors.blue.withValues(alpha: 0.1)
-                            : AppColors.fill,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: AppCheckboxRow(
-                        label: '전체 동의합니다',
-                        checked: _allChecked,
-                        onChanged: _toggleAll,
-                        padding: const EdgeInsets.all(18),
-                        labelStyle: TextStyle(
+                      const SizedBox(height: 16),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
                           color: _allChecked
-                              ? AppColors.textStrong
-                              : AppColors.textBody,
-                          fontSize: 15,
-                          height: 1.4,
-                          fontWeight: FontWeight.w800,
+                              ? AppColors.blue.withValues(alpha: 0.1)
+                              : AppColors.fill,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: AppCheckboxRow(
+                          label: '전체 동의합니다',
+                          checked: _allChecked,
+                          onChanged: _toggleAll,
+                          padding: const EdgeInsets.all(18),
+                          labelStyle: TextStyle(
+                            color: _allChecked
+                                ? AppColors.textStrong
+                                : AppColors.textBody,
+                            fontSize: 15,
+                            height: 1.4,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(color: _dividerColor, height: 1),
-                    const SizedBox(height: 10),
-                    AppCheckboxRow(
-                      label: '이용약관 동의 (필수)',
-                      checked: _termsChecked,
-                      onChanged: (v) => setState(() => _termsChecked = v),
-                      padding: _itemPadding,
-                      labelStyle: _itemLabelStyle,
-                      onViewPressed: () => _openDetail(
-                        '이용약관',
-                        TermsDetailScreen.termsOfServiceBody,
+                      const SizedBox(height: 16),
+                      const Divider(color: _dividerColor, height: 1),
+                      const SizedBox(height: 10),
+                      AppCheckboxRow(
+                        label: '이용약관 동의 (필수)',
+                        checked: _termsChecked,
+                        onChanged: (v) => setState(() => _termsChecked = v),
+                        padding: _itemPadding,
+                        labelStyle: _itemLabelStyle,
+                        onViewPressed: () => _openDetail(
+                          '이용약관',
+                          TermsDetailScreen.termsOfServiceBody,
+                        ),
                       ),
-                    ),
-                    AppCheckboxRow(
-                      label: '개인정보 처리방침 동의 (필수)',
-                      checked: _privacyChecked,
-                      onChanged: (v) => setState(() => _privacyChecked = v),
-                      padding: _itemPadding,
-                      labelStyle: _itemLabelStyle,
-                      onViewPressed: () => _openDetail(
-                        '개인정보 처리방침',
-                        TermsDetailScreen.privacyPolicyBody,
+                      AppCheckboxRow(
+                        label: '개인정보 처리방침 동의 (필수)',
+                        checked: _privacyChecked,
+                        onChanged: (v) => setState(() => _privacyChecked = v),
+                        padding: _itemPadding,
+                        labelStyle: _itemLabelStyle,
+                        onViewPressed: () => _openDetail(
+                          '개인정보 처리방침',
+                          TermsDetailScreen.privacyPolicyBody,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    PrimaryButton(
-                      label: '동의하고 시작하기',
-                      enabled: _allChecked,
-                      onPressed: _onSubmit,
-                    ),
-                  ],
+                      const Spacer(),
+                      PrimaryButton(
+                        label: '동의하고 시작하기',
+                        enabled: _allChecked,
+                        onPressed: _onSubmit,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

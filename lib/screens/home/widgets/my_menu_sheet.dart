@@ -21,7 +21,7 @@ class MyMenuSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE3E3EA),
+                color: const Color(0xFFDDE0E4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -93,10 +93,10 @@ class _MenuTileState extends State<_MenuTile> {
       duration: const Duration(milliseconds: 100),
       curve: Curves.easeOut,
       child: Material(
-        color: const Color(0xFFF0F0F8),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           onHighlightChanged: (value) => setState(() => _pressed = value),
           onTap: _onTap,
           child: Padding(
@@ -107,13 +107,13 @@ class _MenuTileState extends State<_MenuTile> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: danger ? AppColors.blushPink : AppColors.lime,
+                    color: danger ? _dangerSoft : AppColors.blueSoft,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     icon,
                     size: 20,
-                    color: danger ? _accentRed : AppColors.ink,
+                    color: danger ? _accentRed : AppColors.blue,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -121,7 +121,7 @@ class _MenuTileState extends State<_MenuTile> {
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: danger ? _accentRed : AppColors.ink,
+                      color: danger ? _accentRed : AppColors.textStrong,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
@@ -129,7 +129,7 @@ class _MenuTileState extends State<_MenuTile> {
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: danger ? _accentRed : const Color(0x99121212),
+                  color: danger ? _accentRed : AppColors.textMuted,
                 ),
               ],
             ),
@@ -140,5 +140,6 @@ class _MenuTileState extends State<_MenuTile> {
   }
 }
 
-// Figma 스크린샷(node 6:16)의 "로그아웃" 텍스트를 스포이드로 찍어 확인한 값.
-const Color _accentRed = Color(0xFFFF4D4F);
+// v7 캘린더의 삭제 버튼과 같은 빨강·연분홍.
+const Color _accentRed = Color(0xFFE62B34);
+const Color _dangerSoft = Color(0xFFFDECEC);

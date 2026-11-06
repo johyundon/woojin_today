@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 
@@ -8,12 +9,15 @@ class HomePlaceholderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Text(
-          '다음 화면 준비중',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+    return const AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: Center(
+          child: Text(
+            '다음 화면 준비중',
+            style: TextStyle(color: AppColors.textSub, fontSize: 16),
+          ),
         ),
       ),
     );

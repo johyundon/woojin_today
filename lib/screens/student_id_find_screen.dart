@@ -245,159 +245,165 @@ class _StudentIdFindScreenState extends State<StudentIdFindScreen> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      body: ColoredBox(
-        color: AppColors.blue,
-        child: SafeArea(
-          bottom: false,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => FocusScope.of(context).unfocus(),
-            // 파란 제목 영역과 흰 카드를 한 스크롤 안에 둔다. 키보드가 올라와
-            // 화면이 줄어도 버튼까지 스크롤해서 닿을 수 있고, 화면이 충분히
-            // 크면 minHeight 덕에 카드가 화면 맨 아래에 붙는다.
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const StudentIdHeader(
-                        badge: '학번 찾기',
-                        title: '학번을\n찾아드릴게요!',
-                      ),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.fromLTRB(
-                          22,
-                          28,
-                          22,
-                          bottomInset + 10 > 44 ? bottomInset + 10 : 44,
+    // 파란 머리 화면이라 상태 표시줄 글자(시계·배터리)를 흰색으로 그린다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
+        // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
+        backgroundColor: Colors.white,
+        body: ColoredBox(
+          color: AppColors.blue,
+          child: SafeArea(
+            bottom: false,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => FocusScope.of(context).unfocus(),
+              // 파란 제목 영역과 흰 카드를 한 스크롤 안에 둔다. 키보드가 올라와
+              // 화면이 줄어도 버튼까지 스크롤해서 닿을 수 있고, 화면이 충분히
+              // 크면 minHeight 덕에 카드가 화면 맨 아래에 붙는다.
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const StudentIdHeader(
+                          badge: '학번 찾기',
+                          title: '학번을\n찾아드릴게요!',
                         ),
-                        decoration: studentIdCardDecoration,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const _FieldLabel(
-                              icon: Icons.person_rounded,
-                              text: '이름',
-                            ),
-                            const SizedBox(height: 8),
-                            _FindTextField(
-                              controller: _nameController,
-                              hintText: '이름을 입력해 주세요',
-                            ),
-                            const SizedBox(height: 18),
-                            const _FieldLabel(
-                              icon: Icons.smartphone_rounded,
-                              text: '휴대폰 번호',
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                SizedBox(
-                                  width: 86,
-                                  child: _PhoneSegmentField(
-                                    controller: _phonePrefixController,
-                                    maxLength: 3,
-                                  ),
-                                ),
-                                const _PhoneDash(),
-                                Expanded(
-                                  child: _PhoneSegmentField(
-                                    controller: _phoneMiddleController,
-                                    maxLength: 4,
-                                  ),
-                                ),
-                                const _PhoneDash(),
-                                Expanded(
-                                  child: _PhoneSegmentField(
-                                    controller: _phoneLastController,
-                                    maxLength: 4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            const _FieldLabel(
-                              icon: Icons.cake_rounded,
-                              text: '생년월일',
-                            ),
-                            const SizedBox(height: 7),
-                            _BirthdayWheel(
-                              children: [
-                                _WheelColumn(
-                                  controller: _yearController,
-                                  values: _years,
-                                  suffix: '년',
-                                  selectedValue: _selectedYear,
-                                  onChanged: (v) => setState(() {
-                                    _selectedYear = v;
-                                    _clampSelectedDay();
-                                  }),
-                                ),
-                                _WheelColumn(
-                                  controller: _monthController,
-                                  values: _months,
-                                  suffix: '월',
-                                  selectedValue: _selectedMonth,
-                                  onChanged: (v) => setState(() {
-                                    _selectedMonth = v;
-                                    _clampSelectedDay();
-                                  }),
-                                ),
-                                _WheelColumn(
-                                  controller: _dayController,
-                                  values: _days,
-                                  suffix: '일',
-                                  selectedValue: _selectedDay,
-                                  onChanged: (v) =>
-                                      setState(() => _selectedDay = v),
-                                ),
-                              ],
-                            ),
-                            if (_resultError != null) ...[
-                              const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.fromLTRB(
+                            22,
+                            28,
+                            22,
+                            bottomInset + 10 > 44 ? bottomInset + 10 : 44,
+                          ),
+                          decoration: studentIdCardDecoration,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const _FieldLabel(
+                                icon: Icons.person_rounded,
+                                text: '이름',
+                              ),
+                              const SizedBox(height: 8),
+                              _FindTextField(
+                                controller: _nameController,
+                                hintText: '이름을 입력해 주세요',
+                              ),
+                              const SizedBox(height: 18),
+                              const _FieldLabel(
+                                icon: Icons.smartphone_rounded,
+                                text: '휴대폰 번호',
+                              ),
+                              const SizedBox(height: 8),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
-                                    Icons.error_rounded,
-                                    size: 15,
-                                    color: studentIdErrorRed,
+                                  SizedBox(
+                                    width: 86,
+                                    child: _PhoneSegmentField(
+                                      controller: _phonePrefixController,
+                                      maxLength: 3,
+                                    ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      _resultError!,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: studentIdErrorRed,
-                                        fontSize: 12,
-                                        height: 1.4,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                  const _PhoneDash(),
+                                  Expanded(
+                                    child: _PhoneSegmentField(
+                                      controller: _phoneMiddleController,
+                                      maxLength: 4,
+                                    ),
+                                  ),
+                                  const _PhoneDash(),
+                                  Expanded(
+                                    child: _PhoneSegmentField(
+                                      controller: _phoneLastController,
+                                      maxLength: 4,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 26),
-                            ] else
-                              const SizedBox(height: 9),
-                            StudentIdBlueButton(
-                              label: _isLoading ? '조회 중...' : '학번 찾기',
-                              showArrow: !_isLoading,
-                              looksEnabled: _inputFilled && !_isLoading,
-                              onPressed: _isLoading ? null : _onSubmit,
-                            ),
-                          ],
+                              const SizedBox(height: 18),
+                              const _FieldLabel(
+                                icon: Icons.cake_rounded,
+                                text: '생년월일',
+                              ),
+                              const SizedBox(height: 7),
+                              _BirthdayWheel(
+                                children: [
+                                  _WheelColumn(
+                                    controller: _yearController,
+                                    values: _years,
+                                    suffix: '년',
+                                    selectedValue: _selectedYear,
+                                    onChanged: (v) => setState(() {
+                                      _selectedYear = v;
+                                      _clampSelectedDay();
+                                    }),
+                                  ),
+                                  _WheelColumn(
+                                    controller: _monthController,
+                                    values: _months,
+                                    suffix: '월',
+                                    selectedValue: _selectedMonth,
+                                    onChanged: (v) => setState(() {
+                                      _selectedMonth = v;
+                                      _clampSelectedDay();
+                                    }),
+                                  ),
+                                  _WheelColumn(
+                                    controller: _dayController,
+                                    values: _days,
+                                    suffix: '일',
+                                    selectedValue: _selectedDay,
+                                    onChanged: (v) =>
+                                        setState(() => _selectedDay = v),
+                                  ),
+                                ],
+                              ),
+                              if (_resultError != null) ...[
+                                const SizedBox(height: 14),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.error_rounded,
+                                      size: 15,
+                                      color: studentIdErrorRed,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        _resultError!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: studentIdErrorRed,
+                                          fontSize: 12,
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 26),
+                              ] else
+                                const SizedBox(height: 9),
+                              StudentIdBlueButton(
+                                label: _isLoading ? '조회 중...' : '학번 찾기',
+                                showArrow: !_isLoading,
+                                looksEnabled: _inputFilled && !_isLoading,
+                                onPressed: _isLoading ? null : _onSubmit,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
