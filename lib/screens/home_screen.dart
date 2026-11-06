@@ -21,6 +21,8 @@ import 'home/widgets/cafeteria_menu_card.dart';
 import 'home/widgets/home_bottom_nav.dart';
 import 'home/widgets/home_mini_card.dart';
 import 'home/widgets/home_top_icon_button.dart';
+import 'home/services/home_banner_items.dart';
+import 'home/widgets/home_notice_banner.dart';
 import 'home/widgets/my_info_dialog.dart';
 import 'home/widgets/my_menu_sheet.dart';
 import 'home/widgets/next_class_card.dart';
@@ -110,6 +112,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// 공지사항 화면에서 아직 보지 않은 새 공지가 있으면 종 아이콘에 점을 띄운다.
   bool _hasNewNotice = false;
 
+  /// 앱을 열 때의 새 공지 확인. 배너는 이게 끝난 뒤 공지를 읽어, 같은 목록을
+  /// 학교에 두 번 묻지 않고 방금 저장된 것을 쓴다.
+  Future<void>? _firstNoticeCheck;
+
   late final WeatherService _weatherService;
   WeatherResponse? _weatherData;
   bool _weatherLoading = true;
@@ -144,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _now = widget.now ?? DateTime.now;
     _noticeWatcher = widget.noticeWatcher ?? NoticeWatcher();
     WidgetsBinding.instance.addObserver(this);
-    _checkNotices();
+    _firstNoticeCheck = _checkNotices();
     _loadWeather();
     _loadTodayClasses();
     _loadStudentInfo();
@@ -365,6 +371,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Navigator.of(context).push(_calendarRoute());
   }
 
+  /// 위쪽 공지·이벤트 배너 카드. 새 공지 확인이 끝난 뒤 저장된 공지를 쓴다.
+  Future<List<HomeBannerItem>> _loadBanner() async {
+    await _firstNoticeCheck;
+    return loadHomeBannerItems(
+      notices: ServiceFactory.notice(),
+      schedule: ServiceFactory.academicSchedule(),
+      now: _now(),
+    );
+  }
+
   void _handleMenuAction(AvatarMenuAction action) {
     switch (action) {
       case AvatarMenuAction.myInfo:
@@ -542,6 +558,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ],
                       ),
+                    ),
+                    HomeNoticeBanner(
+                      load: _loadBanner,
+                      onOpenCalendar: _openCalendar,
+                      now: _now,
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 7),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 22),

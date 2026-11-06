@@ -10,6 +10,7 @@ import 'fileshare/fileshare_screen.dart';
 import 'graduation/graduation_credit_screen.dart';
 import 'home/rank/department_rank_screen.dart';
 import 'home/widgets/home_bottom_nav.dart';
+import 'home/widgets/home_notice_banner.dart';
 import 'home_placeholder_screen.dart';
 import 'mileage/mileage_screen.dart';
 import 'notice/notice_screen.dart';
@@ -271,6 +272,10 @@ class CollectionScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                HomeNoticeBanner(
+                  onOpenCalendar: () => _onTabTap(context, 3),
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 2),
                 ),
                 const SizedBox(height: 14),
                 const _SectionHeading(
