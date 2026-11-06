@@ -547,12 +547,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           HomeV7IconButton(
-                            icon: Icons.search_rounded,
+                            asset: HomeV7IconButton.searchAsset,
+                            semanticLabel: '검색',
                             onTap: _openTimetable,
                           ),
                           const SizedBox(width: 8),
                           HomeV7IconButton(
-                            icon: Icons.notifications_rounded,
+                            asset: HomeV7IconButton.notificationsAsset,
+                            semanticLabel: '알림',
                             onTap: _openNotice,
                             dot: _hasNewNotice,
                           ),

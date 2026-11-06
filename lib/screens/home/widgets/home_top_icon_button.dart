@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
@@ -54,53 +55,73 @@ class HomeTopIconButton extends StatelessWidget {
   }
 }
 
-/// v7 홈 화면 상단의 흰 네모 아이콘 버튼(검색/알림). [HomeTopIconButton]은 아직
-/// v7로 바꾸지 않은 졸업학점·셔틀 화면의 뒤로가기 버튼으로도 쓰여서, 그 화면들
-/// 모양이 같이 바뀌지 않도록 v7 모양은 따로 둔다. [dot]이 true면 오른쪽 위에
-/// 빨간 점(읽지 않은 새 공지)을 겹쳐 보여준다.
+/// v7 홈 위쪽의 흰 네모 아이콘 버튼(검색/알림). Figma "03 홈"의 Box(40×40,
+/// 모서리 12, 그림자 0·2·7 검정 6%)와 아이콘(Material Symbols Rounded, FILL 1,
+/// 굵기 600, 19×19)을 그대로 옮겼다. 아이콘은 Figma에서 받은 SVG 파일을 쓴다
+/// (Flutter 기본 아이콘은 선 굵기와 모양이 달라서). [dot]이 true면 오른쪽 위에
+/// 빨간 둥근 네모(12×12, 흰 테두리 2)를 겹친다. [HomeTopIconButton]은 아직 v7로
+/// 바꾸지 않은 셔틀 화면 뒤로가기로도 쓰여서 따로 둔다.
 class HomeV7IconButton extends StatelessWidget {
   const HomeV7IconButton({
     super.key,
-    required this.icon,
+    required this.asset,
     required this.onTap,
     this.dot = false,
+    this.semanticLabel,
   });
 
-  final IconData icon;
+  static const searchAsset = 'assets/icons/search.svg';
+  static const notificationsAsset = 'assets/icons/notifications.svg';
+
+  final String asset;
   final VoidCallback onTap;
   final bool dot;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Pressable.icon(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppColors.cardShadow,
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(icon, color: AppColors.textStrong, size: 19),
-            if (dot)
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Pressable.icon(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                offset: Offset(0, 2),
+                blurRadius: 7,
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
               Positioned(
-                top: 9,
-                left: 18,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: HomeV7Colors.alertDot,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.white, width: 2),
+                left: 10.5,
+                top: 10.5,
+                child: SvgPicture.asset(asset, width: 19, height: 19),
+              ),
+              if (dot)
+                Positioned(
+                  top: 9,
+                  left: 18,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: HomeV7Colors.alertDot,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

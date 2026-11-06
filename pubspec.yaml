@@ -119,6 +119,7 @@ flutter:
   assets:
     - assets/images/
     - assets/campus/
+    - assets/icons/
 
   fonts:
     - family: Pretendard
