@@ -78,6 +78,8 @@ class SessionCache {
       icKwa: icKwa,
       icKwa1: icKwa1,
       userId: userId,
+      // 다시 시도처럼 새로 받으라는 요청이면 기기에 저장된 목록도 건너뛴다.
+      forceRefresh: forceRefresh,
     );
     _courseCatalogCache[key] = result;
     return result;

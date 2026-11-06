@@ -9,6 +9,7 @@ import 'package:daejin_app/services/syllabus_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _dir = 'test/services/fixtures/syllabus';
 
@@ -42,13 +43,25 @@ http.Response _euckr(String file) => http.Response.bytes(
 );
 
 void main() {
-  setUp(SyllabusService.clearCache);
+  setUp(() {
+    SyllabusService.clearCache();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   group('분류 고르기(categoryQuery)', () {
     test('교필/교직/일선은 고정 코드', () {
-      expect(SyllabusService.categoryQuery(_course(type: '교필')), 'ic_kwa=B41001');
-      expect(SyllabusService.categoryQuery(_course(type: '교직')), 'ic_kwa=B41004');
-      expect(SyllabusService.categoryQuery(_course(type: '일선')), 'ic_kwa=B41020');
+      expect(
+        SyllabusService.categoryQuery(_course(type: '교필')),
+        'ic_kwa=B41001',
+      );
+      expect(
+        SyllabusService.categoryQuery(_course(type: '교직')),
+        'ic_kwa=B41004',
+      );
+      expect(
+        SyllabusService.categoryQuery(_course(type: '일선')),
+        'ic_kwa=B41020',
+      );
     });
 
     test('전공은 개설학과 이름을 학과 코드로 바꾼다(뒤 공백 포함)', () {
@@ -86,7 +99,9 @@ void main() {
       contains('내 시간표 불러오기'),
     );
     expect(
-      SyllabusService.unavailableReason(_course(type: '전필', department: '없는학과')),
+      SyllabusService.unavailableReason(
+        _course(type: '전필', department: '없는학과'),
+      ),
       '없는학과의 강의계획서 목록을 찾을 수 없어요.',
     );
   });
@@ -374,6 +389,65 @@ void main() {
         () => SyllabusService.parseDetail('<html><body>없음</body></html>'),
         throwsA(isA<SyllabusParseException>()),
       );
+    });
+  });
+
+  group('기기에 저장(7일)', () {
+    var now = DateTime(2026, 11, 6, 9);
+    late int calls;
+    SyllabusService service() => SyllabusService(
+      client: MockClient((request) async {
+        calls++;
+        return request.url.path.endsWith('Blsn020302.jsp')
+            ? _euckr('syllabus_list_anonymized.html')
+            : _euckr('syllabus_detail_anonymized.html');
+      }),
+      now: () => now,
+    );
+    Future<SyllabusDetail> open(SyllabusService s) => s.fetchSyllabus(
+      course: _course(),
+      year: 2026,
+      semester: 2,
+      jsessionId: 'J',
+      wmonid: 'W',
+      userId2: 'U',
+    );
+
+    setUp(() {
+      calls = 0;
+      now = DateTime(2026, 11, 6, 9);
+    });
+
+    test('앱을 다시 켜도(메모리 비움) 7일 안에는 요청 없이 같은 내용을 연다', () async {
+      final first = await open(service());
+      SyllabusService.clearCache();
+      final second = await open(service());
+
+      expect(calls, 2); // 처음 목록 1 + 상세 1, 두 번째는 0
+      expect(second.info('담당교수'), first.info('담당교수'));
+      expect(
+        second.sections.map((s) => s.title),
+        first.sections.map((s) => s.title),
+      );
+      expect(second.section('10.')!.weeks, first.section('10.')!.weeks);
+      expect(
+        second.section('7.')!.evaluations,
+        first.section('7.')!.evaluations,
+      );
+      expect(
+        second.section('3-1)')!.competencies,
+        first.section('3-1)')!.competencies,
+      );
+      expect(second.section('1.')!.weeks, isNull);
+    });
+
+    test('7일이 지나면 목록과 상세를 새로 받는다', () async {
+      await open(service());
+      SyllabusService.clearCache();
+      now = now.add(const Duration(days: 7));
+      await open(service());
+
+      expect(calls, 4);
     });
   });
 }

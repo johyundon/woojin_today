@@ -8,6 +8,7 @@ import 'package:cp949_codec/cp949_codec.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:daejin_app/services/course_catalog_service.dart';
 
@@ -377,6 +378,85 @@ void main() {
 
       expect(result, hasLength(1));
       expect(result.single.courseCode, 'MAT201');
+    });
+  });
+
+  group('기기에 저장(하루)', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    var now = DateTime(2026, 11, 6, 9);
+    late int calls;
+    CourseCatalogService service() => CourseCatalogService(
+      client: MockClient((request) async {
+        calls++;
+        return http.Response.bytes(
+          utf8.encode(_fixtureHtml([_row('tr_a0_chrm', _validCells())])),
+          200,
+          headers: {'content-type': 'text/html; charset=UTF-8'},
+        );
+      }),
+      now: () => now,
+    );
+    Future<List<CourseCatalogItem>> fetch(
+      CourseCatalogService s, {
+      bool forceRefresh = false,
+    }) => s.fetchCourseCatalog(
+      year: 2026,
+      semester: 2,
+      jsessionId: 'J1',
+      wmonid: 'W1',
+      forceRefresh: forceRefresh,
+    );
+
+    setUp(() {
+      calls = 0;
+      now = DateTime(2026, 11, 6, 9);
+    });
+
+    test('하루 안에는 앱을 다시 켜도(새 서비스) 저장된 목록을 쓴다', () async {
+      final first = await fetch(service());
+      final second = await fetch(service());
+
+      expect(calls, 1);
+      expect(second.single.courseName, first.single.courseName);
+      expect(second.single.credit, 3.0);
+      expect(second.single.enrollmentRatio, '30/40');
+    });
+
+    test('다시 로그인해 세션 값이 바뀌어도 같은 학기면 저장된 목록을 쓴다', () async {
+      await fetch(service());
+      await service().fetchCourseCatalog(
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J2',
+        wmonid: 'W2',
+      );
+
+      expect(calls, 1);
+    });
+
+    test('하루가 지나면 새로 받는다', () async {
+      await fetch(service());
+      now = now.add(const Duration(days: 1));
+      await fetch(service());
+
+      expect(calls, 2);
+    });
+
+    test('forceRefresh면 저장된 목록을 건너뛴다', () async {
+      await fetch(service());
+      await fetch(service(), forceRefresh: true);
+
+      expect(calls, 2);
+    });
+
+    test('저장된 값이 깨져 있으면 새로 받는다', () async {
+      SharedPreferences.setMockInitialValues({
+        'course_catalog_2026_2_%_': '{깨짐',
+      });
+      await fetch(service());
+
+      expect(calls, 1);
     });
   });
 }

@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cp949_codec/cp949_codec.dart';
+import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'course_catalog_service.dart';
 import 'department_codes.dart';
@@ -123,9 +125,18 @@ abstract class SyllabusServiceBase {
 /// 과목의 이수구분으로 분류를 골라 목록 1번(학기·분류별로 저장해 재사용) →
 /// 상세 1번 순서로 부른다. 명세서처럼 72개 분류를 전부 부르지 않는다.
 class SyllabusService implements SyllabusServiceBase {
-  SyllabusService({http.Client? client}) : _client = client ?? http.Client();
+  SyllabusService({http.Client? client, DateTime Function()? now})
+    : _client = client ?? http.Client(),
+      _now = now ?? DateTime.now;
 
   final http.Client _client;
+  final DateTime Function() _now;
+
+  /// 기기에 저장한 목록·상세를 다시 쓰는 기간. 교수번호와 강의계획서 내용은
+  /// 학기 중 거의 바뀌지 않지만, 학기 초에 교수가 고칠 수 있어 7일로 둔다.
+  static const cacheDuration = Duration(days: 7);
+  static const _listPrefsPrefix = 'syllabus_list_';
+  static const _detailPrefsPrefix = 'syllabus_detail_';
 
   static const _base = 'https://dreams2.daejin.ac.kr/sugang/center/';
   static const _userAgent =
@@ -224,10 +235,19 @@ class SyllabusService implements SyllabusServiceBase {
     }
 
     final detailUri = Uri.parse('${_base}Blsn020302.jsp').resolve(href);
-    final cached = _detailCache[detailUri.toString()];
+    final detailKey = detailUri.toString();
+    final cached = _detailCache[detailKey];
     if (cached != null) return cached;
+    final prefsKey = '$_detailPrefsPrefix$detailKey';
+    final stored = await _readStored(prefsKey);
+    if (stored != null) {
+      final detail = _detailFromJson(stored as Map<String, dynamic>);
+      _detailCache[detailKey] = detail;
+      return detail;
+    }
     final detail = parseDetail(await _get(detailUri, cookie));
-    _detailCache[detailUri.toString()] = detail;
+    _detailCache[detailKey] = detail;
+    await _writeStored(prefsKey, _detailToJson(detail));
     return detail;
   }
 
@@ -241,12 +261,113 @@ class SyllabusService implements SyllabusServiceBase {
     final listKey = '$year:$semester:$category';
     final cached = _listCache[listKey];
     if (cached != null) return cached;
+    final prefsKey = '$_listPrefsPrefix$listKey';
+    final stored = await _readStored(prefsKey);
+    if (stored != null) {
+      final links = (stored as Map<String, dynamic>).cast<String, String>();
+      _listCache[listKey] = links;
+      return links;
+    }
     final listUri = Uri.parse(
       '${_base}Blsn020302.jsp?fhd_yyyy=$year&fhd_shtm=$semester&$category',
     );
     final links = parseList(await _get(listUri, cookie));
     _listCache[listKey] = links;
+    await _writeStored(prefsKey, links);
     return links;
+  }
+
+  /// 기기에 저장된 값([cacheDuration] 안의 것만). 없거나 못 읽으면 null.
+  Future<Object?> _readStored(String key) async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(key);
+      if (raw == null) return null;
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final savedAt = DateTime.parse(json['savedAt'] as String);
+      if (_now().difference(savedAt) >= cacheDuration) return null;
+      return json['data'];
+    } catch (e) {
+      // 못 읽어도 서버에서 새로 받으면 되므로 조회를 막지 않는다.
+      debugPrint('[Syllabus] 저장된 값 읽기 실패: $e');
+      return null;
+    }
+  }
+
+  Future<void> _writeStored(String key, Object data) async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(
+        key,
+        jsonEncode({'savedAt': _now().toIso8601String(), 'data': data}),
+      );
+    } catch (e) {
+      debugPrint('[Syllabus] 저장 실패: $e');
+    }
+  }
+
+  static Map<String, Object?> _detailToJson(SyllabusDetail d) => {
+    'top': [
+      for (final i in d.topInfo) [i.label, i.value],
+    ],
+    'sections': [
+      for (final s in d.sections)
+        {
+          't': s.title,
+          'b': s.bodyText,
+          if (s.competencies != null)
+            'c': [
+              for (final c in s.competencies!) [c.name, c.ratio, c.goal],
+            ],
+          if (s.weeks != null)
+            'w': [
+              for (final w in s.weeks!) [w.week, w.topic, w.content, w.method],
+            ],
+          if (s.evaluations != null)
+            'e': [
+              for (final e in s.evaluations!) [e.name, e.ratio, e.detail],
+            ],
+        },
+    ],
+  };
+
+  static SyllabusDetail _detailFromJson(Map<String, dynamic> j) {
+    List<String> row(Object? r) => (r as List<dynamic>).cast<String>();
+    return SyllabusDetail(
+      topInfo: [
+        for (final r in j['top'] as List<dynamic>)
+          (label: row(r)[0], value: row(r)[1]),
+      ],
+      sections: [
+        for (final s
+            in (j['sections'] as List<dynamic>).cast<Map<String, dynamic>>())
+          SyllabusSection(
+            title: s['t'] as String,
+            bodyText: s['b'] as String,
+            competencies: s['c'] == null
+                ? null
+                : [
+                    for (final r in s['c'] as List<dynamic>)
+                      (name: row(r)[0], ratio: row(r)[1], goal: row(r)[2]),
+                  ],
+            weeks: s['w'] == null
+                ? null
+                : [
+                    for (final r in s['w'] as List<dynamic>)
+                      (
+                        week: row(r)[0],
+                        topic: row(r)[1],
+                        content: row(r)[2],
+                        method: row(r)[3],
+                      ),
+                  ],
+            evaluations: s['e'] == null
+                ? null
+                : [
+                    for (final r in s['e'] as List<dynamic>)
+                      (name: row(r)[0], ratio: row(r)[1], detail: row(r)[2]),
+                  ],
+          ),
+      ],
+    );
   }
 
   Future<String> _get(Uri uri, String cookie) async {

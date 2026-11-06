@@ -280,6 +280,7 @@ class FakeCourseCatalogService implements CourseCatalogServiceBase {
     String icKwa = '%',
     String? icKwa1,
     String? userId,
+    bool forceRefresh = false,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return fakeCatalog;

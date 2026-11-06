@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cp949_codec/cp949_codec.dart';
+import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// `GET /sugang/center/ProLsnAply06.jsp` 응답의 한 행(개설 과목 하나).
 class CourseCatalogItem {
@@ -90,6 +92,7 @@ abstract class CourseCatalogServiceBase {
     String icKwa = '%',
     String? icKwa1,
     String? userId,
+    bool forceRefresh = false,
   });
 }
 
@@ -122,13 +125,21 @@ class CourseCatalogService implements CourseCatalogServiceBase {
 
   static const _defaultUserId = 'guest';
 
+  /// 기기에 저장해 둔 목록을 다시 쓰는 기간. 신청 인원·폐강 여부가 수강신청
+  /// 기간에 바뀌므로 하루로 둔다. 응답이 약 1.3MB(2026-2 전체 1,558과목)라
+  /// 앱을 켤 때마다 받지 않으려는 것이다.
+  static const cacheDuration = Duration(days: 1);
+  static const _prefsKeyPrefix = 'course_catalog_';
+
   // 명세: "각 행의 직계 자식 td가 14개 미만이면 폐기".
   static const _minColumnCount = 14;
 
   final http.Client _client;
+  final DateTime Function() _now;
 
-  CourseCatalogService({http.Client? client})
-    : _client = client ?? http.Client();
+  CourseCatalogService({http.Client? client, DateTime Function()? now})
+    : _client = client ?? http.Client(),
+      _now = now ?? DateTime.now;
 
   /// [year]/[semester]: 쿼리 파라미터 fhd_yyyy/fhd_shtm.
   /// [icKwa]: 쿼리 파라미터 ic_kwa. "%"(전체) 또는 학과코드(예: "B41005").
@@ -144,9 +155,18 @@ class CourseCatalogService implements CourseCatalogServiceBase {
     String icKwa = '%',
     String? icKwa1,
     String? userId,
+    bool forceRefresh = false,
   }) async {
     if (icKwa != '%' && (icKwa1 == null || icKwa1.isEmpty)) {
       throw ArgumentError('icKwa가 전체("%")가 아닐 때는 icKwa1(학과코드)이 필요합니다.');
+    }
+
+    // 공개 데이터라 로그인 정보 없이 학기·조건만으로 저장한다(다시 로그인해도 재사용).
+    final storeKey =
+        '$_prefsKeyPrefix${year}_${semester}_${icKwa}_${icKwa1 ?? ''}';
+    if (!forceRefresh) {
+      final stored = await _readStored(storeKey);
+      if (stored != null) return stored;
     }
 
     final resolvedUserId = userId ?? _defaultUserId;
@@ -189,14 +209,88 @@ class CourseCatalogService implements CourseCatalogServiceBase {
     // 폴백한다 — my_timetable_service.dart와 동일한 패턴.
     final body = _decodeBody(response);
 
+    final List<CourseCatalogItem> items;
     try {
-      return _parse(body);
+      items = _parse(body);
     } on CourseCatalogParseException {
       rethrow;
     } catch (e) {
       throw CourseCatalogParseException('응답 구조가 예상과 다릅니다: $e');
     }
+    await _writeStored(storeKey, items);
+    return items;
   }
+
+  Future<List<CourseCatalogItem>?> _readStored(String key) async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(key);
+      if (raw == null) return null;
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final savedAt = DateTime.parse(json['savedAt'] as String);
+      if (_now().difference(savedAt) >= cacheDuration) return null;
+      return [
+        for (final row in json['items'] as List<dynamic>)
+          _itemFromRow(row as List<dynamic>),
+      ];
+    } catch (e) {
+      // 저장된 값을 못 읽어도 서버에서 새로 받으면 되므로 조회를 막지 않는다.
+      debugPrint('[CourseCatalog] 저장된 목록 읽기 실패: $e');
+      return null;
+    }
+  }
+
+  Future<void> _writeStored(String key, List<CourseCatalogItem> items) async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(
+        key,
+        jsonEncode({
+          'savedAt': _now().toIso8601String(),
+          'items': [for (final i in items) _itemToRow(i)],
+        }),
+      );
+    } catch (e) {
+      debugPrint('[CourseCatalog] 목록 저장 실패: $e');
+    }
+  }
+
+  // 1,500개 넘는 과목을 저장하므로 키 이름 없이 배열로 줄여 저장한다.
+  static List<Object?> _itemToRow(CourseCatalogItem i) => [
+    i.seq,
+    i.courseCode,
+    i.section,
+    i.courseName,
+    i.courseType,
+    i.credit,
+    i.targetGrade,
+    i.professor,
+    i.rawSchedule,
+    i.room,
+    i.isClosed,
+    i.capacity,
+    i.waitlistCount,
+    i.enrollmentRatio,
+    i.note,
+    i.department,
+  ];
+
+  static CourseCatalogItem _itemFromRow(List<dynamic> r) => CourseCatalogItem(
+    seq: r[0] as int,
+    courseCode: r[1] as String,
+    section: r[2] as String,
+    courseName: r[3] as String,
+    courseType: r[4] as String,
+    credit: (r[5] as num).toDouble(),
+    targetGrade: r[6] as String,
+    professor: r[7] as String,
+    rawSchedule: r[8] as String,
+    room: r[9] as String,
+    isClosed: r[10] as bool,
+    capacity: r[11] as int,
+    waitlistCount: r[12] as int,
+    enrollmentRatio: r[13] as String,
+    note: r[14] as String?,
+    department: r[15] as String?,
+  );
 
   // "charset=EUC-KR" / `charset="UTF-8"` 등에서 charset 값만 뽑는다.
   static final _charsetPattern = RegExp(
