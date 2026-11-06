@@ -262,7 +262,8 @@ class _TimetableScreenState extends State<TimetableScreen>
                               padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
                               child: QuickActionsRow(
                                 loading: _myTimetableLoading,
-                                onLoadMyTimetable: _loadMyTimetable,
+                                onLoadMyTimetable: () =>
+                                    _loadMyTimetable(announce: true),
                                 notificationsEnabled: _notificationsEnabled,
                                 onNotificationsChanged: _onNotificationsToggled,
                               ),

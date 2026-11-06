@@ -130,6 +130,28 @@ void main() {
     expect(find.text('이번 학기에 수강신청한 과목이 없어요.'), findsNothing);
   });
 
+  testWidgets('불러오기 버튼을 누르면 위쪽 배너로 알리고, 처음 열 때는 안 띄운다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+      ]),
+    );
+    expect(find.text('내 시간표를 불러왔어요'), findsNothing);
+
+    // 같은 로그인이라 저장된 결과를 다시 쓴다(학교에 다시 묻지 않음).
+    await tester.tap(find.text('내 시간표 불러오기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('내 시간표를 불러왔어요'), findsOneWidget);
+    expect(find.text('2026년 2학기 1과목'), findsOneWidget);
+
+    // 배너가 저절로 사라질 때까지 기다려 남은 타이머를 비운다.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('시간표 과목 칸에는 빼기(×) 버튼이 없다', (tester) async {
     await _pump(
       tester,
