@@ -116,12 +116,13 @@ class _TopBannerState extends State<_TopBanner>
                 padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.line),
+                  boxShadow: const [
                     BoxShadow(
-                      color: const Color(0xFF030A7F).withValues(alpha: 0.25),
-                      offset: const Offset(0, 10),
-                      blurRadius: 24,
+                      color: Color(0x14000000),
+                      offset: Offset(0, 6),
+                      blurRadius: 20,
                     ),
                   ],
                 ),
@@ -132,7 +133,7 @@ class _TopBannerState extends State<_TopBanner>
                         width: 40,
                         height: 40,
                         decoration: const BoxDecoration(
-                          color: AppColors.cobalt,
+                          color: AppColors.blue,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(icon, color: Colors.white, size: 20),
@@ -148,7 +149,7 @@ class _TopBannerState extends State<_TopBanner>
                           Text(
                             widget.title,
                             style: const TextStyle(
-                              color: AppColors.ink,
+                              color: AppColors.textStrong,
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                             ),
@@ -157,7 +158,7 @@ class _TopBannerState extends State<_TopBanner>
                           Text(
                             widget.message,
                             style: const TextStyle(
-                              color: Color(0x99121212),
+                              color: AppColors.textSub,
                               fontSize: 13,
                               height: 1.35,
                             ),

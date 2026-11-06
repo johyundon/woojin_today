@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 
-/// 홈 화면 하단 탭 바 ("우진이의 하루" v4 리디자인).
-/// 화면 아래에 떠 있는 검은색 알약 모양이며, 시간표 / 모아보기 / [가운데
-/// 라임색 마스코트 버튼 = 홈] / 캘린더 / MY 순서다. 탭을 눌렀을 때 어디로 이동할지는
-/// [onTap]이 인덱스로 받아 처리한다.
+/// 홈 화면 하단 탭 바 ("우진이의 하루" v7).
+/// 화면 아래에 떠 있는 흰색 바이며, 시간표 / 모아보기 / [가운데 홈 버튼] /
+/// 캘린더 / MY 순서다. 가운데 홈 버튼은 바 위로 살짝 솟아 있다. 탭을 눌렀을 때
+/// 어디로 이동할지는 [onTap]이 인덱스로 받아 처리한다.
 class HomeBottomNav extends StatelessWidget {
   const HomeBottomNav({super.key, required this.selectedIndex, this.onTap});
 
@@ -16,11 +15,27 @@ class HomeBottomNav extends StatelessWidget {
   final ValueChanged<int>? onTap;
 
   static const _items = [
-    (icon: Icons.schedule_rounded, label: '시간표'),
-    (icon: Icons.apps_rounded, label: '모아보기'),
-    null, // 가운데 라임색 홈 버튼 자리
-    (icon: Icons.event_rounded, label: '캘린더'),
-    (icon: Icons.person_rounded, label: 'MY'),
+    (
+      icon: Icons.calendar_month_outlined,
+      selectedIcon: Icons.calendar_month_rounded,
+      label: '시간표',
+    ),
+    (
+      icon: Icons.apps_outlined,
+      selectedIcon: Icons.apps_rounded,
+      label: '모아보기',
+    ),
+    null, // 가운데 홈 버튼 자리
+    (
+      icon: Icons.event_outlined,
+      selectedIcon: Icons.event_rounded,
+      label: '캘린더',
+    ),
+    (
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person_rounded,
+      label: 'MY',
+    ),
   ];
 
   @override
@@ -33,15 +48,17 @@ class HomeBottomNav extends StatelessWidget {
         12 + MediaQuery.of(context).padding.bottom,
       ),
       child: Container(
-        height: 68,
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          color: AppColors.ink,
-          borderRadius: BorderRadius.circular(34),
-          boxShadow: [
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.line),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              offset: const Offset(0, 8),
-              blurRadius: 20,
+              color: Color(0x0D000000),
+              offset: Offset(0, 4),
+              blurRadius: 16,
             ),
           ],
         ),
@@ -52,7 +69,9 @@ class HomeBottomNav extends StatelessWidget {
                 child: _items[i] == null
                     ? _CenterButton(onTap: () => onTap?.call(i))
                     : _NavItem(
-                        icon: _items[i]!.icon,
+                        icon: i == selectedIndex
+                            ? _items[i]!.selectedIcon
+                            : _items[i]!.icon,
                         label: _items[i]!.label,
                         selected: i == selectedIndex,
                         onTap: () => onTap?.call(i),
@@ -80,22 +99,19 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = selected ? AppColors.blueText : AppColors.textSub;
     return Pressable.icon(
       onTap: onTap,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 24,
-            color: selected ? AppColors.lime : const Color(0xFF8A877F),
-          ),
+          Icon(icon, size: 22, color: color),
           const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : const Color(0xFF8A877F),
-              fontSize: 11,
+              color: color,
+              fontSize: 12,
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             ),
           ),
@@ -105,7 +121,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// 가운데 라임색 동그란 마스코트 버튼. 라임색 테두리 링이 한 겹 더 둘러져 있다.
+/// 가운데 홈 버튼. 연한 파랑 바탕에 흰 테두리를 두르고, 바 위로 10 솟아 있다.
 class _CenterButton extends StatelessWidget {
   const _CenterButton({required this.onTap});
 
@@ -114,26 +130,26 @@ class _CenterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Pressable.icon(
-        onTap: onTap,
-        child: Container(
-          width: 64,
-          height: 64,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.lime, width: 2),
-          ),
+      child: Transform.translate(
+        offset: const Offset(0, -10),
+        child: Pressable.icon(
+          onTap: onTap,
           child: Container(
+            width: 68,
+            height: 68,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.lime,
-              shape: BoxShape.circle,
+            decoration: BoxDecoration(
+              color: AppColors.blueSoft,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: const [
+                BoxShadow(color: AppColors.line, spreadRadius: 1),
+              ],
             ),
-            child: SvgPicture.asset(
-              'assets/images/mascot_wave.svg',
-              width: 40,
-              fit: BoxFit.contain,
+            child: const Icon(
+              Icons.home_rounded,
+              size: 30,
+              color: AppColors.blueText,
             ),
           ),
         ),

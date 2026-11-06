@@ -25,4 +25,41 @@ class AppColors {
   static const Color lime = Color(0xFFD2F66B);
   static const Color blushPink = Color(0xFFFFACBE);
   static const Color ink = Color(0xFF121212);
+
+  // "우진이의 하루 v7" 팔레트. 연한 배경에 파랑은 핵심 정보에만 쓰고 그림자는
+  // 옅게 둔다. 디자인 보드(v7 standalone.html)를 브라우저에서 열어 계산된
+  // 스타일 값을 그대로 옮겼다. 화면을 v7로 바꿀 때 이 쪽을 쓴다(위 값은 아직
+  // 바꾸지 않은 화면을 위해 그대로 둔다).
+  static const Color blue = Color(0xFF0A78E6);
+  static const Color blueDeep = Color(0xFF0A5FC0);
+  static const Color blueSoft = Color(0xFFEAF1FD);
+  static const Color blueSoftLine = Color(0xFFD3E2F8);
+
+  /// 선택된 탭 같은 파란 글자·아이콘.
+  static const Color blueText = Color(0xFF0A66C8);
+
+  /// 화면 바탕.
+  static const Color canvas = Color(0xFFFCFCFD);
+
+  /// 남색 섞인 진한 색(스와치 "잉크"). 어두운 카드 바탕 등에 쓴다.
+  static const Color inkNavy = Color(0xFF3E4057);
+
+  static const Color textStrong = Color(0xFF1F2024);
+  static const Color textBody = Color(0xFF4B5056);
+  static const Color textSub = Color(0xFF5F6368);
+  static const Color textMuted = Color(0xFFA0A4AB);
+
+  /// 입력칸·옅은 상자 바탕.
+  static const Color fill = Color(0xFFF3F4F6);
+
+  /// 비활성 버튼 바탕.
+  static const Color fillDisabled = Color(0xFFE5E7EB);
+
+  static const Color line = Color(0xFFE3E6EB);
+  static const Color checkLine = Color(0xFFCFD3D9);
+
+  /// 카드 그림자(검정 6%, 아래로 2, 번짐 14).
+  static const List<BoxShadow> cardShadow = [
+    BoxShadow(color: Color(0x0F000000), offset: Offset(0, 2), blurRadius: 14),
+  ];
 }

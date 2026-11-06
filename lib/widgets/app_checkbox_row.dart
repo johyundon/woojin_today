@@ -41,7 +41,7 @@ class AppCheckboxRow extends StatelessWidget {
                 style:
                     labelStyle ??
                     const TextStyle(
-                      color: AppColors.ink,
+                      color: AppColors.textBody,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -53,11 +53,11 @@ class AppCheckboxRow extends StatelessWidget {
                 child: const Text(
                   '보기',
                   style: TextStyle(
-                    color: AppColors.cobalt,
+                    color: AppColors.blue,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     decoration: TextDecoration.underline,
-                    decorationColor: AppColors.cobalt,
+                    decorationColor: AppColors.blue,
                   ),
                 ),
               ),
@@ -77,15 +77,15 @@ class _CheckboxBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      width: 24,
-      height: 24,
+      width: 26,
+      height: 26,
       decoration: BoxDecoration(
-        color: checked ? AppColors.cobalt : Colors.white,
+        color: checked ? AppColors.blue : Colors.white,
         border: Border.all(
-          color: checked ? AppColors.cobalt : const Color(0xFFCFCBC3),
-          width: 1.5,
+          color: checked ? AppColors.blue : AppColors.checkLine,
+          width: 2,
         ),
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: checked
           ? const Icon(Icons.check, size: 16, color: Colors.white)

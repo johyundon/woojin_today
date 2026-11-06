@@ -2,7 +2,6 @@
 // 탭의 화면으로 바로 가는지 확인한다.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -91,7 +90,7 @@ void main() {
 
     // 모아보기의 가운데 홈 버튼도 홈으로 돌아간다.
     await _tapTab(tester, '모아보기');
-    await tester.tap(find.byType(SvgPicture).last); // 가운데 라임 홈 버튼(마스코트 이미지)
+    await tester.tap(find.byIcon(Icons.home_rounded)); // 가운데 홈 버튼
     await tester.pumpAndSettle();
     expect(find.text('필요한 거 다 있음'), findsNothing);
     expect(tester.takeException(), isNull);
