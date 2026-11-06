@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/course_catalog_service.dart';
 import '../../services/department_codes.dart';
@@ -7,8 +8,8 @@ import '../../services/session_cache.dart';
 import '../../services/student_info_service.dart';
 import '../../services/syllabus_service.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/mascot_sticker.dart';
 import '../../widgets/pressable.dart';
+import 'timetable_colors.dart';
 
 /// "강의계획서" 화면(상태 7).
 ///
@@ -156,7 +157,7 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
         Padding(
           padding: EdgeInsets.symmetric(vertical: 40),
           child: Center(
-            child: CircularProgressIndicator(color: AppColors.cobalt),
+            child: CircularProgressIndicator(color: AppColors.blue),
           ),
         ),
       ];
@@ -171,7 +172,11 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
               Text(
                 error,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6B6B70), fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.textSub,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (!_unavailable) ...[
                 const SizedBox(height: 8),
@@ -202,159 +207,167 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
             _expandedIndex = _expandedIndex == i ? null : i;
           }),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
       ],
+    ];
+  }
+
+  /// 위쪽 정보 칸들. 디자인 순서(교수·이수구분 / 학과·학점학년 / 수업시간·강의실)로
+  /// 두 칸씩 놓는다. 학과는 값이 있을 때만, 정원은 내 시간표에서 온 과목(0)이
+  /// 아닐 때만 보여준다.
+  List<Widget> _metaRows(CourseCatalogItem course) {
+    final department = course.department?.trim() ?? '';
+    final cells = [
+      _MetaCell('교수', _detail?.info('담당교수') ?? course.professor),
+      _MetaCell('이수구분', course.courseType),
+      if (department.isNotEmpty) _MetaCell('학과', department),
+      _MetaCell('학점 · 학년', _creditAndGrade(course)),
+      _MetaCell('수업시간', _detail?.info('수업시간') ?? course.rawSchedule),
+      _MetaCell('강의실', _detail?.info('수업장소') ?? course.room),
+      if (course.capacity > 0) _MetaCell('정원', '${course.capacity}명'),
+    ];
+    return [
+      for (var i = 0; i < cells.length; i += 2)
+        Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: cells[i]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: i + 1 < cells.length
+                    ? cells[i + 1]
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     final course = widget.course;
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                child: Pressable.icon(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppColors.cardShadow,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: AppColors.textStrong,
+                      size: 15,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 17),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueSoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '강의계획서',
+                        style: TextStyle(
+                          color: AppColors.blue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      course.courseName,
+                      style: const TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.96,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${course.courseCode}-${course.section} · '
+                      '${course.courseType} · '
+                      '${_formatCredit(course.credit)}학점',
+                      style: const TextStyle(
+                        color: AppColors.textBody,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(36),
+                    ),
+                    boxShadow: TimetableColors.sheetShadow,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(36),
+                    ),
+                    child: ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        18,
+                        22,
+                        18,
+                        20 + MediaQuery.of(context).padding.bottom,
+                      ),
                       children: [
-                        Pressable.icon(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: const BoxDecoration(
-                              color: AppColors.cobaltDeep,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.lime,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: const Text(
-                            '강의계획서',
-                            style: TextStyle(
-                              color: AppColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
                         Padding(
-                          padding: const EdgeInsets.only(right: 90),
-                          child: Text(
-                            course.courseName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.04,
-                            ),
-                          ),
+                          padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
+                          child: Column(children: _metaRows(course)),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${course.courseCode}-${course.section} · '
-                          '${course.courseType} · '
-                          '${_formatCredit(course.credit)}학점',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const SizedBox(height: 12),
+                        const Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: TimetableColors.rowLine,
                         ),
+                        const SizedBox(height: 12),
+                        ..._buildBody(),
                       ],
                     ),
                   ),
-                  const Positioned(
-                    right: 0,
-                    top: 0,
-                    child: MascotSticker(width: 76, angle: 0.08),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(32),
-                ),
-                child: ColoredBox(
-                  color: Colors.white,
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      20,
-                      20,
-                      20 + MediaQuery.of(context).padding.bottom,
-                    ),
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                _MetaCell(
-                                  '교수',
-                                  _detail?.info('담당교수') ?? course.professor,
-                                ),
-                                _MetaCell(
-                                  '수업시간',
-                                  _detail?.info('수업시간') ?? course.rawSchedule,
-                                ),
-                                _MetaCell('학점 · 학년', _creditAndGrade(course)),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                _MetaCell('이수구분', course.courseType),
-                                _MetaCell(
-                                  '강의실',
-                                  _detail?.info('수업장소') ?? course.room,
-                                ),
-                                // 내 시간표에서 온 과목은 정원 값이 없다(0).
-                                if (course.capacity > 0)
-                                  _MetaCell('정원', '${course.capacity}명'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ..._buildBody(),
-                    ],
-                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -438,29 +451,29 @@ class _MetaCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: SizedBox(
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Color(0xFF6B6B70), fontSize: 11),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSub,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            height: 1.4,
+          ),
         ),
-      ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.textStrong,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -487,10 +500,10 @@ class _AccordionSection extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         decoration: BoxDecoration(
-          color: expanded ? const Color(0xFFDCE6FB) : const Color(0xFFF1F1F5),
-          borderRadius: BorderRadius.circular(16),
+          color: expanded ? AppColors.blueSoft : AppColors.fill,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,36 +511,43 @@ class _AccordionSection extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 24,
-                  height: 24,
+                  width: 26,
+                  height: 26,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: expanded ? AppColors.cobalt : Colors.white,
-                    borderRadius: BorderRadius.circular(6),
+                    color: expanded ? AppColors.blue : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '$number',
                     style: TextStyle(
-                      color: expanded ? Colors.white : AppColors.cobalt,
+                      color: expanded ? Colors.white : AppColors.blue,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
+                      height: 1.4,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     title,
                     style: const TextStyle(
-                      color: AppColors.ink,
+                      color: AppColors.textStrong,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: -0.28,
+                      height: 1.4,
                     ),
                   ),
                 ),
+                const SizedBox(width: 10),
                 Icon(
-                  expanded ? Icons.expand_less : Icons.expand_more,
-                  color: const Color(0xFF6B6B70),
+                  expanded
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  color: AppColors.textSub,
+                  size: 19,
                 ),
               ],
             ),
@@ -538,9 +558,9 @@ class _AccordionSection extends StatelessWidget {
                 child: Text(
                   body,
                   style: const TextStyle(
-                    color: Color(0xFF6B6B70),
-                    fontSize: 13,
-                    height: 1.5,
+                    color: SyllabusColors.bodyText,
+                    fontSize: 12.5,
+                    height: 1.4,
                   ),
                 ),
               ),

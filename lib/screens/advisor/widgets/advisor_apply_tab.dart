@@ -13,7 +13,7 @@ import 'advisor_apply_professor_summary_card.dart';
 import 'advisor_apply_search_card.dart';
 import 'advisor_load_states.dart';
 
-/// "상담 신청" 탭 본문(v4 리디자인). 상담교수는 모든 단계에서 항상 위에
+/// "상담 신청" 탭 본문(v7). 상담교수는 모든 단계에서 항상 위에
 /// 떠 있고(눌러서 "변경"하면 검색 패널로 교체), 그 아래 단계 카드가 이어진다
 /// — 교수/방식(방문이면 날짜·시간도) → 전화번호 → 이메일 → 상담 내용 4단계.
 /// 학교 방문 신청에도 전화번호·이메일이 들어가서 두 방식 모두 4단계다.
@@ -460,7 +460,7 @@ class _AdvisorApplyTabState extends State<AdvisorApplyTab> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

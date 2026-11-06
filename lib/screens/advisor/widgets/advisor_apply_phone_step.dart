@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import 'advisor_apply_common.dart';
 
-const Color _fieldFill = Color(0xFFFAFAFD);
-const Color _fieldBorder = Color(0xFFE4E3EC);
-
 /// 2단계(온라인 전용): 전화번호 입력(010-XXXX-XXXX 3칸).
 class AdvisorPhoneStep extends StatelessWidget {
   const AdvisorPhoneStep({
@@ -99,8 +96,7 @@ class _PhoneBox extends StatelessWidget {
       focusNode: focusNode,
       keyboardType: TextInputType.number,
       maxLength: maxLength,
-      textAlign: TextAlign.center,
-      style: const TextStyle(color: AppColors.ink, fontSize: 16),
+      style: const TextStyle(color: AppColors.textStrong, fontSize: 15),
       onChanged: (value) {
         final maxLength = this.maxLength;
         if (maxLength == null || value.length < maxLength) return;
@@ -113,19 +109,22 @@ class _PhoneBox extends StatelessWidget {
       decoration: InputDecoration(
         counterText: '',
         filled: true,
-        fillColor: _fieldFill,
-        contentPadding: const EdgeInsets.symmetric(vertical: 15),
+        fillColor: advisorFieldBackground,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 15,
+        ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: _fieldBorder, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: advisorFieldBorder, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.cobalt, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.blue, width: 2),
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: _fieldBorder, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: advisorFieldBorder, width: 2),
         ),
       ),
     );

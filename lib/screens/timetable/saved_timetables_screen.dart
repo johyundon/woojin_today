@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'models/saved_timetable.dart';
 import 'services/saved_timetable_storage.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/mascot_sticker.dart';
 import '../../widgets/pressable.dart';
 
 /// "저장한 시간표" 목록 화면(상태 9). 전부 로컬(SharedPreferences) 저장분이다.
@@ -51,96 +51,98 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Pressable.icon(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: AppColors.cobaltDeep,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.lime,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          '내 시간표 ${_items.length}개',
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        '저장한 시간표',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.04,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Positioned(
-                    right: -180,
-                    top: 40,
-                    child: MascotSticker(width: 100, angle: 0.08),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  : _items.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '저장한 시간표가 없어요',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      itemCount: _items.length,
-                      itemBuilder: (context, index) =>
-                          _buildCard(_items[index], index),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                child: Pressable.icon(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppColors.cardShadow,
                     ),
-            ),
-          ],
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textStrong,
+                      size: 15,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueSoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '내 시간표 ${_items.length}개',
+                        style: const TextStyle(
+                          color: AppColors.blue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '저장한 시간표',
+                      style: TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1.04,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.blue),
+                      )
+                    : _items.isEmpty
+                    ? const Center(
+                        child: Text(
+                          '저장한 시간표가 없어요',
+                          style: TextStyle(
+                            color: AppColors.textSub,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(18, 0, 18, 20),
+                        itemCount: _items.length,
+                        itemBuilder: (context, index) =>
+                            _buildCard(_items[index], index),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -148,6 +150,12 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
 
   Widget _buildCard(SavedTimetable item, int index) {
     final expanded = _expandedIndex == index;
+    const subStyle = TextStyle(
+      color: AppColors.textSub,
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      height: 1.4,
+    );
     return GestureDetector(
       onTap: () => setState(() => _expandedIndex = expanded ? null : index),
       onLongPress: () => _delete(item),
@@ -155,17 +163,11 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
         pressedScale: 0.98,
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.ink.withValues(alpha: 0.2),
-                offset: const Offset(0, 6),
-                blurRadius: 14,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppColors.cardShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,50 +181,42 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                         Text(
                           item.name,
                           style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 16,
+                            color: AppColors.textStrong,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
+                            height: 1.4,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${item.year}년 ${item.semester}학기 · '
                           '${item.courses.length}개 과목',
-                          style: const TextStyle(
-                            color: Color(0xFF6B6B70),
-                            fontSize: 12,
-                          ),
+                          style: subStyle,
                         ),
-                        Text(
-                          _formatSavedAt(item.savedAt),
-                          style: const TextStyle(
-                            color: Color(0xFF6B6B70),
-                            fontSize: 12,
-                          ),
-                        ),
+                        Text(_formatSavedAt(item.savedAt), style: subStyle),
                       ],
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Pressable.effect(
+                  Pressable(
                     pressedScale: 0.93,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(item),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.cobalt,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        shape: const StadiumBorder(),
+                    onTap: () => Navigator.of(context).pop(item),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue,
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         '시간표로 보기',
                         style: TextStyle(
+                          color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
+                          height: 1.4,
                         ),
                       ),
                     ),
@@ -231,17 +225,14 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
               ),
               if (expanded) ...[
                 const SizedBox(height: 10),
-                const Divider(color: Color(0xFFE5E5EA)),
+                const Divider(color: AppColors.line, height: 17),
                 for (final course in item.courses)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
                     child: Text(
                       '${course.courseName} · ${course.professor} · '
                       '${course.rawSchedule}',
-                      style: const TextStyle(
-                        color: Color(0xFF6B6B70),
-                        fontSize: 12,
-                      ),
+                      style: subStyle,
                     ),
                   ),
               ],

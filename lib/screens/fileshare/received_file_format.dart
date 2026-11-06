@@ -16,9 +16,14 @@ String fileExtension(String fileName) {
 }
 
 Color badgeColorForExtension(String extension) => switch (extension) {
-  'PDF' => AppColors.blushPink,
-  'DOC' || 'DOCX' => AppColors.lime,
-  _ => const Color(0xFFE4E3EC),
+  'PDF' || 'DOC' || 'DOCX' => AppColors.blueSoft,
+  _ => AppColors.fill,
+};
+
+/// v7 시안: PDF 아이콘은 진한 글자색, 문서(DOC) 아이콘은 파랑.
+Color iconColorForExtension(String extension) => switch (extension) {
+  'DOC' || 'DOCX' => AppColors.blue,
+  _ => AppColors.textStrong,
 };
 
 IconData iconForExtension(String extension) => switch (extension) {

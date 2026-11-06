@@ -5,9 +5,10 @@ import '../../../widgets/pressable.dart';
 import '../../../services/advisor_consultation_service.dart';
 import 'advisor_load_states.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
+const Color _barrier = Color(0x8C0A0F3C);
+const Color _handle = Color(0xFFE2E4E8);
 
-/// "상세보기" 바텀시트(v4 리디자인) — 화면 아래에서 올라오며, 제목 +
+/// "상세보기" 바텀시트(v7) — 화면 아래에서 올라오며, 제목 +
 /// 라벨-값 쌍(신청일시/상태/신청 내용/답변일시/답변 내용) 세로 나열 +
 /// 하단 "확인" 버튼. 내용은 시트를 열 때 [loadDetail]로 불러온다.
 Future<void> showAdvisorConsultationDetailSheet(
@@ -18,6 +19,7 @@ Future<void> showAdvisorConsultationDetailSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
+    barrierColor: _barrier,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
@@ -48,7 +50,7 @@ class _AdvisorConsultationDetailSheetState
         22,
         12,
         22,
-        20 + MediaQuery.of(context).padding.bottom,
+        34 + MediaQuery.of(context).padding.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -59,17 +61,17 @@ class _AdvisorConsultationDetailSheetState
               width: 40,
               height: 5,
               decoration: BoxDecoration(
-                color: const Color(0xFFE4E3EC),
+                color: _handle,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 13),
           const Text(
             '상세보기',
             style: TextStyle(
-              color: AppColors.ink,
-              fontSize: 20,
+              color: AppColors.textStrong,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -111,24 +113,28 @@ class _AdvisorConsultationDetailSheetState
             },
           ),
           const SizedBox(height: 4),
-          SizedBox(
+          Container(
             width: double.infinity,
             height: 52,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: AppColors.cardShadow,
+            ),
             child: Pressable.effect(
               pressedScale: 0.97,
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lime,
-                  foregroundColor: AppColors.ink,
+                  backgroundColor: AppColors.blue,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: const Text(
                   '확인',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
@@ -144,13 +150,20 @@ class _AdvisorConsultationDetailSheetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: _mutedText, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSub,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
             value,
             style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 15,
+              color: AppColors.textStrong,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),

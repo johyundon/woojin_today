@@ -6,18 +6,11 @@ import '../models/advisor_consultation_models.dart';
 import 'advisor_consultation_history_card.dart';
 import 'advisor_load_states.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
 const Color _trackBackground = Color(0xFFE8E7F0);
-const Color _divider = Color(0xFFEEEDF4);
+const Color _divider = Color(0xFFEAECEF);
 
-const List<String> _semesterStatHeader = [
-  '학기',
-  '1학년',
-  '2학년',
-  '3학년',
-  '4학년',
-  '합계',
-];
+// 첫 칸(학기 라벨 열)의 머리글은 v7 시안처럼 비워 둔다.
+const List<String> _semesterStatHeader = ['', '1학년', '2학년', '3학년', '4학년', '합계'];
 
 /// T-WIN 인정 현황으로 학기별 표의 행(1학기/2학기/합계)을 만든다.
 ///
@@ -59,7 +52,7 @@ List<SemesterStatRow> buildSemesterStatRows(AdvisorOverview overview) {
   ];
 }
 
-/// "상담 현황" 탭 본문(v4 리디자인) — 흰 카드 하나에 상담 인정 횟수 +
+/// "상담 현황" 탭 본문(v7) — 흰 카드 하나에 상담 인정 횟수 +
 /// 진행률 바, 학기별 인정 횟수 표, 구분선, 상담 이력 리스트를 전부 담는다.
 /// 데이터는 T-WIN 인정 현황·신청 이력([AdvisorOverview])이고, 아래로 당기면
 /// 새로 받는다.
@@ -85,18 +78,19 @@ class AdvisorStatusTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      color: AppColors.cobalt,
+      color: AppColors.blue,
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: AppColors.cardShadow,
             ),
             child: _buildBody(),
           ),
@@ -118,7 +112,7 @@ class AdvisorStatusTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildApprovedCount(data),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _buildSemesterTable(buildSemesterStatRows(data)),
         const SizedBox(height: 12),
         const Divider(height: 1, color: _divider),
@@ -129,7 +123,7 @@ class AdvisorStatusTab extends StatelessWidget {
           for (var i = 0; i < data.history.length; i++)
             Padding(
               padding: EdgeInsets.only(
-                bottom: i == data.history.length - 1 ? 0 : 10,
+                bottom: i == data.history.length - 1 ? 0 : 12,
               ),
               child: AdvisorConsultationHistoryCard(
                 record: data.history[i],
@@ -150,7 +144,11 @@ class AdvisorStatusTab extends StatelessWidget {
       children: [
         const Text(
           '지금까지 상담 인정 횟수',
-          style: TextStyle(color: _mutedText, fontSize: 13),
+          style: TextStyle(
+            color: AppColors.textSub,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 2),
         Row(
@@ -160,25 +158,26 @@ class AdvisorStatusTab extends StatelessWidget {
             Text(
               '$approved',
               style: const TextStyle(
-                color: AppColors.cobalt,
-                fontSize: 38,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.04,
+                color: AppColors.blue,
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1.2,
+                height: 1.4,
               ),
             ),
             const SizedBox(width: 6),
             const Text(
               '회',
               style: TextStyle(
-                color: AppColors.ink,
-                fontSize: 16,
+                color: AppColors.textStrong,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(width: 6),
             Text(
               '/ $required회',
-              style: const TextStyle(color: _mutedText, fontSize: 14),
+              style: const TextStyle(color: AppColors.textSub, fontSize: 13),
             ),
           ],
         ),
@@ -189,7 +188,7 @@ class AdvisorStatusTab extends StatelessWidget {
             value: progress,
             minHeight: 8,
             backgroundColor: _trackBackground,
-            valueColor: const AlwaysStoppedAnimation(AppColors.cobalt),
+            valueColor: const AlwaysStoppedAnimation(AppColors.blue),
           ),
         ),
       ],
@@ -201,7 +200,7 @@ class AdvisorStatusTab extends StatelessWidget {
     final lastColumn = header.length - 2; // '학기' 라벨 칸 제외, 0-based.
 
     return Table(
-      columnWidths: const {0: FlexColumnWidth(0.9)},
+      columnWidths: const {0: FixedColumnWidth(44)},
       children: [
         TableRow(
           children: [for (final h in header) _buildCell(h, isHeader: true)],
@@ -225,19 +224,19 @@ class AdvisorStatusTab extends StatelessWidget {
     bool alignLeft = false,
   }) {
     final color = isTotal
-        ? AppColors.cobalt
+        ? AppColors.blue
         : isHeader
-        ? _mutedText
-        : AppColors.ink;
+        ? AppColors.textSub
+        : AppColors.textStrong;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4.5),
       child: Text(
         text,
         textAlign: alignLeft ? TextAlign.left : TextAlign.center,
         style: TextStyle(
           color: color,
-          fontSize: 13,
-          fontWeight: isHeader || isTotal ? FontWeight.w700 : FontWeight.w600,
+          fontSize: 12,
+          fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
         ),
       ),
     );

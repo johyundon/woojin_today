@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _fieldBorder = Color(0xFFE4E3EC);
-const Color _chipBackground = Color(0xFFF1F0F7);
-const Color _disabledText = Color(0xFFB3B2C0);
+/// 진행 막대의 아직 안 간 칸, 입력칸 테두리(포커스 없을 때).
+const Color advisorFieldBorder = Color(0xFFE2E4E8);
+
+/// 입력칸 바탕.
+const Color advisorFieldBackground = Color(0xFFFAFAFD);
 
 /// "상담 신청" 탭의 단계 카드들이 공통으로 쓰는 뼈대 위젯 모음(흰 카드,
-/// 진행 점, 단계 헤더, 라임 주 버튼, 이전/다음 버튼이 달린 입력형 단계).
+/// 진행 점, 단계 헤더, 파란 주 버튼, 이전/다음 버튼이 달린 입력형 단계).
 class AdvisorApplyCard extends StatelessWidget {
   const AdvisorApplyCard({super.key, required this.children});
 
@@ -22,7 +23,8 @@ class AdvisorApplyCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,27 +48,35 @@ class AdvisorApplyPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    // v7 시안: 켜졌을 때는 파랑(모서리 16·그림자), 꺼졌을 때는 옅은 회색
+    // (모서리 12·그림자 없음·글자 15/800).
+    final radius = BorderRadius.circular(enabled ? 16 : 12);
+    return Container(
       width: double.infinity,
       height: 52,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: enabled ? AppColors.cardShadow : null,
+      ),
       child: Pressable.effect(
         enabled: enabled,
         pressedScale: 0.97,
         child: ElevatedButton(
           onPressed: enabled ? onTap : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.lime,
-            foregroundColor: AppColors.ink,
-            disabledBackgroundColor: _chipBackground,
-            disabledForegroundColor: _disabledText,
+            backgroundColor: AppColors.blue,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.fill,
+            disabledForegroundColor: AppColors.textMuted,
             elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: radius),
           ),
           child: Text(
             label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: enabled ? 16 : 15,
+              fontWeight: enabled ? FontWeight.w700 : FontWeight.w800,
+            ),
           ),
         ),
       ),
@@ -94,7 +104,7 @@ class AdvisorApplyProgressDots extends StatelessWidget {
               height: 4,
               margin: EdgeInsets.only(right: i == totalSteps - 1 ? 0 : 4),
               decoration: BoxDecoration(
-                color: i <= step ? AppColors.cobalt : _fieldBorder,
+                color: i <= step ? AppColors.blue : advisorFieldBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -126,16 +136,17 @@ class AdvisorApplyStepHeader extends StatelessWidget {
           child: Text(
             title,
             style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 19,
+              color: AppColors.textStrong,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
+              letterSpacing: -0.32,
             ),
           ),
         ),
         Text(
           '${step + 1} / $totalSteps',
           style: const TextStyle(
-            color: _mutedText,
+            color: AppColors.textSub,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -146,7 +157,7 @@ class AdvisorApplyStepHeader extends StatelessWidget {
 }
 
 /// 2단계 이상의 "입력형" 단계가 공유하는 뼈대: 제목 + 입력 영역, 그
-/// 아래 "이전"(연보라) + 다음/제출(라임, 조건 안 맞으면 비활성) 버튼.
+/// 아래 "이전"(옅은 회색) + 다음/제출(파랑, 조건 안 맞으면 비활성) 버튼.
 class AdvisorApplyFormStep extends StatelessWidget {
   const AdvisorApplyFormStep({
     super.key,
@@ -178,11 +189,11 @@ class AdvisorApplyFormStep extends StatelessWidget {
           step: step,
           totalSteps: totalSteps,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 15),
         AdvisorApplyProgressDots(step: step, totalSteps: totalSteps),
-        const SizedBox(height: 14),
+        const SizedBox(height: 26),
         content,
-        const SizedBox(height: 14),
+        const SizedBox(height: 28),
         Row(
           children: [
             Pressable(
@@ -192,14 +203,14 @@ class AdvisorApplyFormStep extends StatelessWidget {
                 height: 52,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: _chipBackground,
-                  borderRadius: BorderRadius.circular(18),
+                  color: AppColors.fill,
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Text(
                   '이전',
                   style: TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 15,
+                    color: AppColors.textStrong,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

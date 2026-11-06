@@ -30,14 +30,14 @@ class CourseBlock extends StatelessWidget {
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Stack(
           children: [
-            // ×가 오른쪽 위에 떠 있는 배지라 과목명 폭을 뺏지 않는다(겹치는
-            // 부분만큼만 오른쪽 여백을 둔다) — 과목명이 길면 2줄까지 보인다.
+            // 칸이 좁아(약 58) ×를 오른쪽 아래 구석에 띄워 과목명 폭을 뺏지
+            // 않는다 — 과목명이 길면 2줄까지 보인다.
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 20, 6),
+              padding: const EdgeInsets.all(5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -53,21 +53,26 @@ class CourseBlock extends StatelessWidget {
                       style: TextStyle(
                         color: textColor,
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        height: 1.25,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.36,
+                        height: 1.4,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Flexible(
-                    child: Text(
-                      '${layout.course.room} · ${layout.course.section}분반',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: textColor.withValues(alpha: 0.85),
-                        fontSize: 11,
-                        height: 1.25,
+                    child: Opacity(
+                      opacity: 0.9,
+                      child: Text(
+                        layout.course.room,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.36,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ),
@@ -75,17 +80,17 @@ class CourseBlock extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: 4,
-              right: 4,
+              bottom: 3,
+              right: 3,
               child: Pressable.icon(
                 onTap: onRemove,
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
+                    color: Colors.black.withValues(alpha: 0.18),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 12),
+                  child: const Icon(Icons.close, color: Colors.white, size: 10),
                 ),
               ),
             ),
@@ -108,7 +113,7 @@ class CourseBlockPreview extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: TimetableColors.accent, width: 1.5),
         color: TimetableColors.accent.withValues(alpha: 0.12),
       ),

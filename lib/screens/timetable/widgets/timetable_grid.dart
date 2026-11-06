@@ -8,7 +8,7 @@ import '../models/planned_course.dart';
 import '../timetable_colors.dart';
 import 'course_block.dart';
 
-const double _hourLabelColumnWidth = 28;
+const double _hourLabelColumnWidth = 22;
 
 /// 빈 셀 탭으로 만든 "미확정" 시간 선택. 탭 하나 = 1시간 블록으로 단순화했다
 /// (Figma의 드래그 리사이즈 핸들은 구현하지 않음 — course_block.dart 참고).
@@ -68,16 +68,14 @@ class TimetableGrid extends StatelessWidget {
             const SizedBox(width: _hourLabelColumnWidth),
             for (var i = 0; i < gridWeekdays.length; i++)
               Expanded(
-                child: Center(
-                  child: _WeekdayLabel(
-                    label: weekdayLabelsWeekdaysOnly[i],
-                    isToday: gridWeekdays[i] == today,
-                  ),
+                child: _WeekdayLabel(
+                  label: weekdayLabelsWeekdaysOnly[i],
+                  isToday: gridWeekdays[i] == today,
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         SizedBox(
           height: viewportHeight,
           child: SingleChildScrollView(
@@ -134,7 +132,9 @@ class TimetableGrid extends StatelessWidget {
                     '$hour',
                     style: const TextStyle(
                       color: TimetableColors.textSecondary,
-                      fontSize: 11,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
                     ),
                   ),
                 ),
@@ -214,7 +214,8 @@ class TimetableGrid extends StatelessWidget {
   }
 }
 
-/// 요일 헤더 글자 하나. 오늘이면 잉크색 알약 배경 + 라임색 글자로 강조한다.
+/// 요일 헤더 글자 하나(v7 디자인 23: 12/800 회색). 오늘이면 디자인 16처럼
+/// 파란 바탕(모서리 8) + 흰 글자로 강조한다.
 class _WeekdayLabel extends StatelessWidget {
   const _WeekdayLabel({required this.label, required this.isToday});
 
@@ -223,30 +224,23 @@ class _WeekdayLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isToday) {
-      return Text(
-        label,
-        style: const TextStyle(
-          color: TimetableColors.textSecondary,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      );
-    }
     return Container(
-      width: 28,
-      height: 28,
+      height: 24,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.ink,
-        shape: BoxShape.circle,
-      ),
+      decoration: isToday
+          ? BoxDecoration(
+              color: AppColors.blue,
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.lime,
-          fontSize: 13,
+        style: TextStyle(
+          color: isToday ? Colors.white : TimetableColors.textSecondary,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
+          height: 1.4,
         ),
       ),
     );

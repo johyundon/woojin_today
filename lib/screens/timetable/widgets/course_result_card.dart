@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/course_catalog_service.dart';
+import '../../../theme/app_colors.dart';
 import '../../../utils/credit_format.dart';
 import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
@@ -29,7 +30,7 @@ class CourseResultCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: TimetableColors.gridLine)),
+          border: Border(bottom: BorderSide(color: TimetableColors.rowLine)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,25 +42,30 @@ class CourseResultCard extends StatelessWidget {
                   Text(
                     course.courseName,
                     style: const TextStyle(
-                      color: TimetableColors.textPrimary,
-                      fontSize: 17,
+                      color: AppColors.textStrong,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     '${course.professor} · ${formatCredit(course.credit)}학점 · ${course.courseType}',
                     style: const TextStyle(
-                      color: TimetableColors.textSecondary,
+                      color: AppColors.textSub,
                       fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     '${course.rawSchedule} · ${course.room}',
                     style: const TextStyle(
-                      color: TimetableColors.textSecondary,
+                      color: AppColors.textBody,
                       fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
                     ),
                   ),
                 ],
@@ -72,8 +78,10 @@ class CourseResultCard extends StatelessWidget {
                 Text(
                   '담은인원 ${course.enrollmentRatio}',
                   style: const TextStyle(
-                    color: TimetableColors.textSecondary,
-                    fontSize: 11,
+                    color: AppColors.textSub,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -82,19 +90,20 @@ class CourseResultCard extends StatelessWidget {
                   onTap: onAdd,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
+                      horizontal: 12,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCE6FF),
-                      borderRadius: BorderRadius.circular(99),
+                      color: AppColors.blueSoft,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
                       '담기',
                       style: TextStyle(
-                        color: TimetableColors.accent,
-                        fontSize: 13,
+                        color: AppColors.blue,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
+                        height: 1.4,
                       ),
                     ),
                   ),

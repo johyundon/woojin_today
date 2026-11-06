@@ -5,12 +5,10 @@ import '../../../widgets/pressable.dart';
 import '../../../services/advisor_consultation_service.dart';
 import 'advisor_consultation_detail_dialog.dart';
 
-const Color _rowBackground = Color(0xFFF1F0F7);
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _cancelChipBackground = Color(0xFFECEBF3);
+const Color _cancelChipBackground = Color(0xFFE8EAEE);
 
-/// 상담 이력 한 줄(v4 리디자인) — 연보라색 행 안에 날짜 + "{상담방식} ·
-/// {상태}" 2줄, 상태 배지("취소"는 회색, 그 외는 코발트 톤), "상세보기" 링크.
+/// 상담 이력 한 줄(v7) — 옅은 회색 행 안에 날짜 + "{상담방식} ·
+/// {상태}" 2줄, 상태 배지("취소"는 회색, 그 외는 파랑 톤), "상세보기" 링크.
 /// 상세 내용은 "상세보기"를 누를 때 [loadDetail]로 불러온다.
 class AdvisorConsultationHistoryCard extends StatelessWidget {
   const AdvisorConsultationHistoryCard({
@@ -33,8 +31,8 @@ class AdvisorConsultationHistoryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _rowBackground,
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
@@ -46,15 +44,18 @@ class AdvisorConsultationHistoryCard extends StatelessWidget {
                 Text(
                   record.appliedAt,
                   style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 15,
+                    color: AppColors.textStrong,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${record.method} · ${record.status}',
-                  style: const TextStyle(color: _mutedText, fontSize: 12),
+                  style: const TextStyle(
+                    color: AppColors.textSub,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -64,14 +65,14 @@ class AdvisorConsultationHistoryCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: _isCancelled
                   ? _cancelChipBackground
-                  : AppColors.cobalt.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+                  : AppColors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               _badgeLabel,
               style: TextStyle(
-                color: _isCancelled ? _mutedText : AppColors.cobalt,
-                fontSize: 11,
+                color: _isCancelled ? AppColors.textSub : AppColors.blue,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -85,7 +86,7 @@ class AdvisorConsultationHistoryCard extends StatelessWidget {
             child: const Text(
               '상세보기',
               style: TextStyle(
-                color: AppColors.cobalt,
+                color: AppColors.blue,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),

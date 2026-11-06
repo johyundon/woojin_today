@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../services/file_transfer.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
-import '../fileshare_colors.dart';
 import '../received_file_format.dart';
 
 /// 누가 파일을 보내려 할 때 "받기/거절"을 묻는다. [timeout] 안에 답하지
@@ -41,7 +40,7 @@ class IncomingOfferDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
         child: Column(
@@ -51,23 +50,23 @@ class IncomingOfferDialog extends StatelessWidget {
             const Text(
               '파일을 받을까요?',
               style: TextStyle(
-                color: AppColors.ink,
-                fontSize: 18,
+                color: AppColors.textStrong,
+                fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               '${offer.senderName}에서 보내려고 해요.',
-              style: const TextStyle(color: mutedText, fontSize: 13),
+              style: const TextStyle(color: AppColors.textSub, fontSize: 13),
             ),
             const SizedBox(height: 14),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F0F7),
-                borderRadius: BorderRadius.circular(14),
+                color: AppColors.fill,
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +76,7 @@ class IncomingOfferDialog extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: AppColors.ink,
+                      color: AppColors.textStrong,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -85,7 +84,10 @@ class IncomingOfferDialog extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     formatBytes(offer.sizeBytes),
-                    style: const TextStyle(color: mutedText, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.textSub,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -96,8 +98,8 @@ class IncomingOfferDialog extends StatelessWidget {
                 Expanded(
                   child: _DialogButton(
                     label: '거절',
-                    background: const Color(0xFFF1F0F7),
-                    foreground: AppColors.ink,
+                    background: AppColors.fill,
+                    foreground: AppColors.textStrong,
                     onTap: () => Navigator.of(context).pop(false),
                   ),
                 ),
@@ -105,7 +107,7 @@ class IncomingOfferDialog extends StatelessWidget {
                 Expanded(
                   child: _DialogButton(
                     label: '받기',
-                    background: AppColors.cobalt,
+                    background: AppColors.blue,
                     foreground: Colors.white,
                     onTap: () => Navigator.of(context).pop(true),
                   ),
@@ -142,7 +144,7 @@ class _DialogButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,

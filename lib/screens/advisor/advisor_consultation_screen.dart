@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../config/advisor_submit_config.dart';
 import '../../services/advisor_consultation_service.dart';
@@ -14,12 +15,9 @@ import 'widgets/advisor_load_states.dart';
 import 'widgets/advisor_segmented_tabs.dart';
 import 'widgets/advisor_status_tab.dart';
 
-const Color _mutedLavender = Color(0xFFD7D9F5);
-
-/// "지도교수상담" 화면(v4 리디자인) — 다른 "모아보기" 하위 화면들(마일리지,
-/// 캘린더)과 같은 틀로 다시 짰다: 코발트 배경 위에 뒤로가기/교수님 카드/
+/// "지도교수상담" 화면(v7) — 거의 흰 바탕 위에 뒤로가기/제목/교수님 카드/
 /// 세그먼트 탭이 뜨고, 그 아래 흰 카드들에 탭 내용이 담긴다
-/// (우진이의 하루 v4 시안, standalone.html "13-1~13-10" 화면).
+/// (우진이의 하루 v7 시안 33~42 화면).
 ///
 /// 지도교수 성함은 포털 로그인으로 얻은 [userId2]로 [StudentInfoService]를
 /// 호출해 조회한다(home_screen.dart와 같은 패턴). 상담 인정 횟수·학기별 표·
@@ -199,59 +197,59 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      body: ColoredBox(
-        color: AppColors.cobalt,
-        child: SafeArea(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
                 child: Pressable.icon(
                   onTap: () => Navigator.of(context).pop(),
                   child: Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
-                      color: AppColors.cobaltDeep,
-                      shape: BoxShape.circle,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppColors.cardShadow,
                     ),
                     child: const Icon(
                       Icons.arrow_back_ios_new,
-                      color: Colors.white,
-                      size: 18,
+                      color: AppColors.textStrong,
+                      size: 15,
                     ),
                   ),
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+                padding: EdgeInsets.fromLTRB(22, 14, 22, 0),
                 child: Text(
                   '지도교수 상담',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
+                    color: AppColors.textStrong,
+                    fontSize: 26,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.035,
+                    letterSpacing: -0.91,
+                    height: 1.4,
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
                 child: _buildAdvisorCard(),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
                 child: AdvisorSegmentedTabs(
                   selectedIndex: _selectedTab,
                   onChanged: (index) => setState(() => _selectedTab = index),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Expanded(
                 child: _selectedTab == 0
                     ? AdvisorStatusTab(
@@ -286,8 +284,9 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.cobaltDeep,
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Row(
         children: [
@@ -295,15 +294,15 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
             width: 46,
             height: 46,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.lime,
-              shape: BoxShape.circle,
+            decoration: BoxDecoration(
+              color: AppColors.blueSoft,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               _advisorInitial,
               style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 19,
+                color: AppColors.blue,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -316,7 +315,11 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
               children: [
                 const Text(
                   '나의 지도교수님',
-                  style: TextStyle(color: _mutedLavender, fontSize: 12),
+                  style: TextStyle(
+                    color: AppColors.textBody,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 1),
                 _buildAdvisorNameLine(),
@@ -342,13 +345,13 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
             height: 16,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AppColors.lime,
+              color: AppColors.blue,
             ),
           ),
           SizedBox(width: 8),
           Text(
             '불러오는 중...',
-            style: TextStyle(color: Colors.white, fontSize: 15),
+            style: TextStyle(color: AppColors.textSub, fontSize: 15),
           ),
         ],
       );
@@ -359,8 +362,8 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
       return const Text(
         '불러올 수 없어요',
         style: TextStyle(
-          color: Colors.white,
-          fontSize: 19,
+          color: AppColors.textStrong,
+          fontSize: 16,
           fontWeight: FontWeight.w800,
         ),
       );
@@ -368,15 +371,15 @@ class _AdvisorConsultationScreenState extends State<AdvisorConsultationScreen> {
 
     return RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         children: [
           TextSpan(
             text: advisorName,
-            style: const TextStyle(color: AppColors.lime),
+            style: const TextStyle(color: AppColors.blue),
           ),
           const TextSpan(
             text: ' 교수님',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.textStrong),
           ),
         ],
       ),

@@ -4,9 +4,6 @@ import '../../../services/twin_client.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _chipBackground = Color(0xFFF1F0F7);
-
 /// T-WIN 실패를 사용자에게 보여줄 문장으로 바꾼다.
 String advisorErrorMessage(Object error) {
   if (error is TwinException) {
@@ -37,11 +34,14 @@ class AdvisorLoadingBox extends StatelessWidget {
             height: 16,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AppColors.cobalt,
+              color: AppColors.blue,
             ),
           ),
           const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: _mutedText, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.textSub, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -65,8 +65,8 @@ class AdvisorErrorBox extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       decoration: BoxDecoration(
-        color: _chipBackground,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
@@ -74,7 +74,7 @@ class AdvisorErrorBox extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: _mutedText,
+              color: AppColors.textSub,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -86,12 +86,13 @@ class AdvisorErrorBox extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.line),
               ),
               child: const Text(
                 '다시 시도',
                 style: TextStyle(
-                  color: AppColors.cobalt,
+                  color: AppColors.blue,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
@@ -118,7 +119,7 @@ class AdvisorEmptyText extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _mutedText, fontSize: 13),
+          style: const TextStyle(color: AppColors.textSub, fontSize: 13),
         ),
       ),
     );

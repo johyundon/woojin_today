@@ -52,6 +52,8 @@ class _MileageScholarshipTabState extends State<MileageScholarshipTab> {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
+      color: AppColors.blue,
+      backgroundColor: Colors.white,
       onRefresh: _refresh,
       child: FutureBuilder<List<NoticeItem>>(
         future: _notices,
@@ -60,7 +62,9 @@ class _MileageScholarshipTabState extends State<MileageScholarshipTab> {
           if (snapshot.connectionState != ConnectionState.done) {
             child = const Padding(
               padding: EdgeInsets.only(top: 80),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.blue),
+              ),
             );
           } else if (snapshot.hasError) {
             child = _CenteredText('공지를 불러오지 못했어요.\n당겨서 다시 시도해 주세요.');
@@ -109,7 +113,7 @@ class _CenteredText extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        style: const TextStyle(color: AppColors.textSub, fontSize: 14),
       ),
     );
   }

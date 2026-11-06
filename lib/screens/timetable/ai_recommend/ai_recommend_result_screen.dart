@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
@@ -10,16 +11,41 @@ import '../grid_layout.dart';
 import '../models/ai_recommend_answers.dart';
 import '../models/planned_course.dart';
 import '../timetable_colors.dart';
+import 'ai_recommend_widgets.dart';
 
 const List<String> _weekdayFullNames = ['월요일', '화요일', '수요일', '목요일', '금요일'];
-const double _hourLabelColumnWidth = 22;
+const double _hourLabelColumnWidth = 24;
 
-/// "AI 시간표 자동 생성" 결과 미리보기 (Figma node 6:59, node-id 6:65 — 스크린샷
-/// 6장 중 마지막 1장).
+/// 결과 그리드 한 시간 칸 높이(디자인 22의 줄 간격 54). 메인 시간표 그리드와
+/// 달리 스크롤 없이 한눈에 보이도록 정해진 값이라 따로 둔다.
+const double _hourRowHeight = 54;
+
+/// 가로줄 가운데에 맞춘 시각 글자(17 높이)가 줄 위로 나오는 만큼.
+const double _labelOverhang = 8;
+
+const TextStyle _dayLabelStyle = TextStyle(
+  color: AppColors.textSub,
+  fontSize: 12,
+  fontWeight: FontWeight.w800,
+  height: 1.4,
+);
+const TextStyle _freeDayLabelStyle = TextStyle(
+  color: AppColors.blue,
+  fontSize: 12,
+  fontWeight: FontWeight.w800,
+  height: 1.4,
+);
+const TextStyle _hourLabelStyle = TextStyle(
+  color: AppColors.textSub,
+  fontSize: 12,
+  fontWeight: FontWeight.w700,
+  height: 1.4,
+);
+
+/// "AI 시간표 자동 생성" 결과 미리보기 (v7 디자인 22 ai_result).
 ///
-/// 이 노드는 실제 Figma 벡터 레이어가 아니라 앱 스크린샷이 평탄화된 상태라
-/// `get_design_context`로 쓸만한 코드를 뽑을 수 없었다. 스크린샷을 눈으로 보고
-/// 레이아웃/색상/간격을 근사해 재현했다. 추천 알고리즘/데이터 조회는 이 화면의
+/// 거의 흰 바탕 위에 학점·과목 수 배지, 제목, 조건 칩을 두고, 그 아래 흰
+/// 시트에 후보 시간표 그리드(옆으로 넘겨 다른 후보 보기)를 그린다. 추천 알고리즘/데이터 조회는 이 화면의
 /// 책임이 아니라 [onRegenerate]/[onConfirm] 콜백으로 호출부에 위임한다.
 class AiRecommendResultScreen extends StatefulWidget {
   const AiRecommendResultScreen({
@@ -142,109 +168,105 @@ class _AiRecommendResultScreenState extends State<AiRecommendResultScreen> {
   Widget build(BuildContext context) {
     final hasCandidates = _candidates.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: _TopBar(
-                hasCandidates: _candidates.isNotEmpty,
-                regenerating: _regenerating,
-                onRegenerate: _onRegenerate,
-              ),
-            ),
-            if (!hasCandidates)
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    '조건에 맞는 시간표를 찾지 못했어요',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ),
-              )
-            else ...[
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다(앱 테마는 아직 어두운 테마).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.lime,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                child: _TopBar(
+                  hasCandidates: _candidates.isNotEmpty,
+                  regenerating: _regenerating,
+                  onRegenerate: _onRegenerate,
+                ),
+              ),
+              if (!hasCandidates)
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      '조건에 맞는 시간표를 찾지 못했어요',
+                      style: TextStyle(
+                        color: AppColors.textSub,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SoftBadge(
                             '총 ${_formatCredit(_totalCredit(_candidates[_currentIndex]))}학점 · '
                             '${_candidates[_currentIndex].length}과목',
-                            style: const TextStyle(
-                              color: AppColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                          ),
+                          const SizedBox(height: 12),
+                          const Padding(
+                            padding: EdgeInsets.only(right: 100),
+                            child: Text(
+                              '이 시간표\n어때?',
+                              style: TextStyle(
+                                color: AppColors.textStrong,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                height: 1.4,
+                                letterSpacing: -1.04,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Padding(
-                          padding: EdgeInsets.only(right: 90),
-                          child: Text(
-                            '이 시간표\n어때?',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                              letterSpacing: -0.02,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Positioned(
-                      right: 0,
-                      top: -4,
-                      child: MascotSticker(width: 76, angle: 0.08),
-                    ),
-                  ],
+                        ],
+                      ),
+                      const Positioned(
+                        right: -13,
+                        top: -13,
+                        child: MascotSticker(width: 97, angle: 0.14),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if (_conditionChips.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                  child: SingleChildScrollView(
+                if (_conditionChips.isNotEmpty)
+                  SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
+                    // 칩 그림자가 잘리지 않도록 위아래로 여유를 둔다.
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
                     child: Row(
                       children: [
-                        for (final chip in _conditionChips) ...[
+                        for (final (i, chip) in _conditionChips.indexed) ...[
+                          if (i > 0) const SizedBox(width: 6),
                           _ConditionChip(chip),
-                          const SizedBox(width: 8),
                         ],
                       ],
                     ),
                   ),
-                ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 14, 0, 0),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
-                    child: ColoredBox(
+                const SizedBox(height: 25),
+                Expanded(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      child: Column(
-                        children: [
-                          Expanded(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(36),
+                      ),
+                      boxShadow: TimetableColors.sheetShadow,
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(36),
+                            ),
                             child: PageView.builder(
                               controller: _pageController,
                               itemCount: _candidates.length,
@@ -256,98 +278,33 @@ class _AiRecommendResultScreenState extends State<AiRecommendResultScreen> {
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              20,
-                              16,
-                              20,
-                              20 + MediaQuery.of(context).padding.bottom,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 92,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(26),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.cobaltDeep.withValues(
-                                          alpha: 0.35,
-                                        ),
-                                        offset: const Offset(0, 6),
-                                        blurRadius: 14,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Pressable.effect(
-                                    child: ElevatedButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.cobaltDeep,
-                                        shape: const StadiumBorder(),
-                                        elevation: 0,
-                                      ),
-                                      child: const Text(
-                                        '< 이전',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Container(
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(26),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.ink.withValues(
-                                            alpha: 0.25,
-                                          ),
-                                          offset: const Offset(0, 6),
-                                          blurRadius: 14,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Pressable.effect(
-                                      pressedScale: 0.97,
-                                      child: ElevatedButton(
-                                        onPressed: _onConfirm,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppColors.lime,
-                                          shape: const StadiumBorder(),
-                                          elevation: 0,
-                                        ),
-                                        child: const Text(
-                                          '이 시간표 할래요',
-                                          style: TextStyle(
-                                            color: AppColors.ink,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            24,
+                            12,
+                            24,
+                            16 + MediaQuery.of(context).padding.bottom,
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            children: [
+                              AiBackButton(
+                                onTap: () => Navigator.of(context).pop(),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _ConfirmButton(onTap: _onConfirm),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -380,18 +337,7 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Pressable.icon(
-          onTap: () => Navigator.of(context).pop(),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.cobaltDeep,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.close, color: Colors.white, size: 18),
-          ),
-        ),
+        const AiCloseButton(),
         const Spacer(),
         if (hasCandidates)
           _RegenerateButton(
@@ -422,35 +368,68 @@ class _RegenerateButton extends StatelessWidget {
       pressedScale: 0.93,
       onTap: loading ? null : onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        height: 35,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
         decoration: BoxDecoration(
-          color: AppColors.lime,
-          borderRadius: BorderRadius.circular(99),
+          color: AppColors.blueSoft,
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: loading
-            ? const SizedBox(
-                width: 14,
-                height: 14,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (loading)
+              const SizedBox(
+                width: 15,
+                height: 15,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.ink,
+                  color: AppColors.blue,
                 ),
               )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.refresh, color: AppColors.ink, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+            else
+              const Icon(
+                Icons.refresh_rounded,
+                color: AppColors.blue,
+                size: 15,
               ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.blue,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "총 N학점 · M과목" 연파랑 배지.
+class _SoftBadge extends StatelessWidget {
+  const _SoftBadge(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.blueSoft,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.blue,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          height: 1.4,
+        ),
       ),
     );
   }
@@ -465,17 +444,51 @@ class _ConditionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.cobaltDeep,
-        borderRadius: BorderRadius.circular(99),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
+          color: AppColors.textStrong,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// "이 시간표 할래요" 파란 그라데이션 버튼(60 높이).
+class _ConfirmButton extends StatelessWidget {
+  const _ConfirmButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      pressedScale: 0.96,
+      onTap: onTap,
+      child: Container(
+        height: 60,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: AiRecommendColors.confirmGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: const Text(
+          '이 시간표 할래요',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -521,55 +534,45 @@ class _CandidateGrid extends StatelessWidget {
     final layouts = buildBlockLayouts(courses);
     final freeDayIndex = freeDay == null ? null : gridColumnIndexOf(freeDay!);
     final (displayStartHour, displayEndHour) = _displayHourRange(layouts);
-    final gridHeight = (displayEndHour - displayStartHour) * gridHourRowHeight;
+    final gridHeight = (displayEndHour - displayStartHour) * _hourRowHeight;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const SizedBox(width: _hourLabelColumnWidth),
-              for (var i = 0; i < weekdayLabelsWeekdaysOnly.length; i++)
-                Expanded(
-                  child: Center(
-                    child: i == freeDayIndex
-                        ? Column(
-                            children: [
-                              Text(
-                                weekdayLabelsWeekdaysOnly[i],
-                                style: const TextStyle(
-                                  color: AppColors.cobalt,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const Text(
-                                '공강',
-                                style: TextStyle(
-                                  color: AppColors.cobalt,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          )
-                        : Text(
-                            weekdayLabelsWeekdaysOnly[i],
-                            style: const TextStyle(
-                              color: TimetableColors.textSecondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+          SizedBox(
+            height: 34,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(width: _hourLabelColumnWidth),
+                for (var i = 0; i < weekdayLabelsWeekdaysOnly.length; i++)
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          weekdayLabelsWeekdaysOnly[i],
+                          style: i == freeDayIndex
+                              ? _freeDayLabelStyle
+                              : _dayLabelStyle,
+                        ),
+                        if (i == freeDayIndex)
+                          const Text('공강', style: _freeDayLabelStyle),
+                      ],
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Expanded(
             child: SingleChildScrollView(
+              // 줄 위에 걸친 첫/마지막 시각 글자가 잘리지 않도록 위아래 여유.
+              padding: const EdgeInsets.only(
+                top: _labelOverhang,
+                bottom: _labelOverhang + 8,
+              ),
               child: SizedBox(
                 height: gridHeight,
                 child: LayoutBuilder(
@@ -577,6 +580,7 @@ class _CandidateGrid extends StatelessWidget {
                     final columnWidth =
                         (constraints.maxWidth - _hourLabelColumnWidth) / 5;
                     return Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         if (freeDayIndex != null)
                           Positioned(
@@ -586,11 +590,14 @@ class _CandidateGrid extends StatelessWidget {
                             top: 0,
                             bottom: 0,
                             width: columnWidth,
-                            child: ColoredBox(
-                              color: AppColors.cobalt.withValues(alpha: 0.05),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: AppColors.blue.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
-                        _buildHourLabelsAndLines(
+                        ..._buildHourLabelsAndLines(
                           displayStartHour,
                           displayEndHour,
                         ),
@@ -612,39 +619,26 @@ class _CandidateGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildHourLabelsAndLines(int startHour, int endHour) {
-    return Column(
-      children: [
-        for (var hour = startHour; hour < endHour; hour++)
-          SizedBox(
-            height: gridHourRowHeight,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: _hourLabelColumnWidth,
-                  child: Text(
-                    '$hour',
-                    style: const TextStyle(
-                      color: TimetableColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: TimetableColors.gridLine),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  /// 시각 글자는 디자인처럼 가로줄 높이에 세로 가운데를 맞춘다.
+  List<Widget> _buildHourLabelsAndLines(int startHour, int endHour) {
+    return [
+      for (var hour = startHour; hour <= endHour; hour++) ...[
+        if (hour < endHour)
+          Positioned(
+            left: _hourLabelColumnWidth,
+            right: 0,
+            top: (hour - startHour) * _hourRowHeight,
+            height: 1,
+            child: const ColoredBox(color: TimetableColors.gridLine),
           ),
+        Positioned(
+          left: 0,
+          width: _hourLabelColumnWidth,
+          top: (hour - startHour) * _hourRowHeight - _labelOverhang,
+          child: Text('$hour', style: _hourLabelStyle),
+        ),
       ],
-    );
+    ];
   }
 
   Widget _positionedBlock(
@@ -665,7 +659,7 @@ class _CandidateGrid extends StatelessWidget {
   }
 
   double _minutesToY(int minutes, int startHour) {
-    return (minutes - startHour * 60) / 60 * gridHourRowHeight;
+    return (minutes - startHour * 60) / 60 * _hourRowHeight;
   }
 }
 
@@ -681,11 +675,19 @@ class _LockedCourseBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = colorForCourseKey(layout.course.key);
     final textColor = textColorOnBlock(color);
+    final subStyle = TextStyle(
+      color: textColor.withValues(alpha: 0.9),
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      height: 1.4,
+      letterSpacing: -0.36,
+    );
     return Container(
       width: double.infinity,
       height: double.infinity,
-      margin: const EdgeInsets.all(1.5),
-      padding: const EdgeInsets.fromLTRB(5, 4, 3, 4),
+      margin: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(5),
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(8),
@@ -701,9 +703,10 @@ class _LockedCourseBlock extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: textColor,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
-                height: 1.2,
+                height: 1.4,
+                letterSpacing: -0.36,
               ),
             ),
           ),
@@ -712,25 +715,16 @@ class _LockedCourseBlock extends StatelessWidget {
               layout.course.room,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: textColor.withValues(alpha: 0.8),
-                fontSize: 9,
-                height: 1.2,
-              ),
+              style: subStyle,
             ),
           ),
           Flexible(
             child: Text(
               '${formatMinutesAsTime(layout.startMinutes)}–'
               '${formatMinutesAsTime(layout.endMinutes)}',
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: textColor.withValues(alpha: 0.9),
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                height: 1.15,
-              ),
+              style: subStyle,
             ),
           ),
         ],

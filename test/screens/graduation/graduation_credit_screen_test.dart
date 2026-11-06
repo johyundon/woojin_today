@@ -194,7 +194,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('총 이수학점'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
     await tester.pumpAndSettle();
     expect(find.text('총 이수학점'), findsNothing);
     expect(tester.takeException(), isNull);

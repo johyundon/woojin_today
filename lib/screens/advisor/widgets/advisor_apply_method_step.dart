@@ -6,8 +6,8 @@ import '../models/advisor_consultation_models.dart';
 import 'advisor_apply_common.dart';
 import 'advisor_apply_visit_schedule_picker.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _chipBackground = Color(0xFFF1F0F7);
+const Color _methodBorder = Color(0xFFD5D9E0);
+const Color _methodText = Color(0xFF3F4558);
 
 /// 1단계: 상담교수 방식 선택(온라인/방문). 온라인 흐름에서만 쓰인다 —
 /// 방문이면 [AdvisorMethodAndScheduleStep]이 같은 자리에서 시간 선택까지
@@ -39,14 +39,14 @@ class AdvisorMethodStep extends StatelessWidget {
           step: step,
           totalSteps: totalSteps,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 15),
         AdvisorApplyProgressDots(step: step, totalSteps: totalSteps),
-        const SizedBox(height: 14),
+        const SizedBox(height: 26),
         _MethodToggle(
           selectedMethod: selectedMethod,
           onSelectMethod: onSelectMethod,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
         AdvisorApplyPrimaryButton(
           label: '다음',
           enabled: methodStepValid,
@@ -105,19 +105,19 @@ class AdvisorMethodAndScheduleStep extends StatelessWidget {
           step: step,
           totalSteps: totalSteps,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 15),
         AdvisorApplyProgressDots(step: step, totalSteps: totalSteps),
-        const SizedBox(height: 14),
+        const SizedBox(height: 26),
         _MethodToggle(
           selectedMethod: selectedMethod,
           onSelectMethod: onSelectMethod,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         const Text(
           '상담 시간',
           style: TextStyle(
-            color: _mutedText,
-            fontSize: 13,
+            color: AppColors.textSub,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -132,7 +132,7 @@ class AdvisorMethodAndScheduleStep extends StatelessWidget {
           onSelectVisitDate: onSelectVisitDate,
           onSelectVisitTime: onSelectVisitTime,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
         AdvisorApplyPrimaryButton(
           label: '다음',
           enabled: methodStepValid,
@@ -154,31 +154,24 @@ class _MethodToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: _chipBackground,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _MethodButton(
-              method: ConsultationMethod.online,
-              selectedMethod: selectedMethod,
-              onSelectMethod: onSelectMethod,
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: _MethodButton(
+            method: ConsultationMethod.online,
+            selectedMethod: selectedMethod,
+            onSelectMethod: onSelectMethod,
           ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: _MethodButton(
-              method: ConsultationMethod.visit,
-              selectedMethod: selectedMethod,
-              onSelectMethod: onSelectMethod,
-            ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _MethodButton(
+            method: ConsultationMethod.visit,
+            selectedMethod: selectedMethod,
+            onSelectMethod: onSelectMethod,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -197,31 +190,23 @@ class _MethodButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = selectedMethod == method;
-    final icon = method == ConsultationMethod.online
-        ? Icons.videocam_rounded
-        : Icons.meeting_room_rounded;
     return Pressable(
       onTap: () => onSelectMethod(method),
       child: Container(
-        height: 42,
+        height: 52,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.cobalt : Colors.transparent,
-          borderRadius: BorderRadius.circular(13),
+          color: selected ? AppColors.blueSoft : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? AppColors.blue : _methodBorder),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: selected ? Colors.white : _mutedText),
-            const SizedBox(width: 6),
-            Text(
-              method.label,
-              style: TextStyle(
-                color: selected ? Colors.white : _mutedText,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+        child: Text(
+          method.label,
+          style: TextStyle(
+            color: selected ? AppColors.blueText : _methodText,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

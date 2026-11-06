@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import 'advisor_apply_common.dart';
 
-const Color _fieldFill = Color(0xFFFAFAFD);
-const Color _fieldBorder = Color(0xFFE4E3EC);
-const Color _disabledText = Color(0xFFB3B2C0);
 const Color _errorColor = Color(0xFFE5484D);
 
 /// 자음·모음 낱글자(ㅋㅋ, ㅏㅏ 등). 완성된 글자가 아니라서 상담 내용 글자
@@ -58,34 +55,37 @@ class AdvisorContentStep extends StatelessWidget {
         controller: controller,
         minLines: 5,
         maxLines: 8,
-        style: const TextStyle(color: AppColors.ink, fontSize: 15),
+        style: const TextStyle(color: AppColors.textStrong, fontSize: 15),
         decoration: InputDecoration(
           hintText: '$minContentLength자 이상 적어주세요',
-          hintStyle: const TextStyle(color: _disabledText),
+          hintStyle: const TextStyle(color: AppColors.textMuted),
           errorText: showError ? _errorMessage : null,
           errorStyle: const TextStyle(color: _errorColor, fontSize: 12),
           filled: true,
-          fillColor: _fieldFill,
-          contentPadding: const EdgeInsets.all(14),
+          fillColor: advisorFieldBackground,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 15,
+          ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _fieldBorder, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: advisorFieldBorder, width: 2),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: AppColors.cobalt, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.blue, width: 2),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: _errorColor, width: 2),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: _errorColor, width: 2),
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _fieldBorder, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: advisorFieldBorder, width: 2),
           ),
         ),
       ),

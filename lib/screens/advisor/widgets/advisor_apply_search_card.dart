@@ -5,10 +5,6 @@ import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 import 'advisor_load_states.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _chipBackground = Color(0xFFF1F0F7);
-const Color _disabledText = Color(0xFFB3B2C0);
-
 /// 교수 검색 카드("변경"을 눌렀을 때 상담교수 요약 카드 아래에 뜨는 패널).
 ///
 /// 맨 위에는 항상 지도교수가 있고, 그 아래는 T-WIN 교수 검색 결과다. 학교는
@@ -64,49 +60,52 @@ class AdvisorProfessorSearchCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // v7 시안처럼 돋보기를 왼쪽에 둔다. 눌러도 검색된다(키보드 완료와 같음).
           Container(
-            padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: _chipBackground,
-              borderRadius: BorderRadius.circular(14),
+              color: AppColors.fill,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
+                Pressable.icon(
+                  key: const ValueKey('professor-search-button'),
+                  onTap: onSearch,
+                  child: const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.textMuted,
+                    size: 15,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: searchController,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => onSearch(),
-                    style: const TextStyle(color: AppColors.ink, fontSize: 14),
+                    style: const TextStyle(
+                      color: AppColors.textStrong,
+                      fontSize: 13,
+                    ),
                     decoration: const InputDecoration(
                       hintText: '교수님 이름으로 검색',
-                      hintStyle: TextStyle(color: _disabledText),
+                      hintStyle: TextStyle(color: AppColors.textMuted),
                       border: InputBorder.none,
                       isDense: true,
-                    ),
-                  ),
-                ),
-                Pressable.icon(
-                  key: const ValueKey('professor-search-button'),
-                  onTap: onSearch,
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(
-                      Icons.search,
-                      color: AppColors.cobalt,
-                      size: 20,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 9),
           if (advisor != null)
             _ProfessorRow(
               professor: advisor,
@@ -125,7 +124,7 @@ class AdvisorProfessorSearchCard extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '다른 교수님은 이름을 입력하고 검색해 주세요',
-                style: TextStyle(color: _mutedText, fontSize: 13),
+                style: TextStyle(color: AppColors.textSub, fontSize: 13),
               ),
             )
           else if (results.isEmpty)
@@ -133,7 +132,7 @@ class AdvisorProfessorSearchCard extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '검색 결과가 없어요',
-                style: TextStyle(color: _mutedText, fontSize: 13),
+                style: TextStyle(color: AppColors.textSub, fontSize: 13),
               ),
             )
           else ...[
@@ -152,7 +151,7 @@ class AdvisorProfessorSearchCard extends StatelessWidget {
                     child: const Text(
                       '더 보기',
                       style: TextStyle(
-                        color: AppColors.cobalt,
+                        color: AppColors.blue,
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                       ),
@@ -189,9 +188,9 @@ class _ProfessorRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.cobalt.withValues(alpha: 0.1)
-                : _chipBackground,
-            borderRadius: BorderRadius.circular(14),
+                ? AppColors.blue.withValues(alpha: 0.1)
+                : AppColors.fill,
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -199,8 +198,8 @@ class _ProfessorRow extends StatelessWidget {
               Text(
                 professor.name,
                 style: TextStyle(
-                  color: isSelected ? AppColors.cobalt : AppColors.ink,
-                  fontSize: 15,
+                  color: isSelected ? AppColors.blue : AppColors.textStrong,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -210,7 +209,7 @@ class _ProfessorRow extends StatelessWidget {
                   professor.isAdvisor ? '지도교수' : professor.department,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: isSelected ? AppColors.cobalt : _mutedText,
+                    color: isSelected ? AppColors.blue : AppColors.textSub,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),

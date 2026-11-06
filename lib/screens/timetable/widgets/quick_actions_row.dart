@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
-import '../timetable_colors.dart';
 
-/// 헤더 바로 아래 줄: "내 시간표 불러오기" 아웃라인 버튼 + "강의시간 알림" 토글.
+/// 헤더 바로 아래 줄(v7 디자인 23): "내 시간표 불러오기" 연파랑 버튼 +
+/// "강의시간 알림" 토글.
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({
     super.key,
@@ -22,18 +23,17 @@ class QuickActionsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Pressable.effect(
+        Pressable(
           enabled: !loading,
           pressedScale: 0.93,
-          child: OutlinedButton(
-            onPressed: loading ? null : onLoadMyTimetable,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: TimetableColors.accent,
-              side: const BorderSide(color: TimetableColors.accent),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          onTap: loading ? null : onLoadMyTimetable,
+          child: Container(
+            height: 33,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.blueSoft,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: loading
                 ? const SizedBox(
@@ -41,29 +41,50 @@ class QuickActionsRow extends StatelessWidget {
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: TimetableColors.accent,
+                      color: AppColors.blue,
                     ),
                   )
                 : const Text(
                     '내 시간표 불러오기',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.blue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      height: 1.4,
+                    ),
                   ),
           ),
         ),
         const Spacer(),
         const Text(
           '강의시간 알림',
-          style: TextStyle(color: TimetableColors.textSecondary, fontSize: 13),
+          style: TextStyle(
+            color: AppColors.textStrong,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            height: 1.4,
+          ),
         ),
-        const SizedBox(width: 6),
-        Switch(
-          value: notificationsEnabled,
-          onChanged: onNotificationsChanged,
-          activeThumbColor: Colors.white,
-          activeTrackColor: TimetableColors.accent,
-          inactiveThumbColor: TimetableColors.textSecondary,
-          inactiveTrackColor: TimetableColors.surfaceElevated,
-          trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        const SizedBox(width: 8),
+        // 디자인 토글은 46x26(손잡이 20). 머티리얼 Switch(52x32)를 그 크기로
+        // 줄여 쓴다 — 켜짐: 연파랑 바탕 + 파란 손잡이.
+        SizedBox(
+          width: 46,
+          height: 26,
+          child: FittedBox(
+            child: Switch(
+              value: notificationsEnabled,
+              onChanged: onNotificationsChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              activeThumbColor: AppColors.blue,
+              activeTrackColor: AppColors.blueSoft,
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: AppColors.fillDisabled,
+              trackOutlineColor: const WidgetStatePropertyAll(
+                Colors.transparent,
+              ),
+            ),
+          ),
         ),
       ],
     );

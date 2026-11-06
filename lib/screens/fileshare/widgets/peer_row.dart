@@ -3,6 +3,7 @@ import 'package:nsd/nsd.dart' as nsd;
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
+import '../fileshare_colors.dart';
 
 /// "주변 사람" 목록 한 줄 — 아바타 이니셜 + 광고된 이름 + "보내기".
 class PeerRow extends StatelessWidget {
@@ -33,23 +34,26 @@ class PeerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = peer.name ?? '이름 없는 기기';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F0F7),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 42,
+            height: 42,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(
               name.characters.firstOrNull ?? '?',
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 14,
+              style: TextStyle(
+                color: avatarForeground(color),
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -61,9 +65,9 @@ class PeerRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textStrong,
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -73,13 +77,16 @@ class PeerRow extends StatelessWidget {
             pressedScale: 0.93,
             child: Material(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 child: Text(
                   _buttonLabel,
                   style: const TextStyle(
-                    color: AppColors.cobalt,
+                    color: AppColors.blue,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),

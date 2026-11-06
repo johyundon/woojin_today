@@ -5,12 +5,10 @@ import '../../../utils/weekday_labels.dart';
 import '../../../widgets/pressable.dart';
 
 const Color _weekendRed = Color(0xFFE5484D);
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _chipBackground = Color(0xFFF1F0F7);
-const Color _disabledText = Color(0xFFD5D4DD);
+const Color _disabledText = Color(0xFFCFD3D9);
 
-/// 방문 상담 날짜를 고르는 미니 월간 캘린더(calendar_month_grid.dart와 같은
-/// 코발트 선택 원 스타일을 따르되, 일정 점 표시 없이 날짜 선택만 한다).
+/// 방문 상담 날짜를 고르는 미니 월간 캘린더(v7: 고른 날짜는 연파랑 바탕 +
+/// 파란 테두리 원, 일정 점 표시 없이 날짜 선택만 한다).
 /// [minDate]~[maxDate] 범위 밖 날짜는 눌러도 반응하지 않고 흐리게 보이며,
 /// 그 범위를 벗어나는 달로는 화살표로도 못 넘어간다.
 class AdvisorVisitCalendar extends StatefulWidget {
@@ -86,7 +84,7 @@ class _AdvisorVisitCalendarState extends State<AdvisorVisitCalendar> {
             Text(
               '${_focusedMonth.year}년 ${_focusedMonth.month}월',
               style: const TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textStrong,
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
@@ -114,7 +112,7 @@ class _AdvisorVisitCalendarState extends State<AdvisorVisitCalendar> {
                   child: Text(
                     weekdayLabelsMonFirst[i],
                     style: TextStyle(
-                      color: i >= 5 ? _weekendRed : _mutedText,
+                      color: i >= 5 ? _weekendRed : AppColors.textSub,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -149,13 +147,13 @@ class _AdvisorVisitCalendarState extends State<AdvisorVisitCalendar> {
         height: 28,
         alignment: Alignment.center,
         decoration: const BoxDecoration(
-          color: _chipBackground,
+          color: Colors.white,
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
           size: 18,
-          color: enabled ? AppColors.ink : _disabledText,
+          color: enabled ? AppColors.textStrong : _disabledText,
         ),
       ),
     );
@@ -188,15 +186,16 @@ class _AdvisorVisitCalendarState extends State<AdvisorVisitCalendar> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: selected ? AppColors.cobalt : Colors.transparent,
+              color: selected ? AppColors.blueSoft : Colors.transparent,
+              border: selected ? Border.all(color: AppColors.blue) : null,
             ),
             child: Text(
               '$day',
               style: TextStyle(
                 color: selected
-                    ? Colors.white
+                    ? AppColors.blueText
                     : selectable
-                    ? AppColors.ink
+                    ? AppColors.textStrong
                     : _disabledText,
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w600,

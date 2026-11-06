@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../theme/app_colors.dart';
-import '../../../widgets/mascot_sticker.dart';
 import '../../../widgets/pressable.dart';
 
-const _mutedText = Color(0xFF6B6B70);
-const _fieldBackground = Color(0xFFF1F1F5);
+/// 흰 시트 위쪽 그림자(검정 6%, 위로 4, 번짐 20, v7 디자인 30).
+const List<BoxShadow> _sheetShadow = [
+  BoxShadow(color: Color(0x0F000000), offset: Offset(0, -4), blurRadius: 20),
+];
 
-/// "학과 변경" 화면(v4 리디자인). 학과를 고르고 "변경하기"를 누르면 한 번 더
+/// 확인 시트 손잡이 rgb(221, 224, 228)(v7 디자인 31).
+const _handle = Color(0xFFDDE0E4);
+
+/// 확인 시트 뒤 어둡게 까는 색 rgba(20, 22, 30, 0.55)(v7 디자인 31).
+const _barrier = Color(0x8C14161E);
+
+/// "학과 변경" 화면(v7 디자인). 학과를 고르고 "변경하기"를 누르면 한 번 더
 /// 확인 시트를 띄우고, 확인하면 고른 학과 이름을 반환하며 닫힌다
 /// ([Navigator.pop]). 취소하거나 뒤로 가면 null.
 class DepartmentPickerScreen extends StatefulWidget {
@@ -47,9 +55,10 @@ class _DepartmentPickerScreenState extends State<DepartmentPickerScreen> {
     final ok = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.white,
+      barrierColor: _barrier,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (_) => _ConfirmSheet(departmentName: target),
     );
@@ -62,225 +71,230 @@ class _DepartmentPickerScreenState extends State<DepartmentPickerScreen> {
         ? widget.departmentNames
         : widget.departmentNames.where((n) => n.contains(_query)).toList();
 
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      body: ColoredBox(
-        color: AppColors.cobalt,
-        child: SafeArea(
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
           bottom: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
-                child: Stack(
-                  clipBehavior: Clip.none,
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                child: Pressable.icon(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppColors.cardShadow,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: AppColors.textStrong,
+                      size: 15,
+                      semanticLabel: '뒤로',
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 35),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Pressable.icon(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: const BoxDecoration(
-                                color: AppColors.cobaltDeep,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.lime,
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: const Text(
-                              '학과 변경',
-                              style: TextStyle(
-                                color: AppColors.ink,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            '어느 학과로\n바꿀까?',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                              letterSpacing: -0.04,
-                            ),
-                          ),
-                        ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueSoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '학과 변경',
+                        style: TextStyle(
+                          color: AppColors.blue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                    const Positioned(
-                      right: 0,
-                      top: 0,
-                      child: MascotSticker(width: 76, angle: 0.08),
+                    const SizedBox(height: 10),
+                    const Text(
+                      '어느 학과로 바꿀까?',
+                      style: TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        height: 1.4,
+                        letterSpacing: -1.04,
+                      ),
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
-                  ),
-                  child: ColoredBox(
+                child: Container(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                          child: Row(
-                            children: [
-                              const Text(
-                                '현재 학과',
-                                style: TextStyle(
-                                  color: _mutedText,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.ink,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Text(
-                                  widget.currentDepartment,
-                                  style: const TextStyle(
-                                    color: AppColors.lime,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: _fieldBackground,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (v) => setState(() => _query = v),
-                              style: const TextStyle(
-                                color: AppColors.ink,
-                                fontSize: 14,
-                              ),
-                              decoration: const InputDecoration(
-                                icon: Padding(
-                                  padding: EdgeInsets.only(left: 14),
-                                  child: Icon(Icons.search, color: _mutedText),
-                                ),
-                                hintText: '학과 이름 검색',
-                                hintStyle: TextStyle(color: _mutedText),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 14,
-                                  horizontal: 6,
-                                ),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(36),
+                    ),
+                    boxShadow: _sheetShadow,
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 22, 22, 12),
+                        child: Row(
+                          children: [
+                            const Text(
+                              '현재 학과',
+                              style: TextStyle(
+                                color: AppColors.textSub,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-                            itemCount: filtered.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) {
-                              final name = filtered[index];
-                              return _DepartmentRow(
-                                name: name,
-                                college: widget.colleges[name],
-                                selected: name == _selected,
-                                onTap: () => setState(() => _selected = name),
-                              );
-                            },
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            4,
-                            20,
-                            16 + MediaQuery.of(context).padding.bottom,
-                          ),
-                          child: Pressable.effect(
-                            enabled: _canChange,
-                            pressedScale: 0.96,
-                            child: Container(
-                              height: 56,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                boxShadow: _canChange
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.cobalt.withValues(
-                                            alpha: 0.35,
-                                          ),
-                                          offset: const Offset(0, 6),
-                                          blurRadius: 14,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: SizedBox.expand(
-                                child: ElevatedButton(
-                                  onPressed: _canChange ? _confirm : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.cobalt,
-                                    disabledBackgroundColor: const Color(
-                                      0xFFC9D3F2,
-                                    ),
-                                    elevation: 0,
-                                    shape: const StadiumBorder(),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                                  child: const Text(
-                                    '변경하기',
-                                    style: TextStyle(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.blue,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    widget.currentDepartment,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 16,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ),
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Container(
+                          height: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.fill,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (v) => setState(() => _query = v),
+                            cursorColor: AppColors.blue,
+                            style: const TextStyle(
+                              color: AppColors.textStrong,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            decoration: const InputDecoration(
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.only(left: 16, right: 8),
+                                child: Icon(
+                                  Icons.search_rounded,
+                                  size: 19,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              prefixIconConstraints: BoxConstraints(),
+                              hintText: '학과 이름 검색',
+                              hintStyle: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      Expanded(
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final name = filtered[index];
+                            return _DepartmentRow(
+                              name: name,
+                              college: widget.colleges[name],
+                              selected: name == _selected,
+                              onTap: () => setState(() => _selected = name),
+                            );
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          24,
+                          4,
+                          24,
+                          16 + MediaQuery.of(context).padding.bottom,
+                        ),
+                        child: Pressable.effect(
+                          enabled: _canChange,
+                          pressedScale: 0.96,
+                          child: Container(
+                            height: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: _canChange
+                                  ? AppColors.cardShadow
+                                  : null,
+                            ),
+                            child: SizedBox.expand(
+                              child: ElevatedButton(
+                                onPressed: _canChange ? _confirm : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.blue,
+                                  disabledBackgroundColor:
+                                      AppColors.fillDisabled,
+                                  foregroundColor: Colors.white,
+                                  disabledForegroundColor: AppColors.textMuted,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text(
+                                  '변경하기',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -311,13 +325,13 @@ class _DepartmentRow extends StatelessWidget {
       onTap: onTap,
       pressedScale: 0.97,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFDCE6FB) : _fieldBackground,
-          borderRadius: BorderRadius.circular(18),
+          color: selected ? AppColors.blueSoft : AppColors.fill,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppColors.cobalt : Colors.transparent,
-            width: 1.5,
+            color: selected ? AppColors.blue : Colors.transparent,
+            width: 2,
           ),
         ),
         child: Row(
@@ -326,13 +340,13 @@ class _DepartmentRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: selected ? AppColors.cobalt : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: selected ? AppColors.blue : Colors.white,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                Icons.school,
-                size: 20,
-                color: selected ? Colors.white : AppColors.cobalt,
+                Icons.school_rounded,
+                size: 17,
+                color: selected ? Colors.white : AppColors.blue,
               ),
             ),
             const SizedBox(width: 12),
@@ -343,31 +357,43 @@ class _DepartmentRow extends StatelessWidget {
                   Text(
                     name,
                     style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 14,
+                      color: AppColors.textStrong,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  if (college != null)
+                  if (college != null) ...[
+                    const SizedBox(height: 2),
                     Text(
                       college!,
-                      style: const TextStyle(color: _mutedText, fontSize: 11),
+                      style: const TextStyle(
+                        color: AppColors.textSub,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(width: 12),
             Container(
-              width: 24,
-              height: 24,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected ? AppColors.cobalt : Colors.transparent,
+                borderRadius: BorderRadius.circular(9),
+                color: selected ? AppColors.blue : Colors.transparent,
                 border: selected
                     ? null
-                    : Border.all(color: const Color(0xFFC4C4CC), width: 1.5),
+                    : Border.all(color: AppColors.checkLine, width: 2),
               ),
               child: selected
-                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 15,
+                      color: Colors.white,
+                    )
                   : null,
             ),
           ],
@@ -387,67 +413,77 @@ class _ConfirmSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        10,
-        20,
-        20 + MediaQuery.of(context).padding.bottom,
+        22,
+        12,
+        22,
+        40 + MediaQuery.of(context).padding.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 36,
-            height: 4,
+            width: 44,
+            height: 5,
             decoration: BoxDecoration(
-              color: const Color(0xFFE1E1E6),
-              borderRadius: BorderRadius.circular(2),
+              color: _handle,
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
           const SizedBox(height: 22),
           Container(
-            width: 52,
-            height: 52,
+            width: 56,
+            height: 56,
             decoration: const BoxDecoration(
-              color: Color(0xFFDCE6FB),
+              color: AppColors.blueSoft,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.swap_horiz, color: AppColors.cobalt),
+            child: const Icon(
+              Icons.swap_horiz_rounded,
+              size: 24,
+              color: AppColors.blue,
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Text(
             '$departmentName로 바꿀까요?',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 17,
+              color: AppColors.textStrong,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
+              letterSpacing: -0.54,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             '학과 등수와 평점 비교 기준이\n새 학과로 바뀌어요',
             textAlign: TextAlign.center,
-            style: TextStyle(color: _mutedText, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              color: AppColors.textBody,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           Row(
             children: [
               Expanded(
-                flex: 2,
                 child: SizedBox(
                   height: 52,
                   child: Pressable.effect(
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _fieldBackground,
+                        backgroundColor: AppColors.fill,
+                        foregroundColor: AppColors.textStrong,
                         elevation: 0,
-                        shape: const StadiumBorder(),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: const Text(
                         '취소',
                         style: TextStyle(
-                          color: AppColors.ink,
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -458,23 +494,28 @@ class _ConfirmSheet extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                flex: 3,
-                child: SizedBox(
+                child: Container(
                   height: 52,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppColors.cardShadow,
+                  ),
                   child: Pressable.effect(
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.cobalt,
+                        backgroundColor: AppColors.blue,
+                        foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: const StadiumBorder(),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       child: const Text(
                         '변경',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),

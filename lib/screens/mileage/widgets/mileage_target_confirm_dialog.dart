@@ -133,8 +133,9 @@ class _MileageTargetResultDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 28),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -145,7 +146,7 @@ class _MileageTargetResultDialog extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textSub,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -157,12 +158,12 @@ class _MileageTargetResultDialog extends StatelessWidget {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const Column(
                     children: [
-                      CircularProgressIndicator(),
+                      CircularProgressIndicator(color: AppColors.blue),
                       SizedBox(height: 12),
                       Text(
                         '명단에서 내 학번을 찾는 중이에요',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: AppColors.textSub,
                           fontSize: 13,
                         ),
                       ),
@@ -180,7 +181,7 @@ class _MileageTargetResultDialog extends StatelessWidget {
                   message,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textStrong,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -195,10 +196,13 @@ class _MileageTargetResultDialog extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: AppColors.blue,
                     foregroundColor: Colors.white,
+                    elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: const StadiumBorder(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     '확인',

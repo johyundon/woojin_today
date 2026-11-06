@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import 'advisor_apply_common.dart';
 
-const Color _fieldFill = Color(0xFFFAFAFD);
-const Color _fieldBorder = Color(0xFFE4E3EC);
-
 /// 3단계(온라인 전용): 이메일 입력.
 class AdvisorEmailStep extends StatelessWidget {
   const AdvisorEmailStep({
@@ -34,25 +31,25 @@ class AdvisorEmailStep extends StatelessWidget {
       content: TextField(
         controller: controller,
         keyboardType: TextInputType.emailAddress,
-        style: const TextStyle(color: AppColors.ink, fontSize: 16),
+        style: const TextStyle(color: AppColors.textStrong, fontSize: 15),
         decoration: InputDecoration(
           filled: true,
-          fillColor: _fieldFill,
+          fillColor: advisorFieldBackground,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 15,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _fieldBorder, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: advisorFieldBorder, width: 2),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: AppColors.cobalt, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.blue, width: 2),
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _fieldBorder, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: advisorFieldBorder, width: 2),
           ),
         ),
       ),

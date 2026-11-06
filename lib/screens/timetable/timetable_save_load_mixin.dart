@@ -5,6 +5,7 @@ mixin TimetableSaveLoadMixin on TimetableDataLoadingMixin {
   Future<void> _openSaveDialog() async {
     final name = await showDialog<String>(
       context: context,
+      barrierColor: TimetableColors.barrier,
       builder: (_) => const SaveTimetableDialog(),
     );
     if (name == null) return;

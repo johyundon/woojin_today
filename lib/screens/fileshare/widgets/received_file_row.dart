@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
-import '../fileshare_colors.dart';
 import '../received_file.dart';
 import '../received_file_format.dart';
 
-/// 받은 파일 한 줄 — 형식별 색 배지 + 파일명 + "용량 · 받은 시각" + 다운로드.
+/// 받은 파일 한 줄(v7) — 형식별 배지 + 파일명 + 용량 + 받은 시각 + 다운로드.
 class ReceivedFileRow extends StatelessWidget {
   const ReceivedFileRow({
     super.key,
@@ -25,21 +24,15 @@ class ReceivedFileRow extends StatelessWidget {
 
   IconData get _icon => iconForExtension(_extension);
 
-  String get _subtitle {
-    final parts = <String>[
-      if (entry.sizeBytes != null) formatBytes(entry.sizeBytes!),
-      relativeTime(entry.receivedAt),
-    ];
-    return parts.join(' · ');
-  }
+  Color get _iconColor => iconColorForExtension(_extension);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F0F7),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
@@ -49,9 +42,9 @@ class ReceivedFileRow extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _badgeColor,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(_icon, color: AppColors.ink, size: 20),
+            child: Icon(_icon, color: _iconColor, size: 19),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -64,24 +57,41 @@ class ReceivedFileRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.textStrong,
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.28,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _subtitle,
-                  style: const TextStyle(color: mutedText, fontSize: 12),
-                ),
+                if (entry.sizeBytes != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    formatBytes(entry.sizeBytes!),
+                    style: const TextStyle(
+                      color: AppColors.textSub,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
+          const SizedBox(width: 12),
+          Text(
+            relativeTime(entry.receivedAt),
+            style: const TextStyle(
+              color: AppColors.textSub,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 8),
           Pressable.icon(
             onTap: onDownload,
             child: Container(
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               alignment: Alignment.center,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -89,8 +99,8 @@ class ReceivedFileRow extends StatelessWidget {
               ),
               child: const Icon(
                 Icons.download_rounded,
-                color: AppColors.cobalt,
-                size: 20,
+                color: AppColors.blue,
+                size: 18,
               ),
             ),
           ),

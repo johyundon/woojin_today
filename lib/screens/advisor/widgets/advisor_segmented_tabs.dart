@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 
-/// "상담 현황" / "상담 신청" 세그먼트 탭(v4 리디자인). 진한 남색(cobaltDeep)
-/// 알약 안에서 선택된 쪽만 라임 배경 + 잉크 글씨로 떠오른다.
+const Color _trackBackground = Color(0xFFEDEFF2);
+const Color _trackBorder = Color(0xFFE1E4E9);
+
+/// "상담 현황" / "상담 신청" 세그먼트 탭(v7). 옅은 회색 상자 안에서 선택된
+/// 쪽만 남색(inkNavy) 바탕 + 흰 글씨로 떠오른다.
 class AdvisorSegmentedTabs extends StatelessWidget {
   const AdvisorSegmentedTabs({
     super.key,
@@ -22,8 +25,9 @@ class AdvisorSegmentedTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.cobaltDeep,
-        borderRadius: BorderRadius.circular(18),
+        color: _trackBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _trackBorder),
       ),
       child: Row(
         children: [
@@ -36,18 +40,18 @@ class AdvisorSegmentedTabs extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: i == selectedIndex
-                        ? AppColors.lime
+                        ? AppColors.inkNavy
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     _labels[i],
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: i == selectedIndex
-                          ? AppColors.ink
-                          : Colors.white.withValues(alpha: 0.7),
-                      fontSize: 14,
+                          ? Colors.white
+                          : AppColors.textBody,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

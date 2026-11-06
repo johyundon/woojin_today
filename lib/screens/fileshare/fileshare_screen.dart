@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nsd/nsd.dart' as nsd;
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:share_plus/share_plus.dart';
@@ -24,10 +25,8 @@ import 'widgets/peer_row.dart';
 import 'widgets/radar_view.dart';
 import 'widgets/received_file_row.dart';
 
-const Color _cardTint = Color(0xFFEEF2FD);
-
-/// "파일공유" 화면(v4 리디자인) — 데스크톱에 공유된 참고 스크린샷 3장(꺼짐/
-/// 주변 탐색 중/받은 파일 있음)을 그대로 따라 겉모양만 다시 짰다. 제목과
+/// "파일공유" 화면(v7) — 우진이의 하루 v7 시안 43~45(꺼짐/주변 탐색 중/받은
+/// 파일 있음)를 따라 겉모양만 다시 짰다. 제목과
 /// 본문은 [_enabled]/[_receivedFiles] 두 상태값만으로 3가지로 갈린다 —
 /// 새 상태값을 따로 만들지 않았다:
 /// - 꺼짐: "주변 친구와 자료 주고받기" + 빈 받은 파일 안내
@@ -507,80 +506,91 @@ class _FileShareScreenState extends State<FileShareScreen> {
     // 파일이 생기면(꺼졌더라도) 그쪽이 더 쓸모 있어서 우선한다.
     final showRadar = _enabled && !hasReceived;
 
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      body: ColoredBox(
-        color: AppColors.cobalt,
-        child: SafeArea(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
           bottom: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              // 마스코트를 화면 오른쪽 기준으로 놓으려고 Stack을 화면 폭만큼 편다.
+              SizedBox(
+                width: double.infinity,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Pressable.icon(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: const BoxDecoration(
-                              color: AppColors.cobaltDeep,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.lime,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: const Text(
-                            '파일공유',
-                            style: TextStyle(
-                              color: AppColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                          child: Pressable.icon(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: AppColors.cardShadow,
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new,
+                                color: AppColors.textStrong,
+                                size: 15,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _titleFor(
-                            enabled: _enabled,
-                            receivedCount: _receivedFiles.length,
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.035,
-                            height: 1.22,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.blueSoft,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  '파일공유',
+                                  style: TextStyle(
+                                    color: AppColors.blue,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                _titleFor(
+                                  enabled: _enabled,
+                                  receivedCount: _receivedFiles.length,
+                                ),
+                                style: const TextStyle(
+                                  color: AppColors.textStrong,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1.04,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(height: 34),
                       ],
                     ),
                     const Positioned(
-                      top: 20,
-                      left: 240,
-                      child: MascotSticker(width: 120),
+                      top: 25,
+                      right: 9,
+                      child: MascotSticker(width: 97, angle: 0.14),
                     ),
                   ],
                 ),
@@ -591,30 +601,31 @@ class _FileShareScreenState extends State<FileShareScreen> {
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(32),
+                      top: Radius.circular(36),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        offset: Offset(0, -4),
+                        blurRadius: 20,
+                      ),
+                    ],
                   ),
-                  child: Padding(
+                  child: ListView(
                     padding: EdgeInsets.fromLTRB(
-                      20,
-                      20,
-                      20,
+                      18,
+                      22,
+                      18,
                       16 + MediaQuery.of(context).padding.bottom,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatusCard(peers.length),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: showRadar
-                              ? _buildDiscoverySection(peers)
-                              : _buildReceivedFilesSection(),
-                        ),
-                        const SizedBox(height: 14),
-                        _buildSendButton(),
-                      ],
-                    ),
+                    children: [
+                      _buildStatusCard(peers.length),
+                      const SizedBox(height: 14),
+                      if (showRadar)
+                        ..._buildDiscoverySection(peers)
+                      else
+                        ..._buildReceivedFilesSection(),
+                    ],
                   ),
                 ),
               ),
@@ -634,10 +645,10 @@ class _FileShareScreenState extends State<FileShareScreen> {
   Widget _buildStatusCard(int peerCount) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: _cardTint,
-        borderRadius: BorderRadius.circular(18),
+        color: _enabled ? AppColors.blueSoft : AppColors.fill,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -645,17 +656,17 @@ class _FileShareScreenState extends State<FileShareScreen> {
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 42,
+                height: 42,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.cobalt,
-                  shape: BoxShape.circle,
+                decoration: BoxDecoration(
+                  color: _enabled ? AppColors.blue : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  Icons.wifi_tethering,
-                  color: Colors.white,
-                  size: 18,
+                child: Icon(
+                  Icons.wifi_tethering_rounded,
+                  color: _enabled ? Colors.white : AppColors.blue,
+                  size: 19,
                 ),
               ),
               const SizedBox(width: 12),
@@ -667,24 +678,29 @@ class _FileShareScreenState extends State<FileShareScreen> {
                     Text(
                       _enabled ? '사용 중' : '사용 안 함',
                       style: const TextStyle(
-                        color: AppColors.ink,
+                        color: AppColors.textStrong,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     Text(
                       _enabled ? '주변에 내가 보이는 중이에요' : '꺼져 있어요',
-                      style: const TextStyle(color: mutedText, fontSize: 12),
+                      style: const TextStyle(
+                        color: AppColors.textSub,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
               Switch(
                 value: _enabled,
-                activeTrackColor: AppColors.cobalt,
-                activeThumbColor: Colors.white,
+                activeTrackColor: AppColors.blueSoft,
+                activeThumbColor: AppColors.blue,
                 inactiveThumbColor: Colors.white,
-                inactiveTrackColor: const Color(0xFFD8D8DE),
+                inactiveTrackColor: AppColors.checkLine,
                 trackOutlineColor: const WidgetStatePropertyAll(
                   Colors.transparent,
                 ),
@@ -692,12 +708,17 @@ class _FileShareScreenState extends State<FileShareScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          Container(
+            height: 1,
+            color: _enabled ? statusDividerOn : statusDividerOff,
+          ),
+          const SizedBox(height: 12),
           Text(
             _enabled
                 ? '주변 사람 $peerCount명이 발견됐어요.'
                 : '파일공유 기능을 활성화하면 발견된 사람이 여기 떠요.',
-            style: const TextStyle(color: mutedText, fontSize: 13, height: 1.4),
+            style: const TextStyle(color: AppColors.textBody, fontSize: 12),
           ),
         ],
       ),
@@ -705,28 +726,32 @@ class _FileShareScreenState extends State<FileShareScreen> {
   }
 
   Widget _buildSendButton() {
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 54,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: _enabled ? AppColors.cardShadow : null,
+      ),
       child: Pressable.effect(
         enabled: _enabled,
         pressedScale: 0.97,
         child: ElevatedButton.icon(
           onPressed: _enabled ? _sendFile : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.cobalt,
+            backgroundColor: AppColors.blue,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: AppColors.cobalt.withValues(alpha: 0.35),
-            disabledForegroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.fillDisabled,
+            disabledForegroundColor: AppColors.textMuted,
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-          icon: const Icon(Icons.ios_share, size: 18),
+          icon: const Icon(Icons.ios_share_rounded, size: 17),
           label: const Text(
             '내 파일 보내기',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -735,76 +760,58 @@ class _FileShareScreenState extends State<FileShareScreen> {
 
   // ── 레이더(켜짐 + 받은 파일 0개) ────────────────────────────────────
 
-  Widget _buildDiscoverySection(List<nsd.Service> peers) {
+  List<Widget> _buildDiscoverySection(List<nsd.Service> peers) {
     if (peers.isEmpty) {
-      return const Center(
-        child: Text(
-          '아직 발견된 사람이 없어요.\n상대방도 파일공유 기능을 활성화해야 보여요!',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: mutedText, fontSize: 13, height: 1.4),
+      return [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Text(
+            '아직 발견된 사람이 없어요.\n상대방도 파일공유 기능을 활성화해야 보여요!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSub,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
         ),
-      );
+        const SizedBox(height: 14),
+        _buildSendButton(),
+      ];
     }
 
-    return ListView(
-      children: [
-        SizedBox(height: 220, child: RadarView(peers: peers)),
-        const SizedBox(height: 12),
-        const Text(
+    return [
+      SizedBox(height: 150, child: RadarView(peers: peers)),
+      const SizedBox(height: 14),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(4, 2, 4, 0),
+        child: Text(
           '주변 사람',
           style: TextStyle(
-            color: AppColors.ink,
-            fontSize: 13,
+            color: AppColors.textSub,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 10),
-        for (var i = 0; i < peers.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: PeerRow(
-              peer: peers[i],
-              color: avatarColors[i % avatarColors.length],
-              onSend: () => _sendToPeer(peers[i]),
-              progress: _sendProgress[peers[i].name ?? ''],
-            ),
-          ),
-      ],
-    );
-  }
-
-  // ── 받은 파일 목록(받은 파일 ≥1개) ──────────────────────────────────
-
-  Widget _buildReceivedFilesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F0F7),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: AppColors.ink, fontSize: 14),
-            decoration: const InputDecoration(
-              icon: Icon(Icons.search, color: mutedText, size: 18),
-              hintText: '파일명 검색',
-              hintStyle: TextStyle(color: mutedText),
-              border: InputBorder.none,
-              isDense: true,
-            ),
+      ),
+      for (var i = 0; i < peers.length; i++)
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: PeerRow(
+            peer: peers[i],
+            color: AppColors.blueSoft,
+            onSend: () => _sendToPeer(peers[i]),
+            progress: _sendProgress[peers[i].name ?? ''],
           ),
         ),
-        const SizedBox(height: 10),
-        Expanded(child: _buildReceivedFilesList()),
-      ],
-    );
+      const SizedBox(height: 14),
+      _buildSendButton(),
+    ];
   }
 
-  Widget _buildReceivedFilesList() {
+  // ── 받은 파일 목록(꺼짐 또는 받은 파일 ≥1개) ─────────────────────────
+
+  List<Widget> _buildReceivedFilesSection() {
     final query = _searchController.text.trim();
     final files = query.isEmpty
         ? _receivedFiles
@@ -817,42 +824,89 @@ class _FileShareScreenState extends State<FileShareScreen> {
               )
               .toList();
 
-    if (files.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F0F7),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.desktop_windows_outlined,
-                color: mutedText,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              query.isEmpty ? '아직 받은 파일이 없어요' : '검색 결과가 없어요',
-              style: const TextStyle(color: mutedText, fontSize: 14),
-            ),
-          ],
+    final search = Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (_) => setState(() {}),
+        style: const TextStyle(color: AppColors.textStrong, fontSize: 14),
+        decoration: const InputDecoration(
+          icon: Icon(
+            Icons.search_rounded,
+            color: AppColors.textMuted,
+            size: 19,
+          ),
+          hintText: '파일명 검색',
+          hintStyle: TextStyle(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w600,
+          ),
+          border: InputBorder.none,
+          isDense: true,
         ),
-      );
-    }
-
-    return ListView.separated(
-      itemCount: files.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (context, index) => ReceivedFileRow(
-        entry: files[index],
-        onDownload: () => _downloadFile(files[index]),
       ),
     );
+
+    // v7 시안: 받은 파일이 없으면 보내기 버튼 아래에 빈 안내를, 있으면 목록
+    // 아래에 보내기 버튼을 둔다.
+    if (files.isEmpty) {
+      return [
+        search,
+        const SizedBox(height: 14),
+        _buildSendButton(),
+        const SizedBox(height: 33),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.fill,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.inbox_rounded,
+                  color: AppColors.textMuted,
+                  size: 27,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                query.isEmpty ? '아직 받은 파일이 없어요' : '검색 결과가 없어요',
+                style: const TextStyle(
+                  color: AppColors.textBody,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    return [
+      search,
+      for (final file in files)
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: ReceivedFileRow(
+            entry: file,
+            onDownload: () => _downloadFile(file),
+          ),
+        ),
+      const SizedBox(height: 14),
+      _buildSendButton(),
+    ];
   }
 
   String _fileNameFromPath(String path) {

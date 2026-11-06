@@ -24,14 +24,8 @@ class CourseAddPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: TimetableColors.panelBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 20,
-            offset: Offset(0, -4),
-          ),
-        ],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: TimetableColors.sheetShadow,
       ),
       child: Column(
         children: [
@@ -42,15 +36,19 @@ class CourseAddPanel extends StatelessWidget {
             },
             child: const SizedBox(
               width: double.infinity,
-              height: 28,
-              child: Center(
-                child: SizedBox(
-                  width: 36,
-                  height: 4,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: TimetableColors.surfaceElevated,
-                      borderRadius: BorderRadius.all(Radius.circular(2)),
+              height: 27,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: SizedBox(
+                    width: 44,
+                    height: 5,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: TimetableColors.handle,
+                        borderRadius: BorderRadius.all(Radius.circular(3)),
+                      ),
                     ),
                   ),
                 ),
@@ -58,10 +56,10 @@ class CourseAddPanel extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: searchFilterBar,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Expanded(child: results),
         ],
       ),

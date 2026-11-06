@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/class_schedule_parser.dart';
 import '../../../utils/time_format.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../course_filters.dart';
 import '../timetable_colors.dart';
@@ -64,62 +65,75 @@ class SearchFilterBar extends StatelessWidget {
           children: [
             Expanded(
               child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: TimetableColors.surface,
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppColors.fill,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  onChanged: onQueryChanged,
-                  style: const TextStyle(color: TimetableColors.textPrimary),
-                  decoration: const InputDecoration(
-                    icon: Padding(
-                      padding: EdgeInsets.only(left: 14),
-                      child: Icon(
-                        Icons.search,
-                        color: TimetableColors.textSecondary,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textMuted,
+                      size: 17,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        onChanged: onQueryChanged,
+                        style: const TextStyle(
+                          color: AppColors.textStrong,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          hintText: '과목코드, 교수명, 과목명 검색',
+                          hintStyle: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
                     ),
-                    hintText: '과목코드, 교수명, 과목명 검색',
-                    hintStyle: TextStyle(color: TimetableColors.textSecondary),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
-                  ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Pressable.icon(
               onTap: onToggleFilterPanel,
               child: Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: filterPanelOpen
-                      ? TimetableColors.accent
-                      : TimetableColors.surface,
-                  borderRadius: BorderRadius.circular(14),
+                  // 디자인은 늘 파랑. 필터가 펼쳐져 있으면 조금 진한 파랑으로 구분한다.
+                  color: filterPanelOpen ? AppColors.blueDeep : AppColors.blue,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.tune,
-                  color: filterPanelOpen
-                      ? Colors.white
-                      : TimetableColors.textSecondary,
-                  size: 20,
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: Colors.white,
+                  size: 19,
                 ),
               ),
             ),
           ],
         ),
         if (filterPanelOpen) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildFilterOptionsRow(),
         ],
         if (activeChips.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 32,
+            height: 33,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: activeChips,
@@ -225,7 +239,7 @@ class SearchFilterBar extends StatelessWidget {
 
   Widget _buildFilterOptionsRow() {
     return SizedBox(
-      height: 36,
+      height: 33,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
@@ -355,32 +369,39 @@ class _ActiveChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: TimetableColors.accent,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.blue,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text(label, style: _chipTextStyle(Colors.white)),
           const SizedBox(width: 4),
           Pressable.icon(
             onTap: onClear,
-            child: const Icon(Icons.close, color: Colors.white, size: 14),
+            child: const Icon(Icons.close, color: Colors.white, size: 13),
           ),
         ],
       ),
     );
   }
 }
+
+/// 필터 칩 글자(v7 디자인 23: 12/800).
+TextStyle _chipTextStyle(Color color) => TextStyle(
+  color: color,
+  fontSize: 12,
+  fontWeight: FontWeight.w800,
+  height: 1.4,
+);
+
+/// 필터 칩 바탕: 고른 상태면 파랑, 아니면 옅은 회색. 모서리 8, 높이 33.
+BoxDecoration _chipDecoration(bool active) => BoxDecoration(
+  color: active ? AppColors.blue : AppColors.fill,
+  borderRadius: BorderRadius.circular(8),
+);
 
 /// 단순 켜짐/꺼짐 토글 칩(온라인) — 드롭다운 없이 탭할 때마다 뒤집힌다.
 class _ToggleFilterChip extends StatelessWidget {
@@ -400,18 +421,12 @@ class _ToggleFilterChip extends StatelessWidget {
       pressedScale: 0.93,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? TimetableColors.accent : TimetableColors.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        decoration: _chipDecoration(selected),
         child: Text(
           label,
-          style: TextStyle(
-            color: selected ? Colors.white : TimetableColors.textPrimary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          style: _chipTextStyle(selected ? Colors.white : AppColors.textStrong),
         ),
       ),
     );
@@ -437,8 +452,8 @@ class _AreaFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = selectedAreas.isNotEmpty;
     return PopupMenuButton<void>(
-      color: TimetableColors.surfaceElevated,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       itemBuilder: (context) {
         // 메뉴가 열려 있는 동안엔 바깥(StatelessWidget)이 다시 그려져도 이미
         // 띄운 팝업엔 반영이 안 된다 — 팝업이 열릴 때 한 번만 복사해서, 그
@@ -481,26 +496,22 @@ class _AreaFilterChip extends StatelessWidget {
         ];
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? TimetableColors.accent : TimetableColors.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: _chipDecoration(isActive),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               '영역',
-              style: TextStyle(
-                color: isActive ? Colors.white : TimetableColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              style: _chipTextStyle(
+                isActive ? Colors.white : AppColors.textStrong,
               ),
             ),
+            const SizedBox(width: 4),
             Icon(
-              Icons.keyboard_arrow_down,
-              size: 16,
-              color: isActive ? Colors.white : TimetableColors.textSecondary,
+              Icons.expand_more_rounded,
+              size: 15,
+              color: isActive ? Colors.white : AppColors.textStrong,
             ),
           ],
         ),
@@ -532,7 +543,7 @@ class _FilterDropdownChip<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = selectedLabel != null;
     return PopupMenuButton<T>(
-      color: TimetableColors.surfaceElevated,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: onSelected,
       itemBuilder: (context) => [
@@ -546,26 +557,22 @@ class _FilterDropdownChip<T> extends StatelessWidget {
           ),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? TimetableColors.accent : TimetableColors.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: _chipDecoration(isActive),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               isActive ? selectedLabel! : label,
-              style: TextStyle(
-                color: isActive ? Colors.white : TimetableColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              style: _chipTextStyle(
+                isActive ? Colors.white : AppColors.textStrong,
               ),
             ),
+            const SizedBox(width: 4),
             Icon(
-              Icons.keyboard_arrow_down,
-              size: 16,
-              color: isActive ? Colors.white : TimetableColors.textSecondary,
+              Icons.expand_more_rounded,
+              size: 15,
+              color: isActive ? Colors.white : AppColors.textStrong,
             ),
           ],
         ),

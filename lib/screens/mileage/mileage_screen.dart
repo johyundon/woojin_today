@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/credential_storage.dart';
 import '../../services/mileage_service.dart';
@@ -14,7 +15,7 @@ import 'widgets/mileage_total_card.dart' show MileageTotalCard, formatPoints;
 
 typedef MileageCredentials = ({String userId, String userPwd});
 
-/// "모은 마일리지" 화면(v4 리디자인). 총 포인트 카드, 이번 학기 카드, 장학
+/// "모은 마일리지" 화면(v7 디자인). 총 포인트 카드, 이번 학기 카드, 장학
 /// 대상자 카드, 적립 내역을 보여준다.
 ///
 /// 흐름: 학번·비밀번호(자동 로그인 때 저장한 값, 없으면 입력) → T-WIN에 한 번
@@ -148,10 +149,15 @@ class _MileageScreenState extends State<MileageScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.canvas,
           appBar: AppBar(
-            backgroundColor: AppColors.background,
-            foregroundColor: AppColors.textPrimary,
+            backgroundColor: AppColors.canvas,
+            foregroundColor: AppColors.textStrong,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
+            systemOverlayStyle: SystemUiOverlayStyle.dark,
             title: const Text(
               '장학 대상자 확인',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
@@ -171,68 +177,74 @@ class _MileageScreenState extends State<MileageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      body: ColoredBox(
-        color: AppColors.cobalt,
-        child: SafeArea(
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
           child: RefreshIndicator(
+            color: AppColors.blue,
+            backgroundColor: Colors.white,
             onRefresh: () => _load(forceRefresh: true),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Pressable.icon(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: AppColors.cobaltDeep,
-                        shape: BoxShape.circle,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Pressable.icon(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: AppColors.cardShadow,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textStrong,
+                            size: 15,
+                            semanticLabel: '뒤로',
+                          ),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.white,
-                        size: 18,
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.blueSoft,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '비교과 · 활동',
+                          style: TextStyle(
+                            color: AppColors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.lime,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: const Text(
-                      '비교과 · 활동',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                      const SizedBox(height: 12),
+                      const Text(
+                        '모은 마일리지',
+                        style: TextStyle(
+                          color: AppColors.textStrong,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                          letterSpacing: -0.91,
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  '모은 마일리지',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.04,
+                    ],
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -249,7 +261,7 @@ class _MileageScreenState extends State<MileageScreen> {
     if (_loading) {
       return const [
         SizedBox(height: 80),
-        Center(child: CircularProgressIndicator(color: Colors.white)),
+        Center(child: CircularProgressIndicator(color: AppColors.blue)),
       ];
     }
     if (_needCredentials) {
@@ -278,17 +290,19 @@ class _MileageScreenState extends State<MileageScreen> {
           children: [
             Expanded(
               child: _PointCard(
-                color: AppColors.lime,
+                color: AppColors.blueSoft,
+                valueColor: AppColors.blueText,
                 label: '이번 학기',
                 value: '+${formatPoints(status.semesterPoints(now))}P',
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             // 원래 "장학 기준 2,000P" 카드였다. 기준 점수는 API에 없어 숨기고,
             // 같은 자리에서 대상자 확인으로 들어가게 했다.
             Expanded(
               child: _PointCard(
-                color: AppColors.blushPink,
+                color: _scholarshipCardBackground,
+                valueColor: _scholarshipCardValue,
                 label: '장학 대상자',
                 value: '확인 →',
                 onTap: _openScholarshipTargets,
@@ -318,14 +332,21 @@ class _MileageScreenState extends State<MileageScreen> {
   }
 
   static IconData _iconFor(String category) {
-    if (category.contains('봉사')) return Icons.volunteer_activism;
+    if (category.contains('봉사')) return Icons.volunteer_activism_rounded;
     if (category.contains('학술') || category.contains('상담')) {
-      return Icons.school;
+      return Icons.school_rounded;
     }
-    if (category.contains('특강') || category.contains('교육')) return Icons.mic;
-    return Icons.stars;
+    if (category.contains('특강') || category.contains('교육')) {
+      return Icons.mic_rounded;
+    }
+    return Icons.stars_rounded;
   }
 }
+
+/// "장학 대상자" 카드 바탕 rgb(238, 240, 243)과 값 글자색 rgb(43, 47, 59)
+/// (v7 디자인 47 mileage의 "장학 기준" 카드 색).
+const _scholarshipCardBackground = Color(0xFFEEF0F3);
+const _scholarshipCardValue = Color(0xFF2B2F3B);
 
 class _Message extends StatelessWidget {
   const _Message({required this.text, required this.onRetry});
@@ -336,10 +357,11 @@ class _Message extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,9 +369,10 @@ class _Message extends StatelessWidget {
           Text(
             text,
             style: const TextStyle(
-              color: AppColors.ink,
+              color: AppColors.textStrong,
               fontSize: 15,
               fontWeight: FontWeight.w700,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 16),
@@ -358,11 +381,11 @@ class _Message extends StatelessWidget {
             child: FilledButton(
               onPressed: onRetry,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.lime,
-                foregroundColor: AppColors.ink,
+                backgroundColor: AppColors.blue,
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text(
@@ -380,12 +403,14 @@ class _Message extends StatelessWidget {
 class _PointCard extends StatelessWidget {
   const _PointCard({
     required this.color,
+    required this.valueColor,
     required this.label,
     required this.value,
     this.onTap,
   });
 
   final Color color;
+  final Color valueColor;
   final String label;
   final String value;
   final VoidCallback? onTap;
@@ -397,10 +422,11 @@ class _PointCard extends StatelessWidget {
       enabled: onTap != null,
       pressedScale: 0.97,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,19 +434,24 @@ class _PointCard extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textBody,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
+            const SizedBox(height: 8),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: valueColor,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  height: 1.4,
+                  letterSpacing: -0.945,
+                ),
               ),
             ),
           ],

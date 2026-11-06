@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
@@ -156,6 +157,7 @@ class _TimetableScreenState extends State<TimetableScreen>
   Future<void> _showCourseDetail(CourseCatalogItem item) async {
     await showDialog<void>(
       context: context,
+      barrierColor: TimetableColors.barrier,
       builder: (_) => CourseDetailDialog(
         course: item,
         onViewSyllabus: () {
@@ -210,136 +212,126 @@ class _TimetableScreenState extends State<TimetableScreen>
   @override
   Widget build(BuildContext context) {
     final now = _now();
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      extendBody: true,
-      bottomNavigationBar: _addPanelShown
-          ? null
-          : HomeBottomNav(selectedIndex: 0, onTap: _onTabTap),
-      body: ColoredBox(
-        color: AppColors.cobalt,
-        child: SafeArea(
+    // 거의 흰 바탕이라 상태 표시줄 글자를 어둡게 둔다(앱 테마는 아직 어두운 테마).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        extendBody: true,
+        bottomNavigationBar: _addPanelShown
+            ? null
+            : HomeBottomNav(selectedIndex: 0, onTap: _onTabTap),
+        body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
-                child: TimetableHeader(
-                  semesterLabel: '$_year년 $_semester학기',
-                  totalCredits: _totalCredits,
-                  savedCount: _savedCount,
-                  headerKey: _headerKey,
-                  onBack: () => Navigator.of(context).pop(),
-                  onSemesterTap: _openSemesterMenu,
-                  onSave: _openSaveDialog,
-                  onOpenSavedList: _openSavedList,
-                  onAutoFill: _openAiRecommendWizard,
-                  onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),
-                ),
+              TimetableHeader(
+                semesterLabel: '$_year년 $_semester학기',
+                totalCredits: _totalCredits,
+                savedCount: _savedCount,
+                headerKey: _headerKey,
+                onBack: () => Navigator.of(context).pop(),
+                onSemesterTap: _openSemesterMenu,
+                onSave: _openSaveDialog,
+                onOpenSavedList: _openSavedList,
+                onAutoFill: _openAiRecommendWizard,
+                onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),
               ),
               Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(36),
-                  ),
-                  child: ColoredBox(
-                    color: TimetableColors.panelBackground,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        _bodyHeight = constraints.maxHeight;
-                        // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의
-                        // 실측 높이"를 기준으로 상한을 계산해서, 핸들을 아무리
-                        // 당겨도 화면(Column)이 넘치지 않는 값으로만 움직이게
-                        // 한다.
-                        final panelHeight = constraints.maxHeight * 0.75;
-                        final displayedGridHeight =
-                            _computedMaxGridViewportHeight(
-                              filterPanelOpen: false,
-                              extraReserve: _addPanelOpen ? panelHeight : 0,
-                            );
-                        _scheduleChromeMeasurement(displayedGridHeight);
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    _bodyHeight = constraints.maxHeight;
+                    // 그리드 자체가 아니라 "그리드를 제외한 나머지 요소들의
+                    // 실측 높이"를 기준으로 상한을 계산해서, 핸들을 아무리
+                    // 당겨도 화면(Column)이 넘치지 않는 값으로만 움직이게
+                    // 한다.
+                    final panelHeight = constraints.maxHeight * 0.75;
+                    final displayedGridHeight = _computedMaxGridViewportHeight(
+                      filterPanelOpen: false,
+                      extraReserve: _addPanelOpen ? panelHeight : 0,
+                    );
+                    _scheduleChromeMeasurement(displayedGridHeight);
 
-                        final gridColumn = Column(
+                    final gridColumn = Column(
+                      children: [
+                        Column(
+                          key: _chromeAboveGridKey,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Column(
-                              key: _chromeAboveGridKey,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(height: 18),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                  child: QuickActionsRow(
-                                    loading: _myTimetableLoading,
-                                    onLoadMyTimetable: _loadMyTimetable,
-                                    notificationsEnabled: _notificationsEnabled,
-                                    onNotificationsChanged:
-                                        _onNotificationsToggled,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                  child: MyTimetableStatusBar(
-                                    status: _myTimetableStatus,
-                                    onRetry: _loadMyTimetable,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+                              child: QuickActionsRow(
+                                loading: _myTimetableLoading,
+                                onLoadMyTimetable: _loadMyTimetable,
+                                notificationsEnabled: _notificationsEnabled,
+                                onNotificationsChanged: _onNotificationsToggled,
+                              ),
                             ),
                             Padding(
-                              key: _gridWrapperKey,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
+                                horizontal: 22,
                               ),
-                              child: TimetableGrid(
-                                courses: _confirmedCourses,
-                                pendingSlot: _pendingSlot,
-                                onEmptyCellTap: _onEmptyCellTap,
-                                onRemoveCourse: _removeCourse,
-                                onCourseTap: (course) =>
-                                    _showCourseDetail(course.toCatalogItem()),
-                                today: Weekday.values[now.weekday - 1],
-                                viewportHeight: displayedGridHeight,
+                              child: MyTimetableStatusBar(
+                                status: _myTimetableStatus,
+                                onRetry: _loadMyTimetable,
                               ),
                             ),
-                            // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
-                            // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
-                            SizedBox(
-                              key: _chromeBelowGridKey,
-                              height: _addPanelOpen ? 0 : 100,
-                            ),
+                            const SizedBox(height: 12),
                           ],
-                        );
+                        ),
+                        // 디자인 23처럼 그리드를 흰 카드(모서리 16, 옅은 그림자)에 담는다.
+                        Padding(
+                          key: _gridWrapperKey,
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+                            decoration: BoxDecoration(
+                              color: TimetableColors.panelBackground,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: AppColors.cardShadow,
+                            ),
+                            child: TimetableGrid(
+                              courses: _confirmedCourses,
+                              pendingSlot: _pendingSlot,
+                              onEmptyCellTap: _onEmptyCellTap,
+                              onRemoveCourse: _removeCourse,
+                              onCourseTap: (course) =>
+                                  _showCourseDetail(course.toCatalogItem()),
+                              today: Weekday.values[now.weekday - 1],
+                              viewportHeight: displayedGridHeight,
+                            ),
+                          ),
+                        ),
+                        // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
+                        // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
+                        SizedBox(
+                          key: _chromeBelowGridKey,
+                          height: _addPanelOpen ? 0 : 100,
+                        ),
+                      ],
+                    );
 
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            gridColumn,
-                            if (_addPanelShown)
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                height: panelHeight,
-                                child: IgnorePointer(
-                                  ignoring: !_addPanelOpen,
-                                  child: SlideTransition(
-                                    position: _addPanelOffset,
-                                    child: _buildAddPanel(),
-                                  ),
-                                ),
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        gridColumn,
+                        if (_addPanelShown)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: panelHeight,
+                            child: IgnorePointer(
+                              ignoring: !_addPanelOpen,
+                              child: SlideTransition(
+                                position: _addPanelOffset,
+                                child: _buildAddPanel(),
                               ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -440,7 +432,7 @@ class _TimetableScreenState extends State<TimetableScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 20),
       itemCount: results.length,
       itemBuilder: (context, index) {
         final item = results[index];

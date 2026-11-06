@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../services/credential_storage.dart';
 import '../../../services/service_factory.dart';
@@ -240,12 +241,12 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
                 title: Text(
                   '$g학년',
                   style: TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.textStrong,
                     fontWeight: g == _grade ? FontWeight.w800 : FontWeight.w500,
                   ),
                 ),
                 trailing: g == _grade
-                    ? const Icon(Icons.check, color: AppColors.cobalt)
+                    ? const Icon(Icons.check_rounded, color: AppColors.blue)
                     : null,
                 onTap: () => Navigator.of(sheetContext).pop(g),
               ),
@@ -264,60 +265,76 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => _load(forceRefresh: true),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Pressable.icon(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: AppColors.cobaltDeep,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          child: RefreshIndicator(
+            color: AppColors.blue,
+            backgroundColor: Colors.white,
+            onRefresh: () => _load(forceRefresh: true),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Pressable.icon(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: AppColors.cardShadow,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textStrong,
+                            size: 15,
+                            semanticLabel: '뒤로',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (_credentials != null) ...[
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _Chip(
+                              icon: Icons.leaderboard_rounded,
+                              label: _department ?? '학과 선택',
+                              onTap: _changeDepartment,
+                            ),
+                            _Chip(label: '$_grade학년', onTap: _changeGrade),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      const Text(
+                        '나 몇 등이야?',
+                        style: TextStyle(
+                          color: AppColors.textStrong,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                          letterSpacing: -1.04,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              if (_credentials != null)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _Chip(
-                      label: _department ?? '학과 선택',
-                      onTap: _changeDepartment,
-                    ),
-                    _Chip(label: '$_grade학년', onTap: _changeGrade),
-                  ],
-                ),
-              const SizedBox(height: 10),
-              const Text(
-                '나 몇 등이야?',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.04,
-                ),
-              ),
-              const SizedBox(height: 18),
-              ..._body(),
-            ],
+                const SizedBox(height: 16),
+                ..._body(),
+              ],
+            ),
           ),
         ),
       ),
@@ -328,7 +345,7 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
     if (_loading) {
       return const [
         SizedBox(height: 80),
-        Center(child: CircularProgressIndicator(color: Colors.white)),
+        Center(child: CircularProgressIndicator(color: AppColors.blue)),
       ];
     }
     if (_needCredentials) {
@@ -361,7 +378,7 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
     }
     return [
       RankHeroCard(data: data),
-      const SizedBox(height: 12),
+      const SizedBox(height: 10),
       // 장학 카드(RankSummaryCards.showScholarship)와 과목별 석차 카드
       // (SubjectRankCard)는 실제 데이터가 없어 숨겨 둔다. 코드는 남겨 두었다.
       RankSummaryCards(data: data),
@@ -370,8 +387,9 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.onTap});
+  const _Chip({required this.label, required this.onTap, this.icon});
 
+  final IconData? icon;
   final String label;
   final VoidCallback onTap;
 
@@ -381,26 +399,31 @@ class _Chip extends StatelessWidget {
       onTap: onTap,
       pressedScale: 0.92,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.lime,
-          borderRadius: BorderRadius.circular(99),
+          color: AppColors.blueSoft,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (icon != null) ...[
+              Icon(icon, size: 13, color: AppColors.blue),
+              const SizedBox(width: 3),
+            ],
             Text(
               label,
               style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 13,
+                color: AppColors.blue,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),
             ),
+            const SizedBox(width: 2),
             const Icon(
-              Icons.keyboard_arrow_down,
-              size: 16,
-              color: AppColors.ink,
+              Icons.keyboard_arrow_down_rounded,
+              size: 15,
+              color: AppColors.blue,
             ),
           ],
         ),
@@ -423,10 +446,11 @@ class _Message extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -434,9 +458,10 @@ class _Message extends StatelessWidget {
           Text(
             text,
             style: const TextStyle(
-              color: AppColors.ink,
+              color: AppColors.textStrong,
               fontSize: 15,
               fontWeight: FontWeight.w700,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 16),
@@ -445,11 +470,11 @@ class _Message extends StatelessWidget {
             child: FilledButton(
               onPressed: onPressed,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.lime,
-                foregroundColor: AppColors.ink,
+                backgroundColor: AppColors.blue,
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: Text(

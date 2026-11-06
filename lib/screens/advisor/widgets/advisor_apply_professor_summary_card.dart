@@ -4,9 +4,6 @@ import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../models/advisor_consultation_models.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _chipBackground = Color(0xFFF1F0F7);
-
 /// 상담교수 요약 카드(모든 단계에서 항상 보임). 눌러서 "변경"하면
 /// 검색 패널로 교체된다.
 class AdvisorProfessorSummaryCard extends StatelessWidget {
@@ -35,7 +32,8 @@ class AdvisorProfessorSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -47,7 +45,11 @@ class AdvisorProfessorSummaryCard extends StatelessWidget {
               children: [
                 const Text(
                   '상담교수',
-                  style: TextStyle(color: _mutedText, fontSize: 12),
+                  style: TextStyle(
+                    color: AppColors.textSub,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 _SelectedProfessorLabel(
@@ -62,14 +64,14 @@ class AdvisorProfessorSummaryCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: _chipBackground,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 searching ? '닫기' : '변경',
                 style: const TextStyle(
-                  color: AppColors.cobalt,
-                  fontSize: 13,
+                  color: AppColors.blueText,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -100,11 +102,14 @@ class _SelectedProfessorLabel extends StatelessWidget {
             height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AppColors.cobalt,
+              color: AppColors.blue,
             ),
           ),
           SizedBox(width: 8),
-          Text('불러오는 중...', style: TextStyle(color: _mutedText, fontSize: 14)),
+          Text(
+            '불러오는 중...',
+            style: TextStyle(color: AppColors.textSub, fontSize: 14),
+          ),
         ],
       );
     }
@@ -113,7 +118,7 @@ class _SelectedProfessorLabel extends StatelessWidget {
     if (professor == null) {
       return const Text(
         '지도교수 정보를 불러올 수 없어요',
-        style: TextStyle(color: _mutedText, fontSize: 14),
+        style: TextStyle(color: AppColors.textSub, fontSize: 14),
       );
     }
 
@@ -122,8 +127,8 @@ class _SelectedProfessorLabel extends StatelessWidget {
           ? '${professor.name} (지도교수)'
           : '${professor.name} (${professor.department})',
       style: const TextStyle(
-        color: AppColors.ink,
-        fontSize: 17,
+        color: AppColors.textStrong,
+        fontSize: 15,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -137,7 +142,7 @@ class _SelectedProfessorLabel extends StatelessWidget {
         const SizedBox(height: 2),
         const Text(
           '지도교수님이 아니면 상담 인정 횟수에 들어가지 않아요',
-          style: TextStyle(color: _mutedText, fontSize: 12),
+          style: TextStyle(color: AppColors.textSub, fontSize: 12),
         ),
       ],
     );

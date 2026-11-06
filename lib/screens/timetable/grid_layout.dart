@@ -5,8 +5,8 @@ import 'models/planned_course.dart';
 const int gridStartHour = 8;
 const int gridEndHour = 22;
 
-/// 그리드 한 시간(60분) 칸의 높이(px).
-const double gridHourRowHeight = 64;
+/// 그리드 한 시간(60분) 칸의 높이(px). v7 디자인 16의 줄 간격 50.
+const double gridHourRowHeight = 50;
 
 /// 그리드에 표시하는 요일(월~금만 — Figma 디자인에 토/일 열이 없다).
 const List<Weekday> gridWeekdays = [

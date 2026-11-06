@@ -6,8 +6,7 @@ import '../services/advisor_consultation_mock_data.dart';
 import 'advisor_load_states.dart';
 import 'advisor_visit_calendar.dart';
 
-const Color _mutedText = Color(0xFF7C7B88);
-const Color _chipBackground = Color(0xFFF1F0F7);
+const Color _noSlotsBorder = Color(0xFFC4C9D2);
 
 /// 방문 상담의 날짜·시간 선택 영역(캘린더 + 날짜를 고르면 나타나는 시간
 /// 칩 목록). [AdvisorMethodAndScheduleStep]에서 쓴다. [times]는 고른 날짜에
@@ -42,8 +41,8 @@ class AdvisorVisitSchedulePicker extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _chipBackground,
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.fill,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: AdvisorVisitCalendar(
             selectedDate: selectedVisitDate,
@@ -59,7 +58,7 @@ class AdvisorVisitSchedulePicker extends StatelessWidget {
             child: Text(
               '날짜를 먼저 선택해주세요',
               style: TextStyle(
-                color: _mutedText,
+                color: AppColors.textSub,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -72,13 +71,15 @@ class AdvisorVisitSchedulePicker extends StatelessWidget {
         else if (times.isEmpty)
           const AdvisorEmptyText('이 날은 상담 가능한 시간이 없어요.\n다른 날짜를 골라 주세요.')
         else
-          GridView.count(
-            crossAxisCount: 3,
+          GridView(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              mainAxisExtent: 44,
+            ),
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.2,
             children: [
               for (final t in times)
                 _TimeChip(
@@ -112,14 +113,15 @@ class _TimeChip extends StatelessWidget {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.cobalt : _chipBackground,
-          borderRadius: BorderRadius.circular(14),
+          color: selected ? AppColors.blueSoft : AppColors.fill,
+          borderRadius: BorderRadius.circular(10),
+          border: selected ? Border.all(color: AppColors.blue) : null,
         ),
         child: Text(
           time,
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.ink,
-            fontSize: 14,
+            color: selected ? AppColors.blueText : AppColors.textStrong,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -139,21 +141,23 @@ class AdvisorNoVisitSlotsNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      height: 200,
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
-        color: _chipBackground,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _noSlotsBorder),
       ),
       child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.event_busy_rounded, size: 28, color: _mutedText),
+          Icon(Icons.event_busy_rounded, size: 22, color: AppColors.textSub),
           SizedBox(height: 6),
           Text(
             '앞으로 3개월 안에 상담 가능한 시간이 없어요',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: _mutedText,
-              fontSize: 14,
+              color: AppColors.textSub,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -44,11 +44,9 @@ part of 'timetable_screen.dart';
 
 /// 학기 이동(헤더의 학기 드롭다운 메뉴) 책임.
 mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
-  // Figma 시안(node-id=6-38)에서 드롭다운이 "학기" 필이 아니라 헤더 줄
-  // 왼쪽 끝(뒤로가기 화살표 쪽)에 맞춰서 뜬다 — 그 폭을 그대로 흉내낸
-  // 고정값. 헤더 Row 자체는 Spacer 때문에 화면 폭만큼 넓어서, 메뉴 폭을
-  // renderBox.size에서 그대로 따오면 지나치게 넓어진다.
-  static const double _semesterMenuWidth = 180;
+  // v7 디자인 24: 학기 버튼 바로 아래(왼쪽으로 6 비켜서)에 폭 206 흰 상자로
+  // 뜬다. 지금 보고 있는 학기 줄만 연파랑 바탕 + 파란 굵은 글자.
+  static const double _semesterMenuWidth = 206;
 
   Future<void> _openSemesterMenu() async {
     final renderBox =
@@ -57,7 +55,7 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
     if (renderBox == null) return;
 
     final topLeft = renderBox.localToGlobal(
-      Offset(0, renderBox.size.height + 8),
+      Offset(-6, renderBox.size.height + 4),
       ancestor: overlay,
     );
 
@@ -72,21 +70,22 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
     final selected = await showMenu<({int year, int semester})>(
       context: context,
       position: position,
-      color: TimetableColors.surfaceElevated,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      // 디자인 그림자(검정 6%, 번짐 14)에 가깝게 낮은 그림자만 준다.
+      elevation: 2,
+      menuPadding: const EdgeInsets.all(8),
+      constraints: const BoxConstraints.tightFor(width: _semesterMenuWidth),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       items: [
         for (final option in options)
           PopupMenuItem(
             value: option,
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
+            height: 44,
+            padding: EdgeInsets.zero,
+            child: _semesterMenuRow(
               '${option.year}년 ${option.semester}학기',
-              style: const TextStyle(
-                color: TimetableColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
+              selected: option.year == _year && option.semester == _semester,
             ),
           ),
       ],
@@ -111,5 +110,27 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
     if (_hasFullSession) {
       _loadMyTimetable();
     }
+  }
+
+  Widget _semesterMenuRow(String label, {required bool selected}) {
+    return Container(
+      height: 44,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(
+        color: selected ? AppColors.blueSoft : null,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppColors.blue : AppColors.textStrong,
+          fontSize: 14,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          height: 1.4,
+        ),
+      ),
+    );
   }
 }

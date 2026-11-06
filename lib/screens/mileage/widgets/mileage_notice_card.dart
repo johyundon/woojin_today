@@ -22,8 +22,9 @@ class MileageNoticeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Row(
         children: [
@@ -37,7 +38,7 @@ class MileageNoticeCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textStrong,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -46,7 +47,7 @@ class MileageNoticeCard extends StatelessWidget {
                 Text(
                   '${notice.author} · ${notice.date} · 조회 ${notice.viewCount}',
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSub,
                     fontSize: 12,
                   ),
                 ),
@@ -55,20 +56,22 @@ class MileageNoticeCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Pressable.effect(
-            child: OutlinedButton(
+            child: FilledButton(
               onPressed: onCheck,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.accent,
-                side: const BorderSide(color: AppColors.accent),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.blueSoft,
+                foregroundColor: AppColors.blueText,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
                 ),
-                shape: const StadiumBorder(),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text(
                 '대상자 확인',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
               ),
             ),
           ),

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
 import '../../../widgets/pressable.dart';
+import '../../../widgets/primary_button.dart';
 import '../models/ai_recommend_answers.dart';
+import '../timetable_colors.dart';
+import 'ai_recommend_widgets.dart';
 
 const List<Weekday> _weekdayValues = [
   Weekday.mon,
@@ -14,12 +18,10 @@ const List<Weekday> _weekdayValues = [
   Weekday.fri,
 ];
 
-/// "AI 시간표 자동 생성" 5단계 설문 (Figma node 6:59, node-id 6:60~6:64).
+/// "AI 시간표 자동 생성" 5단계 설문 (v7 디자인 17~21 ai_step1~5).
 ///
-/// 이 노드는 실제 Figma 벡터 레이어가 아니라 앱 스크린샷 6장이 평탄화된
-/// 상태라 `get_design_context`로 쓸만한 코드를 뽑을 수 없었다. 스크린샷을
-/// 눈으로 보고 레이아웃/색상/간격을 근사해 재현했다. 6번째 화면(결과
-/// 미리보기)은 이 위젯의 범위 밖이다 — [onSubmit]이 호출된 뒤 어디로
+/// 거의 흰 바탕 위에 X 닫기·진행바, "n/5" 배지, 제목, 흰 카드 선택지, 하단
+/// "이전"/"다음" 버튼을 둔다. 6번째 화면(결과 미리보기)은 이 위젯의 범위 밖이다 — [onSubmit]이 호출된 뒤 어디로
 /// 이동할지는 호출부가 결정한다.
 class AiRecommendWizardScreen extends StatefulWidget {
   const AiRecommendWizardScreen({required this.onSubmit, super.key});
@@ -61,12 +63,16 @@ class _AiRecommendWizardScreenState extends State<AiRecommendWizardScreen> {
       _ExtraOptionStep(answers: _answers, onSubmit: _submit, onBack: _goBack),
     ];
 
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: KeyedSubtree(key: ValueKey(_step), child: steps[_step]),
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다(앱 테마는 아직 어두운 테마).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: KeyedSubtree(key: ValueKey(_step), child: steps[_step]),
+          ),
         ),
       ),
     );
@@ -94,34 +100,23 @@ class _StepChrome extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
           child: Row(
             children: [
-              Pressable.icon(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: AppColors.cobaltDeep,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 18),
-                ),
-              ),
+              const AiCloseButton(),
               const SizedBox(width: 12),
               Expanded(
                 child: Row(
                   children: [
                     for (var i = 0; i < 5; i++) ...[
-                      if (i > 0) const SizedBox(width: 6),
+                      if (i > 0) const SizedBox(width: 4),
                       Expanded(
                         child: Container(
                           height: 4,
                           decoration: BoxDecoration(
                             color: i < step
-                                ? AppColors.lime
-                                : AppColors.cobaltDeep,
+                                ? AppColors.blue
+                                : AiRecommendColors.progressTrack,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -134,37 +129,38 @@ class _StepChrome extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 6,
+                  vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.lime,
-                  borderRadius: BorderRadius.circular(99),
+                  color: AppColors.blueSoft,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '$step/5',
                   style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 13,
+                    color: AppColors.blue,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
+                    height: 1.4,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Text(
                 title,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textStrong,
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  height: 1.25,
-                  letterSpacing: -0.02,
+                  height: 1.4,
+                  letterSpacing: -1.04,
                 ),
               ),
             ],
@@ -172,12 +168,12 @@ class _StepChrome extends StatelessWidget {
         ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+            padding: const EdgeInsets.fromLTRB(22, 26, 22, 16),
             child: content,
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: bottomBar,
         ),
       ],
@@ -185,8 +181,8 @@ class _StepChrome extends StatelessWidget {
   }
 }
 
-/// 좌측 "< 이전" + 우측 꽉 찬 라임 버튼. [onBack]이 null이면(1단계) 다음
-/// 버튼만 풀폭으로 보여준다.
+/// 좌측 "< 이전" 흰 버튼 + 우측 꽉 찬 파란 버튼. [onBack]이 null이면(1단계)
+/// 다음 버튼만 풀폭으로 보여준다.
 class _StepBottomBar extends StatelessWidget {
   const _StepBottomBar({
     required this.nextLabel,
@@ -200,65 +196,61 @@ class _StepBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nextButton = SizedBox(
-      height: 56,
-      child: Pressable.effect(
-        pressedScale: 0.97,
-        child: ElevatedButton(
-          onPressed: onNext,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.lime,
-            shape: const StadiumBorder(),
-            elevation: 0,
-          ),
-          child: Text(
-            nextLabel,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
+    final nextButton = PrimaryButton(
+      label: nextLabel,
+      enabled: true,
+      onPressed: onNext,
     );
 
-    if (onBack == null) {
-      return SizedBox(width: double.infinity, child: nextButton);
-    }
+    final onBack = this.onBack;
+    if (onBack == null) return nextButton;
 
     return Row(
       children: [
-        SizedBox(
-          width: 92,
-          height: 56,
-          child: Pressable.effect(
-            child: OutlinedButton(
-              onPressed: onBack,
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white54),
-                shape: const StadiumBorder(),
-              ),
-              child: const Text(
-                '< 이전',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
+        AiBackButton(onTap: onBack),
+        const SizedBox(width: 10),
         Expanded(child: nextButton),
       ],
     );
   }
 }
 
-/// 세로로 쌓이는 풀폭 선택 버튼(3/5, 5/5 화면에서 공용). 파란 배경 위에
-/// 직접 놓이므로 미선택 상태는 반투명 흰 오버레이, 선택 상태는 라임색.
+/// 흰 카드 모양 선택 버튼의 바탕. 선택되면 연파랑 바탕 + 파란 1px 테두리.
+BoxDecoration _choiceDecoration(bool selected) {
+  return BoxDecoration(
+    color: selected ? AppColors.blueSoft : Colors.white,
+    borderRadius: BorderRadius.circular(12),
+    border: selected ? Border.all(color: AppColors.blue) : null,
+    boxShadow: selected ? null : AppColors.cardShadow,
+  );
+}
+
+TextStyle _choiceTextStyle(bool selected) {
+  return TextStyle(
+    color: selected ? AppColors.blueText : AppColors.textStrong,
+    fontSize: 15,
+    fontWeight: FontWeight.w800,
+  );
+}
+
+/// 설문 화면의 흰 카드(학점·비율 슬라이더 상자).
+BoxDecoration get _cardDecoration => BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(16),
+  boxShadow: AppColors.cardShadow,
+);
+
+/// "상관없어요" 위의 옅은 가로줄(좌우 2씩 안쪽).
+const Widget _divider = Padding(
+  padding: EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+  child: SizedBox(
+    height: 1,
+    width: double.infinity,
+    child: ColoredBox(color: AppColors.fillDisabled),
+  ),
+);
+
+/// 세로로 쌓이는 풀폭 선택 버튼(56 높이).
 class _SelectableTile extends StatelessWidget {
   const _SelectableTile({
     required this.label,
@@ -277,23 +269,13 @@ class _SelectableTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        margin: const EdgeInsets.only(bottom: 12),
+        height: 56,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.lime
-              : Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: _choiceDecoration(selected),
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: selected ? AppColors.ink : Colors.white,
-            fontSize: 15,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-          ),
+          style: _choiceTextStyle(selected),
         ),
       ),
     );
@@ -312,6 +294,12 @@ class _CreditStep extends StatefulWidget {
 }
 
 class _CreditStepState extends State<_CreditStep> {
+  static const _rangeLabelStyle = TextStyle(
+    color: AppColors.textSub,
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+  );
+
   @override
   Widget build(BuildContext context) {
     return _StepChrome(
@@ -319,68 +307,54 @@ class _CreditStepState extends State<_CreditStep> {
       title: '이번학기 몇학점\n들으실건가요?',
       content: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+        decoration: _cardDecoration,
         child: Column(
           children: [
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: '${widget.answers.credit.round()}',
-                    style: const TextStyle(
-                      color: AppColors.cobalt,
-                      fontSize: 48,
-                      fontWeight: FontWeight.w800,
-                    ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '${widget.answers.credit.round()}',
+                  style: const TextStyle(
+                    color: AppColors.blue,
+                    fontSize: 35,
+                    fontWeight: FontWeight.w800,
+                    height: 1.4,
+                    letterSpacing: -1.4,
                   ),
-                  const TextSpan(
-                    text: '학점',
-                    style: TextStyle(
-                      color: AppColors.cobalt,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  '학점',
+                  style: TextStyle(
+                    color: TimetableColors.headerButtonText,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1.4,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            AiSlider(
+              value: widget.answers.credit,
+              min: 5,
+              max: 22,
+              divisions: 17,
+              onChanged: (value) {
+                setState(() => widget.answers.credit = value);
+              },
             ),
             const SizedBox(height: 8),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: AppColors.cobalt,
-                inactiveTrackColor: AppColors.cobalt.withValues(alpha: 0.15),
-                thumbColor: AppColors.cobalt,
-                overlayColor: AppColors.cobalt.withValues(alpha: 0.2),
-              ),
-              child: Slider(
-                value: widget.answers.credit,
-                min: 5,
-                max: 22,
-                divisions: 17,
-                onChanged: (value) {
-                  setState(() => widget.answers.credit = value);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    '5학점',
-                    style: TextStyle(color: Color(0xFF9A978F), fontSize: 12),
-                  ),
-                  Text(
-                    '22학점',
-                    style: TextStyle(color: Color(0xFF9A978F), fontSize: 12),
-                  ),
-                ],
-              ),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('5학점', style: _rangeLabelStyle),
+                Text('22학점', style: _rangeLabelStyle),
+              ],
             ),
           ],
         ),
@@ -407,6 +381,12 @@ class _FreeDayStep extends StatefulWidget {
 }
 
 class _FreeDayStepState extends State<_FreeDayStep> {
+  static const _rowTextStyle = TextStyle(
+    color: AppColors.textStrong,
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+  );
+
   void _selectSpecificDay(Weekday day) {
     setState(() {
       widget.answers.freeDayMode = FreeDayMode.specificDay;
@@ -451,49 +431,34 @@ class _FreeDayStepState extends State<_FreeDayStep> {
               ],
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                const Text(
-                  '아무 요일이나',
-                  style: TextStyle(color: AppColors.ink, fontSize: 14),
-                ),
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (var n = 1; n <= 4; n++) ...[
-                        if (n > 1) const SizedBox(width: 6),
-                        _RoundNumberButton(
-                          number: n,
-                          selected:
-                              answers.freeDayMode == FreeDayMode.anyDaysCount &&
-                              answers.anyFreeDaysCount == n,
-                          onTap: () => _selectAnyDaysCount(n),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const Text(
-                  '일이면\n돼요',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 14,
-                    height: 1.2,
-                  ),
-                ),
-              ],
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: _choiceDecoration(false),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('아무 요일이나', style: _rowTextStyle),
+                  for (var n = 1; n <= 4; n++) ...[
+                    const SizedBox(width: 10),
+                    _RoundNumberButton(
+                      number: n,
+                      selected:
+                          answers.freeDayMode == FreeDayMode.anyDaysCount &&
+                          answers.anyFreeDaysCount == n,
+                      onTap: () => _selectAnyDaysCount(n),
+                    ),
+                  ],
+                  const SizedBox(width: 10),
+                  const Text('일이면 돼요', style: _rowTextStyle),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
+          _divider,
           _SelectableTile(
             label: '상관없어요',
             selected: answers.freeDayMode == FreeDayMode.any,
@@ -526,22 +491,10 @@ class _WeekdayChip extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        height: 54,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.lime
-              : Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.ink : Colors.white,
-            fontSize: 14,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-          ),
-        ),
+        decoration: _choiceDecoration(selected),
+        child: Text(label, style: _choiceTextStyle(selected)),
       ),
     );
   }
@@ -563,21 +516,19 @@ class _RoundNumberButton extends StatelessWidget {
     return Pressable.icon(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
+        width: 30,
+        height: 30,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.cobalt
-              : AppColors.cobalt.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
+          color: selected ? AppColors.blue : AppColors.blueSoft,
+          borderRadius: BorderRadius.circular(9),
         ),
         child: Text(
           '$number',
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.ink,
+            color: selected ? Colors.white : AppColors.blue,
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
@@ -617,7 +568,8 @@ class _TimePreferenceStepState extends State<_TimePreferenceStep> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final (value, label) in _options)
+          for (final (i, (value, label)) in _options.indexed) ...[
+            if (i > 0) const SizedBox(height: 12),
             _SelectableTile(
               label: label,
               selected: widget.answers.timePreference == value,
@@ -625,6 +577,7 @@ class _TimePreferenceStepState extends State<_TimePreferenceStep> {
                 setState(() => widget.answers.timePreference = value);
               },
             ),
+          ],
         ],
       ),
       bottomBar: _StepBottomBar(
@@ -653,6 +606,12 @@ class _MajorRatioStep extends StatefulWidget {
 }
 
 class _MajorRatioStepState extends State<_MajorRatioStep> {
+  static const _labelStyle = TextStyle(
+    color: AppColors.textStrong,
+    fontSize: 13,
+    fontWeight: FontWeight.w800,
+  );
+
   void _toggleAny() {
     setState(() {
       widget.answers.majorRatioAny = !widget.answers.majorRatioAny;
@@ -674,114 +633,113 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
             ignoring: answers.majorRatioAny,
             child: Opacity(
               opacity: answers.majorRatioAny ? 0.4 : 1,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 22,
+                    ),
+                    decoration: _cardDecoration,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          '전공(주전공+타전공) ${answers.majorRatio.round()}%',
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 13,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Text.rich(
+                                TextSpan(
+                                  text: '전공(주전공+타전공) ',
+                                  children: [
+                                    TextSpan(
+                                      text: '${answers.majorRatio.round()}%',
+                                      style: const TextStyle(
+                                        color: AppColors.blue,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                style: _labelStyle,
+                              ),
+                            ),
+                            Text(
+                              '교양 ${liberalRatio.round()}%',
+                              style: _labelStyle.copyWith(
+                                color: AppColors.textSub,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          '교양 ${liberalRatio.round()}%',
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 13,
-                          ),
+                        const SizedBox(height: 16),
+                        AiSlider(
+                          value: liberalRatio,
+                          min: 0,
+                          max: 100,
+                          onChanged: (value) {
+                            setState(() => answers.majorRatio = 100 - value);
+                          },
                         ),
                       ],
                     ),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: AppColors.cobalt,
-                        inactiveTrackColor: AppColors.cobalt.withValues(
-                          alpha: 0.15,
-                        ),
-                        thumbColor: AppColors.cobalt,
-                      ),
-                      child: Slider(
-                        value: liberalRatio,
-                        min: 0,
-                        max: 100,
-                        onChanged: (value) {
-                          setState(() => answers.majorRatio = 100 - value);
-                        },
-                      ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.cobalt.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
+                    decoration: _cardDecoration,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Opacity(
+                          opacity: 0.85,
+                          child: Text(
                             '전공 비중 중에서, 주전공과 타전공 비율',
                             style: TextStyle(
-                              color: Color(0xFF9A978F),
+                              color: AppColors.textStrong,
                               fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '주전공 ${answers.majorSubRatio.round()}%',
-                                style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '주전공 ${answers.majorSubRatio.round()}%',
+                              style: _labelStyle,
+                            ),
+                            Opacity(
+                              opacity: 0.8,
+                              child: Text(
                                 '타전공 ${(100 - answers.majorSubRatio).round()}%',
-                                style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 13,
-                                ),
+                                style: _labelStyle,
                               ),
-                            ],
-                          ),
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              activeTrackColor: AppColors.cobalt,
-                              inactiveTrackColor: AppColors.cobalt.withValues(
-                                alpha: 0.15,
-                              ),
-                              thumbColor: AppColors.cobalt,
                             ),
-                            child: Slider(
-                              value: answers.majorSubRatio,
-                              min: 0,
-                              max: 100,
-                              onChanged: (value) {
-                                setState(() => answers.majorSubRatio = value);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        AiSlider(
+                          value: answers.majorSubRatio,
+                          min: 0,
+                          max: 100,
+                          onChanged: (value) {
+                            setState(() => answers.majorSubRatio = value);
+                          },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          _divider,
           _SelectableTile(
             label: '상관없어요',
             selected: answers.majorRatioAny,
@@ -828,7 +786,8 @@ class _ExtraOptionStepState extends State<_ExtraOptionStep> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final (value, label) in _options)
+          for (final (i, (value, label)) in _options.indexed) ...[
+            if (i > 0) const SizedBox(height: 12),
             _SelectableTile(
               label: label,
               selected: widget.answers.extraOption == value,
@@ -836,6 +795,7 @@ class _ExtraOptionStepState extends State<_ExtraOptionStep> {
                 setState(() => widget.answers.extraOption = value);
               },
             ),
+          ],
         ],
       ),
       bottomBar: _StepBottomBar(
