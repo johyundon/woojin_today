@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import '../widgets/pressable.dart';
 import 'student_id_login_complete_screen.dart';
 
 /// 온보딩 화면 ("우진이의 하루" v4 리디자인, 01 섹션 3~5번째 화면).
-/// 최초 로그인 후 이용약관 동의가 끝나면 한 번 보여주는 3장짜리 소개 화면으로,
-/// 마지막 장의 "시작하기"를 누르면 로그인 완료 화면으로 넘어간다. 로그인
-/// 이후에 나오는 화면이라 로그인에서 받은 세션 쿠키를 그대로 들고 있다가 다음
-/// 화면에 넘긴다.
+/// 최초 로그인 후 이용약관 동의가 끝나면 학번별로 한 번 보여주는 3장짜리 소개
+/// 화면으로, 마지막 장의 "시작하기"를 누르면 완료를 기록하고 로그인 완료
+/// 화면으로 넘어간다. "시작하기" 전에 앱을 끄면 다음 로그인 때 다시 나온다.
+/// 로그인 이후에 나오는 화면이라 로그인에서 받은 세션 쿠키를 그대로 들고
+/// 있다가 다음 화면에 넘긴다.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,
+    required this.userId,
     this.jsessionId,
     this.wmonid,
     this.userId2,
   });
 
+  /// 온보딩 완료를 기록할 학번.
+  final String userId;
   final String? jsessionId;
   final String? wmonid;
   final String? userId2;
@@ -51,7 +56,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _goToLoginComplete() {
+  Future<void> _goToLoginComplete() async {
+    await TermsAcceptanceStorage().markOnboardingCompleted(widget.userId);
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => StudentIdLoginCompleteScreen(

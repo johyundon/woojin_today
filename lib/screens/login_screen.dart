@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import '../services/credential_storage.dart';
 import '../services/portal_login_service.dart';
 import '../services/service_factory.dart';
-import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import '../widgets/pressable.dart';
+import 'post_login_route.dart';
 import 'student_id_find_screen.dart';
-import 'student_id_login_complete_screen.dart';
-import 'terms_agreement_screen.dart';
 
 /// 로그인 화면 ("우진이의 하루" v4 리디자인).
 /// 로그인 성공 후, 약관에 아직 동의하지 않은 기기라면(최초 로그인) 약관 동의
@@ -152,26 +150,15 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
       }
 
-      final hasAcceptedTerms = await TermsAcceptanceStorage().hasAccepted();
+      final next = await postLoginScreen(
+        userId: userId,
+        jsessionId: result.jsessionId,
+        wmonid: result.wmonid,
+        userId2: result.userId2,
+      );
       if (!mounted) return;
-
-      if (hasAcceptedTerms) {
-        _goToLoginComplete(
-          jsessionId: result.jsessionId,
-          wmonid: result.wmonid,
-          userId2: result.userId2,
-        );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => TermsAgreementScreen(
-              jsessionId: result.jsessionId,
-              wmonid: result.wmonid,
-              userId2: result.userId2,
-            ),
-          ),
-        );
-      }
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (_) => next));
       return;
     }
 
@@ -259,22 +246,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _goToLoginComplete({
-    String? jsessionId,
-    String? wmonid,
-    String? userId2,
-  }) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => StudentIdLoginCompleteScreen(
-          jsessionId: jsessionId,
-          wmonid: wmonid,
-          userId2: userId2,
         ),
       ),
     );
