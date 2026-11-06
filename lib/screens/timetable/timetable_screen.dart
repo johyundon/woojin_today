@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
+import '../../services/department_codes.dart';
 import '../../services/my_timetable_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
+import '../../services/student_info_service.dart';
 import '../../services/syllabus_service.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
@@ -57,6 +59,7 @@ class TimetableScreen extends StatefulWidget {
     this.courseCatalogService,
     this.myTimetableService,
     this.syllabusService,
+    this.studentInfoService,
     this.savedTimetableStorage,
     this.notificationService,
     this.classReminderSettings,
@@ -72,6 +75,9 @@ class TimetableScreen extends StatefulWidget {
   final CourseCatalogServiceBase? courseCatalogService;
   final MyTimetableServiceBase? myTimetableService;
   final SyllabusServiceBase? syllabusService;
+
+  /// 자동 생성이 내 학과·학년을 읽을 때 쓴다(없으면 실제 서비스).
+  final StudentInfoServiceBase? studentInfoService;
   final SavedTimetableStorage? savedTimetableStorage;
   final NotificationService? notificationService;
   final ClassReminderSettings? classReminderSettings;
