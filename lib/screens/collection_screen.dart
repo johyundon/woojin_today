@@ -22,7 +22,13 @@ import '../widgets/pressable.dart';
 /// 4열 아이콘 그리드로 나열한다. 구현된 기능은 그 화면으로, 아직 구현되지 않은
 /// 항목은 [HomePlaceholderScreen]으로 이동한다.
 class CollectionScreen extends StatelessWidget {
-  const CollectionScreen({this.userId2, this.onTabTap, super.key});
+  const CollectionScreen({
+    this.userId2,
+    this.jsessionId,
+    this.wmonid,
+    this.onTabTap,
+    super.key,
+  });
 
   /// 하단 탭 바의 시간표/캘린더/MY 탭 동작. 홈 화면이 쓰는 핸들러를 그대로
   /// 받는다(MY 메뉴가 홈의 학생 정보 상태에 의존하기 때문). 홈(2) 탭은 이
@@ -32,6 +38,10 @@ class CollectionScreen extends StatelessWidget {
   /// 포털 로그인으로 얻은 본인 SSO uid. "지도교수 상담" 카드가 지도교수
   /// 조회에 써야 해서 홈 화면에서 그대로 전달받는다.
   final String? userId2;
+
+  /// 포털 로그인 쿠키. 공지사항의 종합강의시간표 공지(로그인 필요)에 쓴다.
+  final String? jsessionId;
+  final String? wmonid;
 
   void _openCalendar(BuildContext context) {
     Navigator.of(context).push(
@@ -49,9 +59,12 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const MileageScreen()));
   }
 
-  static void _openNotice(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
+  void _openNotice(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NoticeScreen(jsessionId: jsessionId, wmonid: wmonid),
+      ),
+    );
   }
 
   static void _openWeather(BuildContext context) {
@@ -130,7 +143,7 @@ class CollectionScreen extends StatelessWidget {
       icon: Icons.event_rounded,
       onTap: _openCalendar,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       label: '공지사항',
       icon: Icons.campaign_rounded,
       onTap: _openNotice,

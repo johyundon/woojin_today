@@ -17,7 +17,9 @@ import 'widgets/notice_list_card.dart';
 /// 칩으로 거르고, 카드의 북마크로 중요한 공지를 표시해 둘 수 있다(북마크는
 /// 저장하지 않고 화면이 열려 있는 동안만 유지된다).
 ///
-/// 학사공지·마일리지장학 공지를 학교 홈페이지에서 받아 보여준다([NoticeService],
+/// 학사공지·마일리지장학 공지·종합강의시간표 공지를 학교 홈페이지에서 받아
+/// 보여준다. 종합강의시간표 공지는 로그인한 사람만 볼 수 있어서 로그인 정보
+/// ([jsessionId])가 있을 때만 불러오고, "학사" 분류에 함께 보인다([NoticeService],
 /// 1시간 캐시, 당겨서 새로고침). 실제 게시판이 없는 학과·행사 탭과 목업 공지
 /// ([NoticeMockData](services/notice_mock_data.dart))는 코드를 남겨 두고 화면에서만
 /// 숨겼다([_visibleTags]).
@@ -27,7 +29,17 @@ import 'widgets/notice_list_card.dart';
 /// 앱이 꺼져 있을 때는 확인하지 못한다. 켤 때 알림 권한을 묻고, 기본은 꺼짐이다.
 /// 이 화면을 열면 홈 종 아이콘의 "새 공지" 점을 지운다.
 class NoticeScreen extends StatefulWidget {
-  const NoticeScreen({this.service, this.watcher, super.key});
+  const NoticeScreen({
+    this.service,
+    this.watcher,
+    this.jsessionId,
+    this.wmonid,
+    super.key,
+  });
+
+  /// 포털 로그인 쿠키. 있어야 종합강의시간표 공지를 읽을 수 있다.
+  final String? jsessionId;
+  final String? wmonid;
 
   /// 테스트용 주입 지점.
   final NoticeServiceBase? service;
@@ -46,7 +58,18 @@ class _NoticeScreenState extends State<NoticeScreen> {
   final _notifications = NotificationService.instance;
   final _readStorage = NoticeReadStorage();
   late final NoticeServiceBase _service =
-      widget.service ?? ServiceFactory.notice();
+      widget.service ??
+      ServiceFactory.notice(
+        jsessionId: widget.jsessionId,
+        wmonid: widget.wmonid,
+      );
+
+  /// 이번에 불러올 게시판. 로그인 정보가 없으면 로그인이 필요한 게시판은
+  /// 오류 없이 건너뛴다.
+  late final List<NoticeBoard> _boards = [
+    for (final board in NoticeBoard.values)
+      if (!board.requiresLogin || widget.jsessionId != null) board,
+  ];
   late final NoticeWatcher _watcher =
       widget.watcher ?? NoticeWatcher(service: _service);
 
@@ -71,24 +94,32 @@ class _NoticeScreenState extends State<NoticeScreen> {
     _watcher.clearPending();
   }
 
-  /// 두 게시판을 동시에 받아 최신순으로 합친다. 한쪽이 실패해도 다른 쪽은 보여준다.
+  /// 게시판들을 동시에 받아 최신순으로 합친다. 하나가 실패해도 나머지는 보여준다.
   Future<void> _loadNotices({bool forceRefresh = false}) async {
+    var loginExpired = false;
     final results = await Future.wait([
-      for (final board in NoticeBoard.values)
+      for (final board in _boards)
         _service
             .fetchNotices(board, forceRefresh: forceRefresh)
             .then<List<NoticeItem>?>((items) => items)
-            .catchError((Object _) => null),
+            .catchError((Object e) {
+              if (e is NoticeLoginRequiredException) loginExpired = true;
+              return null;
+            }),
     ]);
     if (!mounted) return;
     setState(() {
       _loading = false;
       _failedBoards = [
-        for (var i = 0; i < NoticeBoard.values.length; i++)
+        for (var i = 0; i < _boards.length; i++)
           if (results[i] == null)
-            switch (NoticeBoard.values[i]) {
+            switch (_boards[i]) {
               NoticeBoard.academic => '학사공지',
               NoticeBoard.mileage => '마일리지장학 공지',
+              NoticeBoard.timetable =>
+                loginExpired
+                    ? '종합강의시간표 공지(다시 로그인 필요)'
+                    : '종합강의시간표 공지',
             },
       ];
       // 날짜가 "2026.10.29" 형식이라 문자열 비교가 곧 날짜 비교다.

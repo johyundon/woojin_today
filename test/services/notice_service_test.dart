@@ -289,4 +289,99 @@ void main() {
     expect(d.title, '2학기 이수신청 안내');
     expect(log.length, 1);
   });
+
+  group('종합강의시간표(로그인 필요)', () {
+    const ttPath = '/bbs/daejin/7482/5/artclView.do';
+    const noPermission =
+        '<html><body><script>alert("접근 권한이 없습니다.");</script></body></html>';
+
+    /// 로그인 쿠키(JSESSIONID=j1)가 있어야 목록·상세를 주고, 없으면 실제 서버처럼
+    /// 상태 200에 "접근 권한이 없습니다."만 돌려준다.
+    MockClient loginServer(List<http.Request> log) => MockClient((r) async {
+      log.add(r);
+      final loggedIn = (r.headers['Cookie'] ?? '').contains('JSESSIONID=j1');
+      switch (r.url.path) {
+        case '/daejin/7482/subview.do':
+          return http.Response.bytes(
+            utf8.encode(
+              loggedIn
+                  ? _list([_row(title: '2학기 종합강의시간표', path: ttPath)])
+                  : noPermission,
+            ),
+            200,
+          );
+        case ttPath:
+          return http.Response.bytes(
+            utf8.encode(loggedIn ? _detail : noPermission),
+            200,
+          );
+        case '/daejin/1003/subview.do':
+          return http.Response.bytes(utf8.encode(_list([_row(title: 'A')])), 200);
+      }
+      return http.Response('not found', 404);
+    });
+
+    test('로그인 정보가 없으면 요청하지 않고 로그인 필요로 실패한다', () async {
+      final log = <http.Request>[];
+      await expectLater(
+        NoticeService(client: loginServer(log))
+            .fetchNotices(NoticeBoard.timetable),
+        throwsA(isA<NoticeLoginRequiredException>()),
+      );
+      expect(log, isEmpty);
+    });
+
+    test('로그인 쿠키를 실어 목록을 받고, "학사" 분류로 보여준다', () async {
+      final log = <http.Request>[];
+      final items = await NoticeService(
+        client: loginServer(log),
+        jsessionId: 'j1',
+        wmonid: 'w1',
+      ).fetchNotices(NoticeBoard.timetable);
+
+      expect(items.single.title, '2학기 종합강의시간표');
+      expect(items.single.tag, NoticeTag.academic);
+      expect(log.single.headers['Cookie'], 'JSESSIONID=j1; WMONID=w1');
+    });
+
+    test('"접근 권한이 없습니다"가 오면 로그인 필요로 실패하고 저장하지 않는다', () async {
+      final log = <http.Request>[];
+      final expired = NoticeService(
+        client: loginServer(log),
+        jsessionId: 'old',
+      );
+      await expectLater(
+        expired.fetchNotices(NoticeBoard.timetable),
+        throwsA(isA<NoticeLoginRequiredException>()),
+      );
+      // 저장된 게 없으니 다시 부르면 또 요청한다.
+      await expectLater(
+        expired.fetchNotices(NoticeBoard.timetable),
+        throwsA(isA<NoticeLoginRequiredException>()),
+      );
+      expect(log.length, 2);
+    });
+
+    test('공개 게시판(학사공지)에는 로그인 쿠키를 보내지 않는다', () async {
+      final log = <http.Request>[];
+      await NoticeService(
+        client: loginServer(log),
+        jsessionId: 'j1',
+        wmonid: 'w1',
+      ).fetchNotices(NoticeBoard.academic);
+      expect(log.single.headers['Cookie'], isNull);
+    });
+
+    test('종합강의시간표 글의 상세는 로그인 쿠키를 실어 연다', () async {
+      final log = <http.Request>[];
+      final service = NoticeService(
+        client: loginServer(log),
+        jsessionId: 'j1',
+      );
+      await service.fetchNotices(NoticeBoard.timetable);
+      final detail = await service.fetchDetail(ttPath);
+      expect(detail.title, '2학기 이수신청 안내');
+      expect(log.last.headers['Cookie'], 'JSESSIONID=j1');
+    });
+  });
 }

@@ -97,6 +97,8 @@ class NoticeWatcher {
       final current = <NoticeItem>[];
       var anyFailed = false;
       for (final board in NoticeBoard.values) {
+        // 로그인이 필요한 게시판은 로그인 정보 없이 읽을 수 없어 건너뛴다.
+        if (board.requiresLogin) continue;
         try {
           current.addAll(await _service.fetchNotices(board));
         } catch (e) {

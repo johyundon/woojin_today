@@ -13,6 +13,8 @@ import 'package:daejin_app/services/notice_service.dart';
 
 class _FakeNotices implements NoticeServiceBase {
   bool failMileage = false;
+  bool timetableExpired = false;
+  final boards = <NoticeBoard>[];
   final forceFlags = <bool>[];
   final detailCalls = <String>[];
 
@@ -22,6 +24,20 @@ class _FakeNotices implements NoticeServiceBase {
     bool forceRefresh = false,
   }) async {
     forceFlags.add(forceRefresh);
+    boards.add(board);
+    if (board == NoticeBoard.timetable) {
+      if (timetableExpired) throw const NoticeLoginRequiredException();
+      return const [
+        NoticeItem(
+          title: '2026학년도 2학기 종합강의시간표 안내',
+          author: '학사팀',
+          date: '2026.11.02',
+          viewCount: 3021,
+          tag: NoticeTag.academic,
+          detailPath: '/t1',
+        ),
+      ];
+    }
     if (board == NoticeBoard.mileage) {
       if (failMileage) throw const NoticeException('fail');
       return const [
@@ -84,11 +100,19 @@ class _FakeNotices implements NoticeServiceBase {
   }
 }
 
-Future<void> _pump(WidgetTester tester, _FakeNotices service) async {
+Future<void> _pump(
+  WidgetTester tester,
+  _FakeNotices service, {
+  String? jsessionId,
+}) async {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MaterialApp(home: NoticeScreen(service: service)));
+  await tester.pumpWidget(
+    MaterialApp(
+      home: NoticeScreen(service: service, jsessionId: jsessionId),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -220,5 +244,33 @@ void main() {
     await prefs.setStringList('notice_watch_pending', ['2026.10.29-새 공지']);
     await _pump(tester, _FakeNotices());
     expect(await prefs.getStringList('notice_watch_pending'), isNull);
+  });
+
+  group('종합강의시간표 공지(로그인 필요)', () {
+    testWidgets('로그인 정보가 없으면 요청하지 않고, 오류도 띄우지 않는다', (tester) async {
+      final service = _FakeNotices();
+      await _pump(tester, service);
+      expect(service.boards, isNot(contains(NoticeBoard.timetable)));
+      expect(find.text('2026학년도 2학기 종합강의시간표 안내'), findsNothing);
+      expect(find.textContaining('종합강의시간표 공지'), findsNothing);
+    });
+
+    testWidgets('로그인했으면 다른 공지와 함께 최신순 맨 위에 보인다', (tester) async {
+      final service = _FakeNotices();
+      await _pump(tester, service, jsessionId: 'j1');
+      expect(service.boards, contains(NoticeBoard.timetable));
+      expect(find.text('2026학년도 2학기 종합강의시간표 안내'), findsOneWidget);
+      final top = tester.getTopLeft(find.text('2026학년도 2학기 종합강의시간표 안내'));
+      final next = tester.getTopLeft(find.text('부·복수전공 이수신청 안내'));
+      expect(top.dy, lessThan(next.dy));
+    });
+
+    testWidgets('로그인이 만료됐으면 "다시 로그인 필요"를 알린다', (tester) async {
+      final service = _FakeNotices()..timetableExpired = true;
+      await _pump(tester, service, jsessionId: 'old');
+      expect(find.textContaining('다시 로그인 필요'), findsOneWidget);
+      // 나머지 공지는 그대로 보인다.
+      expect(find.text('부·복수전공 이수신청 안내'), findsOneWidget);
+    });
   });
 }

@@ -10,10 +10,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/notice/models/notice_item.dart';
 import 'host_cookie_jar.dart';
 
-/// 실제 데이터로 연결된 게시판(명세: 상세_2 "공지" 5·7번).
+/// 실제 데이터로 연결된 게시판(명세: 상세_2 "공지" 5·7번, 06 종합강의시간표).
 enum NoticeBoard {
   /// 학사공지(게시판 188). 로그인 불필요.
   academic('/daejin/1003/subview.do', NoticeTag.academic),
+
+  /// 종합강의시간표 공지. **로그인한 사람만** 볼 수 있다 — 로그인 정보 없이
+  /// 요청하면 상태 200에 "접근 권한이 없습니다."만 담겨 온다(2026-11-06 직접
+  /// 확인). 그래서 포털 로그인 쿠키를 실어 보낸다([NoticeService.new]).
+  timetable(
+    '/daejin/7482/subview.do',
+    NoticeTag.academic,
+    requiresLogin: true,
+  ),
 
   /// 마일리지장학 공지(게시판 189를 검색어 "마일리지장학"으로 거른 목록).
   /// enc는 명세의 고정값이다. 명세의 조립 규칙으로 다시 만들면 인코딩 차이로 값이
@@ -23,10 +32,13 @@ enum NoticeBoard {
     NoticeTag.scholarship,
   );
 
-  const NoticeBoard(this.path, this.tag);
+  const NoticeBoard(this.path, this.tag, {this.requiresLogin = false});
 
   final String path;
   final NoticeTag tag;
+
+  /// 포털 로그인 쿠키가 있어야 읽을 수 있는 게시판인지.
+  final bool requiresLogin;
 }
 
 class NoticeException implements Exception {
@@ -39,6 +51,12 @@ class NoticeException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// 로그인이 필요한 게시판인데 로그인 정보가 없거나 만료된 경우.
+class NoticeLoginRequiredException extends NoticeException {
+  const NoticeLoginRequiredException()
+    : super('로그인이 필요해요. 다시 로그인해 주세요.');
 }
 
 /// 첨부파일 하나(`a.file-download`).
@@ -94,9 +112,20 @@ abstract class NoticeServiceBase {
 /// 목록은 게시판별로 1시간 동안 기기에 저장해 두고 다시 요청하지 않는다. 상세는
 /// 앱이 켜져 있는 동안만 기억한다. 실패한 결과는 저장하지 않는다.
 class NoticeService implements NoticeServiceBase {
-  NoticeService({http.Client? client, DateTime Function()? now})
-    : _client = client ?? http.Client(),
-      _now = now ?? DateTime.now;
+  /// [jsessionId]/[wmonid]: 포털 로그인으로 받은 www.daejin.ac.kr 쿠키.
+  /// 로그인이 필요한 게시판([NoticeBoard.requiresLogin])과 그 글 상세에만
+  /// 실어 보낸다 — 지금 잘 되는 공개 게시판의 동작은 바꾸지 않기 위해서다.
+  NoticeService({
+    http.Client? client,
+    DateTime Function()? now,
+    String? jsessionId,
+    String? wmonid,
+  }) : _client = client ?? http.Client(),
+       _now = now ?? DateTime.now,
+       _loginCookies = [
+         if (jsessionId != null) 'JSESSIONID=$jsessionId',
+         if (wmonid != null) 'WMONID=$wmonid',
+       ];
 
   static const _base = 'https://www.daejin.ac.kr';
   static const _userAgent =
@@ -108,12 +137,23 @@ class NoticeService implements NoticeServiceBase {
 
   static final Map<String, NoticeDetail> _detailCache = {};
 
+  /// 로그인이 필요한 게시판에서 나온 글의 상세 경로. 상세를 열 때 이 경로만
+  /// 로그인 쿠키를 싣는다.
+  static final Set<String> _loginDetailPaths = {};
+
+  /// 로그인 없이 받으면 오는 안내 문구(상태 코드는 200).
+  static const _noPermissionText = '접근 권한이 없습니다';
+
   final http.Client _client;
   final DateTime Function() _now;
+  final List<String> _loginCookies;
 
   /// 테스트에서 상세 캐시를 비우려고 쓴다.
   @visibleForTesting
-  static void clearMemoryCache() => _detailCache.clear();
+  static void clearMemoryCache() {
+    _detailCache.clear();
+    _loginDetailPaths.clear();
+  }
 
   @override
   Future<List<NoticeItem>> fetchNotices(
@@ -123,11 +163,27 @@ class NoticeService implements NoticeServiceBase {
     final key = '$_prefsKeyPrefix${board.name}';
     if (!forceRefresh) {
       final cached = await _readStored(key, board);
-      if (cached != null) return cached;
+      if (cached != null) return _remember(board, cached);
     }
-    final body = await _get('$_base${board.path}');
+    if (board.requiresLogin && _loginCookies.isEmpty) {
+      throw const NoticeLoginRequiredException();
+    }
+    final body = await _get(
+      '$_base${board.path}',
+      withLogin: board.requiresLogin,
+    );
+    if (board.requiresLogin && body.contains(_noPermissionText)) {
+      throw const NoticeLoginRequiredException();
+    }
     final items = parseList(body, board);
     await _writeStored(key, items);
+    return _remember(board, items);
+  }
+
+  List<NoticeItem> _remember(NoticeBoard board, List<NoticeItem> items) {
+    if (board.requiresLogin) {
+      _loginDetailPaths.addAll(items.map((n) => n.detailPath).nonNulls);
+    }
     return items;
   }
 
@@ -135,7 +191,12 @@ class NoticeService implements NoticeServiceBase {
   Future<NoticeDetail> fetchDetail(String detailPath) async {
     final cached = _detailCache[detailPath];
     if (cached != null) return cached;
-    final detail = parseDetail(await _get('$_base$detailPath'));
+    final withLogin = _loginDetailPaths.contains(detailPath);
+    final body = await _get('$_base$detailPath', withLogin: withLogin);
+    if (withLogin && body.contains(_noPermissionText)) {
+      throw const NoticeLoginRequiredException();
+    }
+    final detail = parseDetail(body);
     _detailCache[detailPath] = detail;
     return detail;
   }
@@ -267,12 +328,14 @@ class NoticeService implements NoticeServiceBase {
   /// [url]은 [NoticeAttachment.url] 같은 전체 주소.
   Future<Uint8List> downloadBytes(String url) => _getBytes(url);
 
-  Future<String> _get(String url) async =>
-      utf8.decode(await _getBytes(url), allowMalformed: true);
+  Future<String> _get(String url, {bool withLogin = false}) async => utf8
+      .decode(await _getBytes(url, withLogin: withLogin), allowMalformed: true);
 
   /// GET을 보내고 리다이렉트를 직접 따라가며 홉마다 쿠키를 주고받는다.
-  Future<Uint8List> _getBytes(String url) async {
+  /// [withLogin]이면 처음부터 포털 로그인 쿠키를 www 서버용으로 넣고 시작한다.
+  Future<Uint8List> _getBytes(String url, {bool withLogin = false}) async {
     final cookies = HostCookieJar();
+    if (withLogin) cookies.store(Uri.parse(_base), _loginCookies);
     var uri = Uri.parse(url);
     for (var hop = 0; hop <= _maxRedirects; hop++) {
       final request = http.Request('GET', uri)
