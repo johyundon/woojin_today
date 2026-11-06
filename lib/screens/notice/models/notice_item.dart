@@ -4,6 +4,7 @@ import '../../mileage/models/mileage_models.dart';
 enum NoticeTag {
   academic('학사'),
   scholarship('장학'),
+  timetable('시간표'),
   department('학과'),
   event('행사');
 

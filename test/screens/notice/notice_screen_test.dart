@@ -33,7 +33,7 @@ class _FakeNotices implements NoticeServiceBase {
           author: '학사팀',
           date: '2026.11.02',
           viewCount: 3021,
-          tag: NoticeTag.academic,
+          tag: NoticeTag.timetable,
           detailPath: '/t1',
         ),
       ];
@@ -263,6 +263,22 @@ void main() {
       final top = tester.getTopLeft(find.text('2026학년도 2학기 종합강의시간표 안내'));
       final next = tester.getTopLeft(find.text('부·복수전공 이수신청 안내'));
       expect(top.dy, lessThan(next.dy));
+    });
+
+    testWidgets('로그인하지 않았으면 "시간표" 칩이 없다', (tester) async {
+      await _pump(tester, _FakeNotices());
+      expect(find.text('시간표'), findsNothing);
+    });
+
+    testWidgets('"시간표" 칩을 누르면 시간표 공지만 보인다', (tester) async {
+      await _pump(tester, _FakeNotices(), jsessionId: 'j1');
+      // 칩 줄의 "시간표"(목록 카드의 분류 표시와 구분하려고 첫 번째를 누른다).
+      await tester.tap(find.text('시간표').first);
+      await tester.pumpAndSettle();
+      expect(find.text('2026학년도 2학기 종합강의시간표 안내'), findsOneWidget);
+      expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+      expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('로그인이 만료됐으면 "다시 로그인 필요"를 알린다', (tester) async {

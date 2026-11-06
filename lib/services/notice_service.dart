@@ -20,7 +20,7 @@ enum NoticeBoard {
   /// 확인). 그래서 포털 로그인 쿠키를 실어 보낸다([NoticeService.new]).
   timetable(
     '/daejin/7482/subview.do',
-    NoticeTag.academic,
+    NoticeTag.timetable,
     requiresLogin: true,
   ),
 

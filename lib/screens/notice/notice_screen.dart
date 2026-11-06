@@ -19,7 +19,8 @@ import 'widgets/notice_list_card.dart';
 ///
 /// 학사공지·마일리지장학 공지·종합강의시간표 공지를 학교 홈페이지에서 받아
 /// 보여준다. 종합강의시간표 공지는 로그인한 사람만 볼 수 있어서 로그인 정보
-/// ([jsessionId])가 있을 때만 불러오고, "학사" 분류에 함께 보인다([NoticeService],
+/// ([jsessionId])가 있을 때만 불러오고, 따로 "시간표" 칩으로도 모아 볼 수 있다
+/// (로그인했을 때만 칩이 보인다)([NoticeService],
 /// 1시간 캐시, 당겨서 새로고침). 실제 게시판이 없는 학과·행사 탭과 목업 공지
 /// ([NoticeMockData](services/notice_mock_data.dart))는 코드를 남겨 두고 화면에서만
 /// 숨겼다([_visibleTags]).
@@ -52,8 +53,13 @@ class NoticeScreen extends StatefulWidget {
 }
 
 class _NoticeScreenState extends State<NoticeScreen> {
-  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다.
-  static const _visibleTags = [NoticeTag.academic, NoticeTag.scholarship];
+  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다. 시간표는
+  /// 로그인해야 읽을 수 있어서, 로그인하지 않았으면 빈 칩이 되지 않게 숨긴다.
+  late final List<NoticeTag> _visibleTags = [
+    NoticeTag.academic,
+    NoticeTag.scholarship,
+    if (widget.jsessionId != null) NoticeTag.timetable,
+  ];
 
   final _notifications = NotificationService.instance;
   final _readStorage = NoticeReadStorage();

@@ -331,7 +331,7 @@ void main() {
       expect(log, isEmpty);
     });
 
-    test('로그인 쿠키를 실어 목록을 받고, "학사" 분류로 보여준다', () async {
+    test('로그인 쿠키를 실어 목록을 받고, "시간표" 분류로 보여준다', () async {
       final log = <http.Request>[];
       final items = await NoticeService(
         client: loginServer(log),
@@ -340,7 +340,7 @@ void main() {
       ).fetchNotices(NoticeBoard.timetable);
 
       expect(items.single.title, '2학기 종합강의시간표');
-      expect(items.single.tag, NoticeTag.academic);
+      expect(items.single.tag, NoticeTag.timetable);
       expect(log.single.headers['Cookie'], 'JSESSIONID=j1; WMONID=w1');
     });
 
