@@ -246,10 +246,24 @@ class SyllabusService implements SyllabusServiceBase {
     String? href;
     if (isElective(course)) {
       // 과목이 어느 영역인지 몰라서 영역 목록을 하나씩 받아 보며 찾는다.
-      // 찾으면 바로 멈추고, 받은 목록은 [_links]가 기억해 다시 쓴다.
+      // 1) 이미 저장된 영역 목록을 요청 없이 먼저 뒤지고, 2) 없을 때만 아직
+      // 안 받은 영역을 앞에서부터 받아 찾는 즉시 멈춘다. 그래야 같은 학기의
+      // 다른 교양 과목을 열 때 이미 받은 목록 덕에 요청이 거의 없다.
+      final notStored = <String>[];
       for (final area in electiveAreaQueries) {
-        href = (await _links(year, semester, area, cookie))[key];
-        if (href != null) break;
+        final stored = await _storedLinks(year, semester, area);
+        if (stored == null) {
+          notStored.add(area);
+        } else if (stored.containsKey(key)) {
+          href = stored[key];
+          break;
+        }
+      }
+      if (href == null) {
+        for (final area in notStored) {
+          href = (await _links(year, semester, area, cookie))[key];
+          if (href != null) break;
+        }
       }
       if (href == null) {
         throw const SyllabusUnavailableException('교양선택 영역 목록에서 이 과목을 찾지 못했어요.');
@@ -289,22 +303,32 @@ class SyllabusService implements SyllabusServiceBase {
   }
 
   /// 학기·분류별 목록({"과목코드-분반": 상세 링크}). 한 번 받은 목록은 재사용한다.
+  /// 메모리나 기기에 저장된 목록. 요청은 하지 않으며 없으면 null.
+  Future<Map<String, String>?> _storedLinks(
+    int year,
+    int semester,
+    String category,
+  ) async {
+    final listKey = '$year:$semester:$category';
+    final cached = _listCache[listKey];
+    if (cached != null) return cached;
+    final stored = await _readStored('$_listPrefsPrefix$listKey');
+    if (stored == null) return null;
+    final links = (stored as Map<String, dynamic>).cast<String, String>();
+    _listCache[listKey] = links;
+    return links;
+  }
+
   Future<Map<String, String>> _links(
     int year,
     int semester,
     String category,
     String cookie,
   ) async {
+    final stored = await _storedLinks(year, semester, category);
+    if (stored != null) return stored;
     final listKey = '$year:$semester:$category';
-    final cached = _listCache[listKey];
-    if (cached != null) return cached;
     final prefsKey = '$_listPrefsPrefix$listKey';
-    final stored = await _readStored(prefsKey);
-    if (stored != null) {
-      final links = (stored as Map<String, dynamic>).cast<String, String>();
-      _listCache[listKey] = links;
-      return links;
-    }
     final listUri = Uri.parse(
       '${_base}Blsn020302.jsp?fhd_yyyy=$year&fhd_shtm=$semester&$category',
     );

@@ -2,6 +2,7 @@
 // 익명 fixture로 검증한다. 상세 fixture는 Notion 명세의 실제 응답 예시에서
 // 교수 이름·연락처·연구실·강의실·교수번호를 가짜 값으로 바꾸고, 읽지 않는
 // 표(수업방법)와 일부 주차를 줄인 것이다(EUC-KR 저장).
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:daejin_app/services/course_catalog_service.dart';
@@ -499,6 +500,75 @@ void main() {
       await open(service());
 
       expect(calls, 4);
+    });
+  });
+
+  group('교양선택: 저장된 영역 목록 먼저 보기', () {
+    // 영역 쿼리의 영역 코드 → 그 영역 목록에 들어 있는 "과목코드-분반".
+    const areas = {
+      'B42002': '900201-01',
+      'B42003': '900301-01',
+      'B42005': '900501-01',
+    };
+    late List<String> listAreas;
+
+    String listHtml(String? key) {
+      if (key == null) return '<html><body><table></table></body></html>';
+      final p = key.split('-');
+      final href =
+          'Blsn020303.jsp?fhd_00=${p[0]}&fhd_01=${p[1]}'
+          '&fhd_02=2026&fhd_03=2&fhd_04=1234567';
+      return '<html><body><table><tr class="tr_a_chrm"><td>교선</td>'
+          '<td><a href="$href">$key</a></td></tr></table></body></html>';
+    }
+
+    SyllabusService service() => SyllabusService(
+      client: MockClient((request) async {
+        if (!request.url.path.endsWith('Blsn020302.jsp')) {
+          return _euckr('syllabus_detail_anonymized.html');
+        }
+        final area = request.url.queryParameters['ic_kwa_2']!.trim();
+        listAreas.add(area);
+        return http.Response.bytes(utf8.encode(listHtml(areas[area])), 200);
+      }),
+    );
+    Future<SyllabusDetail> open(SyllabusService s, String key) {
+      final p = key.split('-');
+      return s.fetchSyllabus(
+        course: _course(code: p[0], section: p[1], type: '교선'),
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
+        userId2: 'U',
+      );
+    }
+
+    setUp(() => listAreas = []);
+
+    test('뒤쪽 영역(5영역) 목록만 저장돼 있어도 앞 영역을 받지 않고 바로 찾는다', () async {
+      final href =
+          'Blsn020303.jsp?fhd_00=900501&fhd_01=01'
+          '&fhd_02=2026&fhd_03=2&fhd_04=1234567';
+      SharedPreferences.setMockInitialValues({
+        'syllabus_list_2026:2:ic_kwa=B41002&ic_kwa_2=B42005%20': jsonEncode({
+          'savedAt': DateTime.now().toIso8601String(),
+          'data': {'900501-01': href},
+        }),
+      });
+
+      await open(service(), '900501-01');
+
+      expect(listAreas, isEmpty); // 예전 방식이면 1~4영역을 먼저 받았다
+    });
+
+    test('저장된 영역에 없으면 아직 안 받은 영역만 앞에서부터 받는다', () async {
+      await open(service(), '900301-01'); // 1~3영역 저장
+      listAreas.clear();
+
+      await open(service(), '900501-01');
+
+      expect(listAreas, ['B42004', 'B42005']);
     });
   });
 }
