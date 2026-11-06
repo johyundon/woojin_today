@@ -17,7 +17,6 @@ import 'calendar/calendar_screen.dart';
 import 'collection_screen.dart';
 import 'home/home_colors.dart';
 import 'home/home_enums.dart';
-import 'home/rank/department_rank_screen.dart';
 import 'home/widgets/cafeteria_menu_card.dart';
 import 'home/widgets/home_bottom_nav.dart';
 import 'home/widgets/home_mini_card.dart';
@@ -28,8 +27,10 @@ import 'home/widgets/next_class_card.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import 'campus_map/campus_map_screen.dart';
+import 'campus_map/models/room_building.dart';
 import 'login_screen.dart';
 import 'notice/notice_screen.dart';
+import 'shuttle/shuttle_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
 
@@ -331,13 +332,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Navigator.of(context).push(_timetableRoute());
   }
 
-  void _openDepartmentRank() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            DepartmentRankScreen(isDark: true, userId2: widget.userId2),
-      ),
-    );
+  void _openShuttle() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ShuttleScreen()));
   }
 
   void _openCollection() {
@@ -352,9 +349,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _openCampusMap() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CampusMapScreen()));
+  /// 길찾기: 앞 수업 건물(있으면)에서 다음 수업 건물까지 채운 채 지도를 연다.
+  void _openCampusMap({String? origin, String? destination}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CampusMapScreen(
+          initialOriginBuilding: origin,
+          initialDestinationBuilding: destination,
+        ),
+      ),
+    );
   }
 
   void _openCalendar() {
@@ -473,18 +477,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _myInfoDialogRefresh = null;
   }
 
-  /// 이름("홍길동")에서 성을 뗀 호칭("길동아")을 만든다. 받침이 있으면 "아",
-  /// 없으면 "야". 이름을 모르거나 두 글자 미만이면 null.
-  String? _callName() {
-    final name = _studentInfoData?.name?.trim();
-    if (name == null || name.length < 2) return null;
-    final given = name.length >= 3 ? name.substring(name.length - 2) : name;
-    final last = given.codeUnitAt(given.length - 1);
-    final hasBatchim =
-        last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 != 0;
-    return '$given${hasBatchim ? '아' : '야'}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final now = _now();
@@ -493,14 +485,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .where((c) => c.slot.endMinutes > nowMinutes)
         .toList();
     final next = remaining.isEmpty ? null : remaining.first;
+    // 걷는 거리: 오늘 바로 앞 수업 강의실 건물 → 다음 수업 강의실 건물.
+    final nextRoom = next == null ? '' : roomForSlot(next);
+    final nextIndex = next == null ? -1 : _todayClasses.indexOf(next);
+    final walkDestination = buildingForRoom(nextRoom);
+    final walkOrigin = nextIndex > 0
+        ? buildingForRoom(roomForSlot(_todayClasses[nextIndex - 1]))
+        : null;
 
-    final callName = _callName();
-    final greetingHead = callName == null ? '' : '$callName,\n';
     final greeting = !_timetableLoaded || _todayClasses.isEmpty
-        ? '$greetingHead오늘 하루도 화이팅!'
+        ? '오늘 하루도\n화이팅해요!'
         : remaining.isEmpty
-        ? '$greetingHead오늘도 수고했어!'
-        : '$greetingHead오늘 수업 ${remaining.length}개 남았어';
+        ? '오늘도\n수고했어요!'
+        : '오늘은\n수업 ${remaining.length}개 남았어요!';
     final dateBadge =
         '${now.month.toString().padLeft(2, '0')}.'
         '${now.day.toString().padLeft(2, '0')} '
@@ -614,7 +611,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         hasClassesToday: _todayClasses.isNotEmpty,
                         upcoming: upcoming,
                         upcomingDayLabel: upcomingDayLabel,
-                        onDirectionsTap: _openCampusMap,
+                        room: nextRoom,
+                        walkOrigin: walkOrigin,
+                        walkDestination: walkDestination,
+                        onDirectionsTap: () => _openCampusMap(
+                          origin: walkOrigin?.name,
+                          destination: walkDestination?.name,
+                        ),
                         onTimetableTap: _openTimetable,
                       ),
                     ),
@@ -623,15 +626,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       child: Row(
                         children: [
                           Expanded(
+                            // 셔틀은 운행 정보 API가 없어 시각을 지어내지 않고
+                            // "서비스 준비 중"만 보여준다.
                             child: HomeMiniCard(
-                              icon: Icons.leaderboard_rounded,
+                              icon: Icons.directions_bus_rounded,
                               iconColor: AppColors.blue,
-                              label: '학과 등수',
+                              label: '셔틀버스',
                               labelColor: HomeV7Colors.onNavySub,
-                              title: '나는 학과에서\n몇등일까?',
+                              title: '서비스\n준비 중',
                               titleColor: Colors.white,
                               footer: const Text(
-                                '두근두근',
+                                '곧 운행 정보를 알려드릴게요',
                                 style: TextStyle(
                                   color: HomeV7Colors.onNavySub,
                                   fontSize: 12,
@@ -640,7 +645,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                               ),
                               backgroundColor: AppColors.inkNavy,
-                              onTap: _openDepartmentRank,
+                              onTap: _openShuttle,
                             ),
                           ),
                           const SizedBox(width: 12),

@@ -60,7 +60,7 @@ void main() {
   // 비워주지 않으면 앞 테스트의 캐시가 뒤 테스트로 새어 들어간다.
   setUp(SessionCache.clear);
 
-  group('인사말(오늘 수업 N개 남았어/오늘 하루도 화이팅!)', () {
+  group('인사말(오늘은 수업 N개 남았어요!/오늘 하루도 화이팅해요!)', () {
     // 날씨 조회는 이 그룹의 관심사가 아니므로, 전부 같은 성공 응답으로 고정해
     // 실제 네트워크 호출 없이 끝내고 greeting 로직만 분리해서 본다.
     WeatherService fakeWeatherService() => WeatherService(
@@ -81,7 +81,7 @@ void main() {
     // "현재 수업 없음" 상황을 고정하기 위한 값.
     final gapNow = DateTime(2026, 10, 6, 10, 55);
 
-    List<int> timetableFixtureBytes() {
+    List<int> timetableFixtureBytes({String extraRows = ''}) {
       // 실제 응답(table#tTbl)과 같은 10칸: 교과번호/교과목명/분반/이수구분/
       // 학점/담당교수/강의시간/강의실/개설학과/비고.
       final headerRow =
@@ -93,12 +93,12 @@ void main() {
           '<td>3</td><td>홍길동</td><td>화10:00-10:50</td><td>공학관201</td>'
           '<td>컴퓨터공학과</td><td></td></tr>';
       final html =
-          '<html><body><table id="tTbl">$headerRow$dataRow</table>'
+          '<html><body><table id="tTbl">$headerRow$dataRow$extraRows</table>'
           '</body></html>';
       return cp949.encode(html);
     }
 
-    testWidgets('세션이 있고 오늘 남은 수업이 있으면 "오늘 수업 N개 남았어"와 다음 수업 카드를 보여준다', (
+    testWidgets('세션이 있고 오늘 남은 수업이 있으면 "오늘은 수업 N개 남았어요!"와 다음 수업 카드를 보여준다', (
       tester,
     ) async {
       final timetableClient = MockClient(
@@ -120,9 +120,95 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘 수업 1개 남았어'), findsOneWidget);
+      expect(find.text('오늘은\n수업 1개 남았어요!'), findsOneWidget);
       expect(find.text('자료구조'), findsOneWidget);
-      expect(find.text('오늘 하루도 화이팅!'), findsNothing);
+      expect(find.text('오늘 하루도\n화이팅해요!'), findsNothing);
+    });
+
+    testWidgets('다음 수업 강의실 건물을 못 찾으면 걷는 거리 대신 교수님 이름을 보여준다', (tester) async {
+      // 9:00 인문학관 → 10:00 공학관201(기본 행) → 10:30 사회과학관.
+      // 9:55에는 다음 수업이 10:00 공학관201인데, "공학관"은 건물 목록에 없다.
+      const rows =
+          '<tr><td>HUM101</td><td>글쓰기</td><td>01</td><td>교필</td>'
+          '<td>1</td><td>김교수</td><td>화09:00-09:50</td><td>인문학관101</td>'
+          '<td>교양</td><td></td></tr>'
+          '<tr><td>SOC201</td><td>사회학개론</td><td>01</td><td>전선</td>'
+          '<td>3</td><td>이교수</td><td>화10:30-11:20</td><td>사회과학관202</td>'
+          '<td>사회학과</td><td></td></tr>';
+      final timetableClient = MockClient(
+        (request) async =>
+            http.Response.bytes(timetableFixtureBytes(extraRows: rows), 200),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            weatherService: fakeWeatherService(),
+            jsessionId: 'JSESSION123',
+            wmonid: 'WMONID123',
+            userId2: 'REAL_USER_UID',
+            myTimetableService: MyTimetableService(client: timetableClient),
+            studentInfoService: fakeStudentInfoService(),
+            now: () => DateTime(2026, 10, 6, 9, 55),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('공학관201'), findsOneWidget);
+      expect(find.text('홍길동 교수님'), findsOneWidget);
+      expect(find.textContaining('걸어서'), findsNothing);
+    });
+
+    testWidgets('바로 앞 수업 건물에서 다음 수업 건물까지 걸어서 N분 · Mm를 보여준다', (tester) async {
+      const rows =
+          '<tr><td>HUM101</td><td>글쓰기</td><td>01</td><td>교필</td>'
+          '<td>1</td><td>김교수</td><td>화11:00-11:50</td><td>인문관301</td>'
+          '<td>교양</td><td></td></tr>'
+          '<tr><td>SOC201</td><td>사회학개론</td><td>01</td><td>전선</td>'
+          '<td>3</td><td>이교수</td><td>화12:00-12:50</td><td>사회과학관202</td>'
+          '<td>사회학과</td><td></td></tr>';
+      final timetableClient = MockClient(
+        (request) async =>
+            http.Response.bytes(timetableFixtureBytes(extraRows: rows), 200),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            weatherService: fakeWeatherService(),
+            jsessionId: 'JSESSION123',
+            wmonid: 'WMONID123',
+            userId2: 'REAL_USER_UID',
+            myTimetableService: MyTimetableService(client: timetableClient),
+            studentInfoService: fakeStudentInfoService(),
+            // 11:55 — 11:00 인문관 수업이 끝났고 다음은 12:00 사회과학관 수업.
+            now: () => DateTime(2026, 10, 6, 11, 55),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // 캠퍼스 길 데이터(asset) 읽기와 경로 계산은 실제 비동기라 runAsync로 기다린다.
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(seconds: 1));
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.text('사회학개론'), findsOneWidget);
+      expect(find.text('사회과학관202'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^걸어서 \d+분 · \d+m$')), findsOneWidget);
+      expect(find.text('이교수 교수님'), findsNothing);
+    });
+
+    testWidgets('왼쪽 작은 카드는 셔틀버스 "서비스 준비 중"이다', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(home: HomeScreen(weatherService: fakeWeatherService())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('셔틀버스'), findsOneWidget);
+      expect(find.text('서비스\n준비 중'), findsOneWidget);
+      expect(find.text('학과 등수'), findsNothing);
     });
 
     testWidgets('세션이 없으면(jsessionId/wmonid/userId2 중 하나라도 null) 원래 문구 그대로다', (
@@ -133,7 +219,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘 하루도 화이팅!'), findsOneWidget);
+      expect(find.text('오늘 하루도\n화이팅해요!'), findsOneWidget);
     });
 
     testWidgets('세션은 있지만 오늘 수업이 모두 끝났으면 그 안내 문구를 보여준다', (tester) async {
@@ -156,7 +242,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘도 수고했어!'), findsOneWidget);
+      expect(find.text('오늘도\n수고했어요!'), findsOneWidget);
     });
 
     testWidgets('서비스 호출 중 예외가 발생해도 앱이 죽지 않고 원래 문구로 폴백한다', (tester) async {
@@ -179,7 +265,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘 하루도 화이팅!'), findsOneWidget);
+      expect(find.text('오늘 하루도\n화이팅해요!'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

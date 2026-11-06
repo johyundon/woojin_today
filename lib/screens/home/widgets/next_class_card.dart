@@ -4,6 +4,9 @@ import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/time_format.dart';
 import '../../../widgets/pressable.dart';
+import '../../campus_map/models/campus_building.dart';
+import '../../campus_map/models/geo_point.dart';
+import '../../campus_map/services/campus_route_service.dart';
 import '../home_colors.dart';
 
 /// 홈 화면의 "다음 수업" 큰 카드 (v7 디자인 12 수업 있는 날 / 13 공강인 날).
@@ -21,6 +24,9 @@ class NextClassCard extends StatelessWidget {
     required this.upcomingDayLabel,
     required this.onDirectionsTap,
     required this.onTimetableTap,
+    this.room = '',
+    this.walkOrigin,
+    this.walkDestination,
   });
 
   final TodayClass? next;
@@ -48,6 +54,14 @@ class NextClassCard extends StatelessWidget {
 
   /// [upcoming] 블록의 "시간표" 버튼을 눌렀을 때.
   final VoidCallback onTimetableTap;
+
+  /// [next]의 이번 시간대 강의실. 비어 있으면 "강의실 정보 없음".
+  final String room;
+
+  /// 오늘 바로 앞 수업 건물과 [next] 강의실 건물. 둘 다 있고 서로 다르면
+  /// 교수님 이름 대신 "걸어서 N분 · Mm"를 보여준다.
+  final CampusBuilding? walkOrigin;
+  final CampusBuilding? walkDestination;
 
   static String _remainingLabel(int minutes) {
     if (minutes < 60) return '$minutes분 남음';
@@ -418,9 +432,7 @@ class NextClassCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.course.room.isEmpty
-                            ? '강의실 정보 없음'
-                            : item.course.room,
+                        room.isEmpty ? '강의실 정보 없음' : room,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -430,20 +442,11 @@ class NextClassCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (professor.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          '$professor 교수님',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: HomeV7Colors.cardSub,
-                            fontSize: 13,
-                            height: 1.4,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                      _WalkOrProfessorLine(
+                        professor: professor,
+                        origin: walkOrigin,
+                        destination: walkDestination,
+                      ),
                     ],
                   ),
                 ),
@@ -471,6 +474,95 @@ class NextClassCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 강의실 아래 한 줄. 앞 수업 건물에서 걷는 시간을 구하면 "걸어서 N분 · Mm",
+/// 못 구하면(첫 수업, 같은 건물, 건물을 못 찾음) 교수님 이름을 보여준다.
+class _WalkOrProfessorLine extends StatefulWidget {
+  const _WalkOrProfessorLine({
+    required this.professor,
+    required this.origin,
+    required this.destination,
+  });
+
+  final String professor;
+  final CampusBuilding? origin;
+  final CampusBuilding? destination;
+
+  @override
+  State<_WalkOrProfessorLine> createState() => _WalkOrProfessorLineState();
+}
+
+class _WalkOrProfessorLineState extends State<_WalkOrProfessorLine> {
+  /// 캠퍼스 길 데이터는 한 번만 읽도록 화면 전체에서 같이 쓴다.
+  static final _routeService = CampusRouteService();
+
+  CampusRoute? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_WalkOrProfessorLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.origin?.name != widget.origin?.name ||
+        oldWidget.destination?.name != widget.destination?.name) {
+      _route = null;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final origin = widget.origin;
+    final destination = widget.destination;
+    if (origin == null ||
+        destination == null ||
+        origin.name == destination.name) {
+      return;
+    }
+    try {
+      final route = await _routeService.findRoute(
+        origin: GeoPoint(lat: origin.lat, lng: origin.lng),
+        destination: GeoPoint(lat: destination.lat, lng: destination.lng),
+      );
+      if (!mounted ||
+          widget.origin?.name != origin.name ||
+          widget.destination?.name != destination.name) {
+        return;
+      }
+      setState(() => _route = route);
+    } catch (e) {
+      debugPrint('[Home] 걷는 거리 계산 실패: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final route = _route;
+    final text = route != null
+        ? '걸어서 ${route.walkMinutes}분 · ${route.distanceMeters.round()}m'
+        : widget.professor.isNotEmpty
+        ? '${widget.professor} 교수님'
+        : null;
+    if (text == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: HomeV7Colors.cardSub,
+          fontSize: 13,
+          height: 1.4,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
