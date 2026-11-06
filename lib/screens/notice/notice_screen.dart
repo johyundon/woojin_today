@@ -4,6 +4,7 @@ import '../../services/notice_service.dart';
 import '../../services/notice_watcher.dart';
 import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
+import '../../services/session_cache.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
@@ -18,8 +19,8 @@ import 'widgets/notice_list_card.dart';
 /// 저장하지 않고 화면이 열려 있는 동안만 유지된다).
 ///
 /// 학사공지·마일리지장학 공지·종합강의시간표 공지를 학교 홈페이지에서 받아
-/// 보여준다. 종합강의시간표 공지는 로그인한 사람만 볼 수 있어서 로그인 정보
-/// ([jsessionId])가 있을 때만 불러오고, 따로 "시간표" 칩으로도 모아 볼 수 있다
+/// 보여준다. 종합강의시간표 공지는 로그인한 사람만 볼 수 있어서 로그인 때
+/// 홈페이지가 준 쿠키([SessionCache.homepageCookie])가 있을 때만 불러오고, 따로 "시간표" 칩으로도 모아 볼 수 있다
 /// (로그인했을 때만 칩이 보인다)([NoticeService],
 /// 1시간 캐시, 당겨서 새로고침). 실제 게시판이 없는 학과·행사 탭과 목업 공지
 /// ([NoticeMockData](services/notice_mock_data.dart))는 코드를 남겨 두고 화면에서만
@@ -33,14 +34,13 @@ class NoticeScreen extends StatefulWidget {
   const NoticeScreen({
     this.service,
     this.watcher,
-    this.jsessionId,
-    this.wmonid,
+    this.loginCookie,
     super.key,
   });
 
-  /// 포털 로그인 쿠키. 있어야 종합강의시간표 공지를 읽을 수 있다.
-  final String? jsessionId;
-  final String? wmonid;
+  /// 로그인 때 홈페이지가 준 쿠키. 없으면 [SessionCache.homepageCookie]를 쓴다
+  /// (테스트에서 직접 넣는다). 있어야 종합강의시간표 공지를 읽을 수 있다.
+  final String? loginCookie;
 
   /// 테스트용 주입 지점.
   final NoticeServiceBase? service;
@@ -58,23 +58,22 @@ class _NoticeScreenState extends State<NoticeScreen> {
   late final List<NoticeTag> _visibleTags = [
     NoticeTag.academic,
     NoticeTag.scholarship,
-    if (widget.jsessionId != null) NoticeTag.timetable,
+    if (_loginCookie != null) NoticeTag.timetable,
   ];
 
   final _notifications = NotificationService.instance;
   final _readStorage = NoticeReadStorage();
+  late final String? _loginCookie =
+      widget.loginCookie ?? SessionCache.homepageCookie;
+
   late final NoticeServiceBase _service =
-      widget.service ??
-      ServiceFactory.notice(
-        jsessionId: widget.jsessionId,
-        wmonid: widget.wmonid,
-      );
+      widget.service ?? ServiceFactory.notice(loginCookie: _loginCookie);
 
   /// 이번에 불러올 게시판. 로그인 정보가 없으면 로그인이 필요한 게시판은
   /// 오류 없이 건너뛴다.
   late final List<NoticeBoard> _boards = [
     for (final board in NoticeBoard.values)
-      if (!board.requiresLogin || widget.jsessionId != null) board,
+      if (!board.requiresLogin || _loginCookie != null) board,
   ];
   late final NoticeWatcher _watcher =
       widget.watcher ?? NoticeWatcher(service: _service);

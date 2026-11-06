@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/credential_storage.dart';
 import '../services/portal_login_service.dart';
 import '../services/service_factory.dart';
+import '../services/session_cache.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import '../widgets/pressable.dart';
@@ -150,6 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
       }
 
+      SessionCache.homepageCookie = result.homepageCookie;
       final next = await postLoginScreen(
         userId: userId,
         jsessionId: result.jsessionId,

@@ -321,12 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Route<void> _collectionRoute() => MaterialPageRoute(
     builder: (_) =>
-        CollectionScreen(
-          userId2: widget.userId2,
-          jsessionId: widget.jsessionId,
-          wmonid: widget.wmonid,
-          onTabTap: _goToTab,
-        ),
+        CollectionScreen(userId2: widget.userId2, onTabTap: _goToTab),
   );
 
   Route<void> _calendarRoute() =>
@@ -353,13 +348,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _openNotice() async {
     setState(() => _hasNewNotice = false);
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => NoticeScreen(
-          watcher: _noticeWatcher,
-          jsessionId: widget.jsessionId,
-          wmonid: widget.wmonid,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => NoticeScreen(watcher: _noticeWatcher)),
     );
   }
 

@@ -210,6 +210,9 @@ void main() {
       expect(result.jsessionId, 'js_new_dreams2');
       expect(result.wmonid, 'wmo_new_dreams2');
       expect(result.userId2, 'stu002');
+      // 홈페이지(www)용 쿠키는 dreams2 값에 덮이지 않고 www가 준 값 그대로다
+      // (종합강의시간표 공지가 "다시 로그인 필요"로 뜨던 원인).
+      expect(result.homepageCookie, 'WMONID=wmo_old; JSESSIONID=js_old');
     });
 
     test('HTTP 3xx가 아니라 <meta refresh>로 지시하는 클라이언트 사이드 리다이렉트도 따라간다', () async {

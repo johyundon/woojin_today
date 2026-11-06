@@ -42,9 +42,10 @@ class ServiceFactory {
 
   /// 공지(학사·마일리지장학)는 공개 게시판이라 `kUseMockApi`와 상관없이 항상 실제
   /// 서버를 부른다(1시간 캐시로 요청을 줄인다).
-  /// [jsessionId]/[wmonid]를 주면 로그인이 필요한 게시판(종합강의시간표)도 읽는다.
-  static NoticeServiceBase notice({String? jsessionId, String? wmonid}) =>
-      NoticeService(jsessionId: jsessionId, wmonid: wmonid);
+  /// [loginCookie](로그인 때 홈페이지가 준 쿠키)를 주면 로그인이 필요한
+  /// 게시판(종합강의시간표)도 읽는다.
+  static NoticeServiceBase notice({String? loginCookie}) =>
+      NoticeService(loginCookie: loginCookie);
 
   /// 마일리지(내 점수·지급 내역·장학 대상자 확인). 로그인한 본인의 실제 점수를
   /// 보여줘야 하므로 `kUseMockApi`와 상관없이 항상 실제 서버를 부른다(내 현황은

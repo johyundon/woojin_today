@@ -335,8 +335,7 @@ void main() {
       final log = <http.Request>[];
       final items = await NoticeService(
         client: loginServer(log),
-        jsessionId: 'j1',
-        wmonid: 'w1',
+        loginCookie: 'JSESSIONID=j1; WMONID=w1',
       ).fetchNotices(NoticeBoard.timetable);
 
       expect(items.single.title, '2학기 종합강의시간표');
@@ -348,7 +347,7 @@ void main() {
       final log = <http.Request>[];
       final expired = NoticeService(
         client: loginServer(log),
-        jsessionId: 'old',
+        loginCookie: 'JSESSIONID=old',
       );
       await expectLater(
         expired.fetchNotices(NoticeBoard.timetable),
@@ -366,8 +365,7 @@ void main() {
       final log = <http.Request>[];
       await NoticeService(
         client: loginServer(log),
-        jsessionId: 'j1',
-        wmonid: 'w1',
+        loginCookie: 'JSESSIONID=j1; WMONID=w1',
       ).fetchNotices(NoticeBoard.academic);
       expect(log.single.headers['Cookie'], isNull);
     });
@@ -376,7 +374,7 @@ void main() {
       final log = <http.Request>[];
       final service = NoticeService(
         client: loginServer(log),
-        jsessionId: 'j1',
+        loginCookie: 'JSESSIONID=j1',
       );
       await service.fetchNotices(NoticeBoard.timetable);
       final detail = await service.fetchDetail(ttPath);

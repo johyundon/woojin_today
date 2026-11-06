@@ -103,14 +103,14 @@ class _FakeNotices implements NoticeServiceBase {
 Future<void> _pump(
   WidgetTester tester,
   _FakeNotices service, {
-  String? jsessionId,
+  String? loginCookie,
 }) async {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
-      home: NoticeScreen(service: service, jsessionId: jsessionId),
+      home: NoticeScreen(service: service, loginCookie: loginCookie),
     ),
   );
   await tester.pumpAndSettle();
@@ -257,7 +257,7 @@ void main() {
 
     testWidgets('로그인했으면 다른 공지와 함께 최신순 맨 위에 보인다', (tester) async {
       final service = _FakeNotices();
-      await _pump(tester, service, jsessionId: 'j1');
+      await _pump(tester, service, loginCookie: 'JSESSIONID=j1');
       expect(service.boards, contains(NoticeBoard.timetable));
       expect(find.text('2026학년도 2학기 종합강의시간표 안내'), findsOneWidget);
       final top = tester.getTopLeft(find.text('2026학년도 2학기 종합강의시간표 안내'));
@@ -271,7 +271,7 @@ void main() {
     });
 
     testWidgets('"시간표" 칩을 누르면 시간표 공지만 보인다', (tester) async {
-      await _pump(tester, _FakeNotices(), jsessionId: 'j1');
+      await _pump(tester, _FakeNotices(), loginCookie: 'JSESSIONID=j1');
       // 칩 줄의 "시간표"(목록 카드의 분류 표시와 구분하려고 첫 번째를 누른다).
       await tester.tap(find.text('시간표').first);
       await tester.pumpAndSettle();
@@ -283,7 +283,7 @@ void main() {
 
     testWidgets('로그인이 만료됐으면 "다시 로그인 필요"를 알린다', (tester) async {
       final service = _FakeNotices()..timetableExpired = true;
-      await _pump(tester, service, jsessionId: 'old');
+      await _pump(tester, service, loginCookie: 'JSESSIONID=old');
       expect(find.textContaining('다시 로그인 필요'), findsOneWidget);
       // 나머지 공지는 그대로 보인다.
       expect(find.text('부·복수전공 이수신청 안내'), findsOneWidget);

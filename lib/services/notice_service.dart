@@ -17,7 +17,7 @@ enum NoticeBoard {
 
   /// 종합강의시간표 공지. **로그인한 사람만** 볼 수 있다 — 로그인 정보 없이
   /// 요청하면 상태 200에 "접근 권한이 없습니다."만 담겨 온다(2026-11-06 직접
-  /// 확인). 그래서 포털 로그인 쿠키를 실어 보낸다([NoticeService.new]).
+  /// 확인). 그래서 로그인 때 홈페이지가 준 쿠키를 실어 보낸다([NoticeService.new]).
   timetable(
     '/daejin/7482/subview.do',
     NoticeTag.timetable,
@@ -112,19 +112,19 @@ abstract class NoticeServiceBase {
 /// 목록은 게시판별로 1시간 동안 기기에 저장해 두고 다시 요청하지 않는다. 상세는
 /// 앱이 켜져 있는 동안만 기억한다. 실패한 결과는 저장하지 않는다.
 class NoticeService implements NoticeServiceBase {
-  /// [jsessionId]/[wmonid]: 포털 로그인으로 받은 www.daejin.ac.kr 쿠키.
-  /// 로그인이 필요한 게시판([NoticeBoard.requiresLogin])과 그 글 상세에만
-  /// 실어 보낸다 — 지금 잘 되는 공개 게시판의 동작은 바꾸지 않기 위해서다.
+  /// [loginCookie]: 로그인 때 학교 홈페이지(www.daejin.ac.kr)가 준 쿠키를
+  /// 모은 Cookie 헤더 값(`PortalLoginResult.homepageCookie`). 로그인이 필요한
+  /// 게시판([NoticeBoard.requiresLogin])과 그 글 상세에만 실어 보낸다 — 지금
+  /// 잘 되는 공개 게시판의 동작은 바꾸지 않기 위해서다.
   NoticeService({
     http.Client? client,
     DateTime Function()? now,
-    String? jsessionId,
-    String? wmonid,
+    String? loginCookie,
   }) : _client = client ?? http.Client(),
        _now = now ?? DateTime.now,
        _loginCookies = [
-         if (jsessionId != null) 'JSESSIONID=$jsessionId',
-         if (wmonid != null) 'WMONID=$wmonid',
+         for (final pair in (loginCookie ?? '').split(';'))
+           if (pair.trim().isNotEmpty) pair.trim(),
        ];
 
   static const _base = 'https://www.daejin.ac.kr';

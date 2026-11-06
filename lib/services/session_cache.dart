@@ -22,6 +22,11 @@ class SessionCache {
   static final Map<String, List<CourseCatalogItem>> _courseCatalogCache = {};
   static final Map<String, MyTimetableResponse> _myTimetableCache = {};
 
+  /// 로그인할 때 학교 홈페이지가 준 쿠키(`PortalLoginResult.homepageCookie`).
+  /// 로그인한 사람만 보이는 홈페이지 게시판(종합강의시간표 공지)에 쓴다.
+  /// 로그인 화면·자동 로그인(스플래시)에서 채우고 [clear]로 지운다.
+  static String? homepageCookie;
+
   /// [StudentInfoServiceBase.fetchStudentInfo] 결과를 [userId2] 기준으로
   /// 캐싱한다. 이 서비스 호출은 jsessionId/wmonid를 쓰지 않으므로(명세:
   /// SUGANG_SIMPLE_COOKIE 패턴) 키에도 포함하지 않는다.
@@ -111,5 +116,6 @@ class SessionCache {
     _studentInfoCache.clear();
     _courseCatalogCache.clear();
     _myTimetableCache.clear();
+    homepageCookie = null;
   }
 }

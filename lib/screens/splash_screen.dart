@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../services/credential_storage.dart';
 import '../services/portal_login_service.dart';
 import '../services/service_factory.dart';
+import '../services/session_cache.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import 'login_screen.dart';
@@ -63,6 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
     await minDisplay;
     if (!mounted) return;
     if (loginSucceeded && result != null) {
+      SessionCache.homepageCookie = result.homepageCookie;
       // 보통은 바로 로그인 완료 화면이지만, 약관 버전이 바뀌었거나 온보딩을
       // 끝내지 않은 학번이면 그 화면부터 보여준다.
       final next = await postLoginScreen(

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'host_cookie_jar.dart';
+
 /// `POST /subLogin/daejin/login.do` (+ 필요시 `GET /sugang/LinkPortal.jsp?dvd=P`
 /// 2단계 폴백) 호출 결과.
 ///
@@ -18,6 +20,7 @@ class PortalLoginResult {
     this.jsessionId,
     this.userId2,
     this.passwordChangeOverdue = false,
+    this.homepageCookie,
   });
 
   final bool success;
@@ -41,6 +44,12 @@ class PortalLoginResult {
   /// "6개월간 변경하지 않았습니다" 안내 페이지를 끼워 넣는 것으로만 드러낸다.
   /// 그래서 1단계 체인의 모든 홉 HTML에서 이 문구를 찾아 판단한다.
   final bool passwordChangeOverdue;
+
+  /// 로그인 중 학교 홈페이지(www.daejin.ac.kr)가 준 쿠키만 모은 Cookie 헤더 값
+  /// ("JSESSIONID=...; WMONID=..."). 로그인해야 보이는 홈페이지 게시판
+  /// (종합강의시간표 공지)에 쓴다. [jsessionId]는 2단계 폴백에서 수강신청
+  /// 서버(dreams2) 값으로 바뀔 수 있어 홈페이지에는 쓸 수 없다.
+  final String? homepageCookie;
 }
 
 /// 네트워크 연결 실패 또는 서버 오류(5xx 등)로 로그인 요청 자체를 완료하지
@@ -96,6 +105,7 @@ class PortalLoginService implements PortalLoginServiceBase {
   static final List<String> debugLog = [];
 
   static const _loginUrl = 'https://www.daejin.ac.kr/subLogin/daejin/login.do';
+  static final _homepage = Uri.parse('https://www.daejin.ac.kr/');
   static const _fallbackUrl =
       'https://dreams2.daejin.ac.kr/sugang/LinkPortal.jsp?dvd=P';
   static const _userAgent =
@@ -146,17 +156,32 @@ class PortalLoginService implements PortalLoginServiceBase {
     // 1단계와 2단계(폴백)는 같은 로그인 시도이므로 같은 쿠키 저장소를
     // 공유해야 한다 — client 인스턴스뿐 아니라 수집한 쿠키 맵도 함께 넘긴다.
     final cookieJar = <String, String>{};
+    // 위 [cookieJar]는 이름만으로 담아 서버별 쿠키가 서로 덮어쓴다. 홈페이지
+    // 쿠키를 따로 꺼내려고 서버별로도 같이 담는다.
+    final hostJar = HostCookieJar();
+    String? homepageCookie() {
+      final header = hostJar.headerFor(_homepage);
+      return header.isEmpty ? null : header;
+    }
+
     try {
       if (kDebugMode) debugLog.clear();
-      final step1 = await _step1(client, cookieJar, userId, userPwd);
+      final step1 = await _step1(client, cookieJar, hostJar, userId, userPwd);
       if (step1.failReason != null) {
         return step1;
       }
       if (kDebugMode) await _debugCheckPwdChange(client, cookieJar);
       if (step1.userId2 != null) {
-        return step1;
+        return PortalLoginResult(
+          success: true,
+          wmonid: step1.wmonid,
+          jsessionId: step1.jsessionId,
+          userId2: step1.userId2,
+          passwordChangeOverdue: step1.passwordChangeOverdue,
+          homepageCookie: homepageCookie(),
+        );
       }
-      final fallbackUid = await _step2Fallback(client, cookieJar);
+      final fallbackUid = await _step2Fallback(client, cookieJar, hostJar);
       // 2단계 폴백(LinkPortal.jsp)은 www.daejin.ac.kr이 아니라
       // dreams2.daejin.ac.kr(+ nsso.daejin.ac.kr SSO 리다이렉트)을 거치는데,
       // 이 흐름에서 dreams2 쪽이 1단계와는 다른 자체 JSESSIONID/WMONID를
@@ -171,6 +196,7 @@ class PortalLoginService implements PortalLoginServiceBase {
         jsessionId: cookieJar['JSESSIONID'] ?? step1.jsessionId,
         userId2: fallbackUid,
         passwordChangeOverdue: step1.passwordChangeOverdue,
+        homepageCookie: homepageCookie(),
       );
     } on PortalLoginException {
       rethrow;
@@ -184,6 +210,7 @@ class PortalLoginService implements PortalLoginServiceBase {
   Future<PortalLoginResult> _step1(
     http.Client client,
     Map<String, String> cookieJar,
+    HostCookieJar hostJar,
     String userId,
     String userPwd,
   ) async {
@@ -204,7 +231,7 @@ class PortalLoginService implements PortalLoginServiceBase {
       ..headers['User-Agent'] = _userAgent
       ..body = body;
 
-    final chain = await _followRedirects(client, cookieJar, request);
+    final chain = await _followRedirects(client, cookieJar, hostJar, request);
 
     final wmonid = _firstMatch(_wmonidPattern, chain.setCookies);
     final jsessionId = _firstMatch(_jsessionIdPattern, chain.setCookies);
@@ -255,12 +282,13 @@ class PortalLoginService implements PortalLoginServiceBase {
   Future<String?> _step2Fallback(
     http.Client client,
     Map<String, String> cookieJar,
+    HostCookieJar hostJar,
   ) async {
     final request = http.Request('GET', Uri.parse(_fallbackUrl))
       ..headers['Referer'] = 'https://www.daejin.ac.kr/'
       ..headers['User-Agent'] = _userAgent;
 
-    final chain = await _followRedirects(client, cookieJar, request);
+    final chain = await _followRedirects(client, cookieJar, hostJar, request);
 
     // "마지막 매치"를 채택해야 하므로 전부 순회하며 덮어쓴다.
     String? userId2;
@@ -343,6 +371,7 @@ class PortalLoginService implements PortalLoginServiceBase {
   Future<_RedirectChainResult> _followRedirects(
     http.Client client,
     Map<String, String> cookieJar,
+    HostCookieJar hostJar,
     http.Request initialRequest,
   ) async {
     final setCookies = <String>[];
@@ -371,6 +400,7 @@ class PortalLoginService implements PortalLoginServiceBase {
       final hopSetCookies =
           response.headersSplitValues['set-cookie'] ?? const <String>[];
       setCookies.addAll(hopSetCookies);
+      hostJar.store(request.url, hopSetCookies);
       for (final cookie in hopSetCookies) {
         final pair = cookie.split(';').first;
         final eq = pair.indexOf('=');
