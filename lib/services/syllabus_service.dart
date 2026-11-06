@@ -187,13 +187,37 @@ class SyllabusService implements SyllabusServiceBase {
     return 'ic_kwa=B41005&ic_kwa_1=$code%20';
   }
 
+  /// 교양선택 과목인지. 이 과목은 [categoryQuery] 대신 영역 목록을 뒤진다.
+  static bool isElective(CourseCatalogItem course) {
+    final type = course.courseType.trim();
+    return type.startsWith('교선') || type.startsWith('교양선택');
+  }
+
+  /// 교양선택 영역 목록 쿼리. 현재 쓰는 제1~제C 영역만, 앞 번호부터.
+  ///
+  /// 코드는 학교 강의계획서 검색 화면(`Blsn020301.jsp`) 스크립트에서 가져왔다
+  /// (2026-11-06 실제 응답 확인). 같은 화면에 옛 분류로 보이는 코드 7개
+  /// (B42010~12, B42020~21, B42030~31)도 있지만, 요청 수를 줄이려고 뺐다.
+  /// 코드 뒤 공백(`%20`)은 검색 화면의 실제 값을 따른 것이다.
+  static const electiveAreaQueries = [
+    'ic_kwa=B41002&ic_kwa_2=B42001%20', // 제1영역: 인간과소통
+    'ic_kwa=B41002&ic_kwa_2=B42002%20', // 제2영역: 사회와경제
+    'ic_kwa=B41002&ic_kwa_2=B42003%20', // 제3영역: 과학과기술
+    'ic_kwa=B41002&ic_kwa_2=B42004%20', // 제4영역: 예술과문화
+    'ic_kwa=B41002&ic_kwa_2=B42005%20', // 제5영역: 융합과혁신
+    'ic_kwa=B41002&ic_kwa_2=B42006%20', // 제6영역: AI·디지털리터러시
+    'ic_kwa=B41002&ic_kwa_2=B42007%20', // 제7영역: 기타(평생교육사,취업스쿨)
+    'ic_kwa=B41002&ic_kwa_2=B42008%20', // 제8영역: 사회봉사
+    'ic_kwa=B41002&ic_kwa_2=B42009%20', // 제9영역: 전공탐색
+    'ic_kwa=B41002&ic_kwa_2=B4200A%20', // 제A영역: 위성강의및인터넷
+    'ic_kwa=B41002&ic_kwa_2=B4200B%20', // 제B영역: 기타
+    'ic_kwa=B41002&ic_kwa_2=B4200C%20', // 제C영역: DUCC
+  ];
+
   /// [categoryQuery]가 null일 때 사용자에게 보여줄 이유.
   static String unavailableReason(CourseCatalogItem course) {
     final type = course.courseType.trim();
     final department = course.department?.trim() ?? '';
-    if (type.startsWith('교선') || type.startsWith('교양')) {
-      return '교양선택 과목은 아직 강의계획서를 불러올 수 없어요.';
-    }
     if (type.startsWith('전') && department.isEmpty) {
       // 예전에 저장한 시간표나 검색에서 담은 과목은 개설학과 정보가 없다.
       return '학과 정보가 없어 강의계획서를 찾을 수 없어요.\n'
@@ -214,24 +238,37 @@ class SyllabusService implements SyllabusServiceBase {
     required String wmonid,
     required String userId2,
   }) async {
-    final category = categoryQuery(course);
-    if (category == null) {
-      throw SyllabusUnavailableException(unavailableReason(course));
-    }
     final cookie =
         'JSESSIONID=$jsessionId; user_id=$userId2; userId=$userId2; '
         '$_fixedCookieFields; WMONID=$wmonid';
-
     final key = '${course.courseCode}-${course.section}';
-    var href = (await _links(year, semester, category, cookie))[key];
-    // 일선처럼 다른 학과 전공을 듣는 과목은 분류 목록이 아니라 개설학과의
-    // 전공 목록에 있다(2026-11-01 실제 일선 과목에서 확인). 이때만 한 번 더 찾는다.
-    final department = departmentQuery(course);
-    if (href == null && department != null && department != category) {
-      href = (await _links(year, semester, department, cookie))[key];
-    }
-    if (href == null) {
-      throw const SyllabusUnavailableException('강의계획서 목록에 이 과목이 없어요.');
+
+    String? href;
+    if (isElective(course)) {
+      // 과목이 어느 영역인지 몰라서 영역 목록을 하나씩 받아 보며 찾는다.
+      // 찾으면 바로 멈추고, 받은 목록은 [_links]가 기억해 다시 쓴다.
+      for (final area in electiveAreaQueries) {
+        href = (await _links(year, semester, area, cookie))[key];
+        if (href != null) break;
+      }
+      if (href == null) {
+        throw const SyllabusUnavailableException('교양선택 영역 목록에서 이 과목을 찾지 못했어요.');
+      }
+    } else {
+      final category = categoryQuery(course);
+      if (category == null) {
+        throw SyllabusUnavailableException(unavailableReason(course));
+      }
+      href = (await _links(year, semester, category, cookie))[key];
+      // 일선처럼 다른 학과 전공을 듣는 과목은 분류 목록이 아니라 개설학과의
+      // 전공 목록에 있다(2026-11-01 실제 일선 과목에서 확인). 이때만 한 번 더 찾는다.
+      final department = departmentQuery(course);
+      if (href == null && department != null && department != category) {
+        href = (await _links(year, semester, department, cookie))[key];
+      }
+      if (href == null) {
+        throw const SyllabusUnavailableException('강의계획서 목록에 이 과목이 없어요.');
+      }
     }
 
     final detailUri = Uri.parse('${_base}Blsn020302.jsp').resolve(href);

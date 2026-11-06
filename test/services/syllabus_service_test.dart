@@ -91,10 +91,6 @@ void main() {
 
   test('찾을 수 없는 이유를 과목 상태별로 알려준다', () {
     expect(
-      SyllabusService.unavailableReason(_course(type: '교선')),
-      '교양선택 과목은 아직 강의계획서를 불러올 수 없어요.',
-    );
-    expect(
       SyllabusService.unavailableReason(_course(type: '전필')),
       contains('내 시간표 불러오기'),
     );
@@ -179,12 +175,52 @@ void main() {
       expect(calls, 3); // 목록 1 + 상세(01) 1 + 상세(02) 1
     });
 
-    test('교양선택처럼 분류를 모르는 과목은 요청 없이 Unavailable', () async {
+    test('교양선택은 영역 목록을 앞에서부터 찾다가 있으면 멈추고 상세를 연다', () async {
+      // 제1·2영역은 비어 있고 제3영역 목록에 과목이 있는 서버.
+      final requested = <Uri>[];
+      final service = SyllabusService(
+        client: MockClient((request) async {
+          requested.add(request.url);
+          if (!request.url.path.endsWith('Blsn020302.jsp')) {
+            return _euckr('syllabus_detail_anonymized.html');
+          }
+          return request.url.query.contains('B42003')
+              ? _euckr('syllabus_list_anonymized.html')
+              : http.Response('<html><body><table></table></body></html>', 200);
+        }),
+      );
+      Future<SyllabusDetail> open() => service.fetchSyllabus(
+        course: _course(type: '교선'),
+        year: 2026,
+        semester: 2,
+        jsessionId: 'J',
+        wmonid: 'W',
+        userId2: 'U',
+      );
+
+      final detail = await open();
+      expect(requested.map((u) => u.query), [
+        'fhd_yyyy=2026&fhd_shtm=2&ic_kwa=B41002&ic_kwa_2=B42001%20',
+        'fhd_yyyy=2026&fhd_shtm=2&ic_kwa=B41002&ic_kwa_2=B42002%20',
+        'fhd_yyyy=2026&fhd_shtm=2&ic_kwa=B41002&ic_kwa_2=B42003%20',
+        'fhd_00=922601&fhd_01=01&fhd_02=2026&fhd_03=2&fhd_04=1234567',
+      ]);
+      expect(detail.info('담당교수'), '김가상');
+
+      // 다시 열면 받은 목록과 상세를 그대로 쓴다.
+      await open();
+      expect(requested, hasLength(4));
+    });
+
+    test('교양선택 영역 12개 어디에도 없으면 Unavailable', () async {
       var calls = 0;
       final service = SyllabusService(
         client: MockClient((request) async {
           calls++;
-          return http.Response('', 200);
+          return http.Response(
+            '<html><body><table></table></body></html>',
+            200,
+          );
         }),
       );
 
@@ -197,9 +233,15 @@ void main() {
           wmonid: 'W',
           userId2: 'U',
         ),
-        throwsA(isA<SyllabusUnavailableException>()),
+        throwsA(
+          isA<SyllabusUnavailableException>().having(
+            (e) => e.message,
+            'message',
+            '교양선택 영역 목록에서 이 과목을 찾지 못했어요.',
+          ),
+        ),
       );
-      expect(calls, 0);
+      expect(calls, 12);
     });
 
     test('목록에 과목이 없으면 Unavailable', () async {

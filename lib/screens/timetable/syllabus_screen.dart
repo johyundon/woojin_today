@@ -14,7 +14,7 @@ import '../../widgets/pressable.dart';
 ///
 /// [SyllabusService]로 학교 강의계획서를 불러와 위쪽 정보와 5칸(개요,
 /// 선수과목, 핵심역량·수업목표, 주별 수업계획, 평가방법)을 채운다. 불러오기
-/// 전에는 [CourseCatalogItem]에 있는 값만 보여준다. 교양선택처럼 강의계획서를
+/// 전에는 [CourseCatalogItem]에 있는 값만 보여준다. 다른 학과 전공처럼 강의계획서를
 /// 찾을 방법이 없는 과목은 그 사실만 안내한다(다시 시도 없음).
 class SyllabusScreen extends StatefulWidget {
   const SyllabusScreen({
