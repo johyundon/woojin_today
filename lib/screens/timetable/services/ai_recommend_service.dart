@@ -23,17 +23,32 @@ bool isMajorCourseType(String courseType) => courseType.trim().startsWith('전')
 String? _gradeDigit(String targetGrade) =>
     RegExp(r'[1-4]').firstMatch(targetGrade)?.group(0);
 
+/// 담은 인원 비율(정원 대비 담은 사람, 예: "56.3%")을 숫자로. 못 읽으면 0.
+/// 꿀강의(많이 담는 과목) 판단에 쓴다. 정원을 넘으면 100보다 크다(최대 300으로 자름).
+double _fillRatio(String enrollmentRatio) {
+  final v = double.tryParse(enrollmentRatio.trim().replaceAll('%', ''));
+  return v == null ? 0 : v.clamp(0, 300).toDouble();
+}
+
 /// 교직 과목은 교직 이수자만 듣는 과목이라 자동 생성 후보에서 뺀다.
 bool _isTeachingCourse(String courseType) => courseType.trim() == '교직';
 
 /// 자동 생성이 참고하는 "나"에 대한 정보. 못 구하면 null로 두고, 그 경우엔
 /// 학과·학년을 가리지 않는다.
 class AiRecommendProfile {
-  const AiRecommendProfile({this.myMajorCourseCodes, this.myGrade});
+  const AiRecommendProfile({
+    this.myMajorCourseCodes,
+    this.secondMajorCourseCodes,
+    this.myGrade,
+  });
 
   /// 내 학과 전공 과목코드(학과별 개설과목 조회 결과). 있으면 이 목록에 없는
   /// 전공 과목(다른 학과 전공)은 후보에서 뺀다. 교양은 학과와 상관없이 둔다.
   final Set<String>? myMajorCourseCodes;
+
+  /// 타전공(복수전공) 학과 전공 과목코드. 설문에서 학과를 골랐을 때만 있다.
+  /// 있으면 이 과목들도 전공 후보로 두고, 주전공/타전공 비율을 맞춘다.
+  final Set<String>? secondMajorCourseCodes;
 
   /// 내 학년(1~4). 있으면 대상학년이 같은 전공 과목을 먼저 고른다.
   final int? myGrade;
@@ -48,9 +63,10 @@ class AiRecommendProfile {
 /// 높은(목표 학점에 가깝고, 전공 비율·학년·오전오후 균형이 맞는) 서로 다른
 /// 후보를 고른다.
 ///
-/// [AiRecommendAnswers.majorSubRatio](주전공/타전공)와
-/// [ExtraOption.honeyLecturesPreferred](꿀강의)는 아직 반영하지 않는다(모델
-/// 문서 참고).
+/// [AiRecommendAnswers.majorSubRatio](주전공/타전공)는 타전공 학과 목록
+/// ([AiRecommendProfile.secondMajorCourseCodes])이 있을 때만,
+/// [ExtraOption.honeyLecturesPreferred](꿀강의)는 담은 인원 비율이 높은 과목을
+/// 앞에 두고 점수를 더 주는 방식으로 반영한다.
 List<List<PlannedCourse>> generateTimetableCandidates({
   required List<CourseCatalogItem> catalog,
   required AiRecommendAnswers answers,
@@ -96,11 +112,23 @@ List<List<PlannedCourse>> generateTimetableCandidates({
 
 /// 과목 하나와 미리 풀어 둔 수업 시간.
 class _PoolItem {
-  const _PoolItem(this.item, this.slots, this.isMajor);
+  const _PoolItem(
+    this.item,
+    this.slots, {
+    required this.isMajor,
+    required this.isSecondMajor,
+    required this.fill,
+  });
 
   final CourseCatalogItem item;
   final List<ClassTimeSlot> slots;
   final bool isMajor;
+
+  /// 타전공(복수전공) 학과 전공인지. 주전공 목록에도 있으면 주전공으로 본다.
+  final bool isSecondMajor;
+
+  /// 담은 인원 비율(0~300).
+  final double fill;
 }
 
 /// 후보로 쓸 수 있는 과목만 남기고 수업 시간을 한 번만 풀어 둔다.
@@ -109,12 +137,16 @@ List<_PoolItem> _buildPool(
   AiRecommendProfile profile,
 ) {
   final myMajors = profile.myMajorCourseCodes;
+  final second = profile.secondMajorCourseCodes ?? const <String>{};
   final pool = <_PoolItem>[];
   for (final item in catalog) {
     if (item.isClosed || _isTeachingCourse(item.courseType)) continue;
     final isMajor = isMajorCourseType(item.courseType);
-    // 내 학과 전공 목록을 알면 다른 학과 전공은 뺀다.
-    if (isMajor && myMajors != null && !myMajors.contains(item.courseCode)) {
+    final inMine = myMajors?.contains(item.courseCode) ?? false;
+    final isSecondMajor =
+        isMajor && !inMine && second.contains(item.courseCode);
+    // 내 학과 전공 목록을 알면 다른 학과 전공은 뺀다(고른 타전공 학과는 둔다).
+    if (isMajor && myMajors != null && !inMine && !isSecondMajor) {
       continue;
     }
     final slots = parseRawSchedule(item.rawSchedule);
@@ -129,7 +161,15 @@ List<_PoolItem> _buildPool(
     )) {
       continue; // 시간표 칸 밖 시간 포함 과목은 제외.
     }
-    pool.add(_PoolItem(item, slots, isMajor));
+    pool.add(
+      _PoolItem(
+        item,
+        slots,
+        isMajor: isMajor,
+        isSecondMajor: isSecondMajor,
+        fill: _fillRatio(item.enrollmentRatio),
+      ),
+    );
   }
   return pool;
 }
@@ -137,7 +177,9 @@ List<_PoolItem> _buildPool(
 /// 담을 순서를 정한다. 전공과 그 밖의 과목을 따로 섞은 뒤, 고른 전공 비율만큼의
 /// 확률로 번갈아 꺼낸다. 내 학과 전공은 수십 개뿐이라 전체를 한꺼번에 섞으면
 /// 전공이 앞쪽에 거의 오지 않아 전공 비율을 못 채우기 때문이다. 전공 안에서는
-/// 내 학년 과목이 앞에 더 자주 오게 한다(무게 2배).
+/// 내 학년 과목이 앞에 더 자주 오게 한다(무게 2배). 타전공 학과를 골랐으면
+/// 전공 안에서 주전공과 타전공을 주전공 비율만큼의 확률로 번갈아 놓는다.
+/// 꿀강의를 골랐으면 담은 인원 비율이 높을수록 앞에 온다(100%면 무게 2배).
 List<_PoolItem> _weightedShuffle(
   List<_PoolItem> pool,
   AiRecommendAnswers answers,
@@ -145,30 +187,47 @@ List<_PoolItem> _weightedShuffle(
   Random rng,
 ) {
   final grade = profile.myGrade?.toString();
+  final honey = answers.extraOption == ExtraOption.honeyLecturesPreferred;
   double weight(_PoolItem p) =>
-      grade != null && p.isMajor && _gradeDigit(p.item.targetGrade) == grade
-      ? 2.0
-      : 1.0;
+      (grade != null && p.isMajor && _gradeDigit(p.item.targetGrade) == grade
+          ? 2.0
+          : 1.0) *
+      (honey ? 1 + p.fill / 100 : 1.0);
   List<_PoolItem> shuffle(Iterable<_PoolItem> items) {
     final keyed = [for (final p in items) (p, rng.nextDouble() * weight(p))]
       ..sort((a, b) => b.$2.compareTo(a.$2));
     return [for (final k in keyed) k.$1];
   }
 
-  final majors = shuffle(pool.where((p) => p.isMajor));
+  final mains = shuffle(pool.where((p) => p.isMajor && !p.isSecondMajor));
+  final seconds = shuffle(pool.where((p) => p.isSecondMajor));
+  final majors = seconds.isEmpty
+      ? mains
+      : _interleave(mains, seconds, answers.majorSubRatio / 100, rng);
   final others = shuffle(pool.where((p) => !p.isMajor));
   final majorChance = answers.majorRatioAny
       ? (pool.isEmpty ? 0.0 : majors.length / pool.length)
       : answers.majorRatio / 100;
 
+  return _interleave(majors, others, majorChance, rng);
+}
+
+/// [first]와 [second]를 순서대로 꺼내 하나로 잇는다. 매번 [firstChance]
+/// 확률로 [first]에서 꺼내고, 한쪽이 바닥나면 남은 쪽을 그대로 붙인다.
+List<_PoolItem> _interleave(
+  List<_PoolItem> first,
+  List<_PoolItem> second,
+  double firstChance,
+  Random rng,
+) {
   final ordered = <_PoolItem>[];
   var i = 0;
   var j = 0;
-  while (i < majors.length || j < others.length) {
-    final takeMajor =
-        j >= others.length ||
-        (i < majors.length && rng.nextDouble() < majorChance);
-    ordered.add(takeMajor ? majors[i++] : others[j++]);
+  while (i < first.length || j < second.length) {
+    final takeFirst =
+        j >= second.length ||
+        (i < first.length && rng.nextDouble() < firstChance);
+    ordered.add(takeFirst ? first[i++] : second[j++]);
   }
   return ordered;
 }
@@ -232,6 +291,8 @@ List<_PoolItem> _pickOneCandidate(
 /// - 전공 비율이 목표와 1%p 벌어질 때마다 -0.2
 /// - 내 학년 전공 과목마다 +1, 다른 학년 전공 과목마다 -1
 /// - "적당히 섞어주세요"면 오전·오후 수업 수 차이마다 -2
+/// - 타전공 학과를 골랐으면 주전공 비율이 목표와 1%p 벌어질 때마다 -0.1
+/// - 꿀강의를 골랐으면 과목마다 담은 인원 비율 100%당 +1(최대 +2)
 double _score(
   List<_PoolItem> picked,
   AiRecommendAnswers answers,
@@ -251,6 +312,24 @@ double _score(
   if (grade != null) {
     for (final p in picked.where((p) => p.isMajor)) {
       score += _gradeDigit(p.item.targetGrade) == grade ? 1 : -1;
+    }
+  }
+
+  final majorCredit = picked
+      .where((p) => p.isMajor)
+      .fold(0.0, (s, p) => s + p.item.credit);
+  if ((profile.secondMajorCourseCodes?.isNotEmpty ?? false) &&
+      majorCredit > 0) {
+    final mainCredit = picked
+        .where((p) => p.isMajor && !p.isSecondMajor)
+        .fold(0.0, (s, p) => s + p.item.credit);
+    score -=
+        0.1 * (mainCredit / majorCredit * 100 - answers.majorSubRatio).abs();
+  }
+
+  if (answers.extraOption == ExtraOption.honeyLecturesPreferred) {
+    for (final p in picked) {
+      score += min(p.fill, 200) / 100;
     }
   }
 

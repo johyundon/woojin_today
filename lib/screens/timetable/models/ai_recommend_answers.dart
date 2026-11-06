@@ -20,11 +20,10 @@ enum ExtraOption { honeyLecturesPreferred, any }
 
 /// AI 시간표 추천 5단계 설문 답변.
 ///
-/// [majorSubRatio]는 어떤 과목이 "내 주전공"인지 "타전공"인지 구분할 데이터가
-/// 앱에 없어 화면에만 보여주고 추천 로직에는 반영하지 않는다(값만 들고
-/// 있다가, 나중에 그런 데이터가 생기면 연결할 수 있게). [extraOption]의
-/// [ExtraOption.honeyLecturesPreferred]도 강의 평점/후기 데이터가 없어 같은
-/// 이유로 로직에는 반영하지 않는다.
+/// [majorSubRatio](주전공/타전공)는 [secondMajorDepartment](복수전공 학과)를
+/// 골랐을 때만 반영한다 — 앱은 복수전공 학과를 모르기 때문이다.
+/// [ExtraOption.honeyLecturesPreferred](꿀강의)는 담은 인원 비율(정원 대비
+/// 담은 사람, 예: "56.3%")이 높은 과목을 꿀강의로 보고 우선 담는다.
 class AiRecommendAnswers {
   AiRecommendAnswers({
     this.credit = 15,
@@ -35,6 +34,7 @@ class AiRecommendAnswers {
     this.majorRatio = 100,
     this.majorRatioAny = false,
     this.majorSubRatio = 60,
+    this.secondMajorDepartment,
     this.extraOption = ExtraOption.any,
   });
 
@@ -60,9 +60,12 @@ class AiRecommendAnswers {
   /// 추천 로직에서 무시한다.
   bool majorRatioAny;
 
-  /// 전공 비중 중 주전공 비율(0~100, 타전공은 100 - majorSubRatio) — UI
-  /// 전용, 추천 로직 미반영.
+  /// 전공 비중 중 주전공 비율(0~100, 타전공은 100 - majorSubRatio).
+  /// [secondMajorDepartment]가 있을 때만 추천에 반영한다.
   double majorSubRatio;
+
+  /// 타전공(복수전공) 학과 이름(학과 코드표의 이름). 없으면 타전공을 담지 않는다.
+  String? secondMajorDepartment;
 
   ExtraOption extraOption;
 }

@@ -32,9 +32,9 @@ CourseCatalogItem _item(dynamic r) => CourseCatalogItem(
   rawSchedule: r['rawSchedule'] as String,
   room: '',
   isClosed: r['isClosed'] as bool,
-  capacity: 0,
-  waitlistCount: 0,
-  enrollmentRatio: '',
+  capacity: (r['capacity'] as num).toInt(),
+  waitlistCount: (r['enrolled'] as num).toInt(),
+  enrollmentRatio: r['enrollmentRatio'] as String,
 );
 
 final _all = [for (final r in _json['all'] as List) _item(r)];
@@ -45,6 +45,16 @@ final _myMajors = {
 };
 
 final _profile = AiRecommendProfile(myMajorCourseCodes: _myMajors, myGrade: 3);
+
+/// 타전공 학과 대신 쓰는 다른 학과 전공 묶음(과목코드 앞자리 "86").
+final _secondMajors = {
+  for (final i in _all)
+    if (isMajorCourseType(i.courseType) && i.courseCode.startsWith('86'))
+      i.courseCode,
+};
+
+double _fill(PlannedCourse p) =>
+    double.tryParse(p.enrollmentRatio.replaceAll('%', '')) ?? 0;
 
 double _credit(List<PlannedCourse> c) => c.fold(0.0, (s, p) => s + p.credit);
 
@@ -154,5 +164,49 @@ void main() {
     _generate(AiRecommendAnswers(majorRatio: 60));
     sw.stop();
     expect(sw.elapsedMilliseconds, lessThan(1000));
+  });
+
+  test('꿀강의를 고르면 담은 인원 비율이 높은 과목을 담는다', () {
+    double avgFill(ExtraOption option) {
+      final all = _generate(
+        AiRecommendAnswers(majorRatio: 0, extraOption: option),
+      ).expand((c) => c).toList();
+      return all.fold(0.0, (s, p) => s + _fill(p)) / all.length;
+    }
+
+    final plain = avgFill(ExtraOption.any);
+    final honey = avgFill(ExtraOption.honeyLecturesPreferred);
+    expect(honey, greaterThan(plain + 20), reason: '보통 $plain% → 꿀강의 $honey%');
+  });
+
+  test('타전공 학과를 고르면 주전공/타전공 비율을 맞춰 담는다', () {
+    final profile = AiRecommendProfile(
+      myMajorCourseCodes: _myMajors,
+      secondMajorCourseCodes: _secondMajors,
+      myGrade: 3,
+    );
+    final candidates = _generate(
+      AiRecommendAnswers(majorRatio: 100, majorSubRatio: 50),
+      profile: profile,
+    );
+    for (final c in candidates) {
+      final mine = c.where((p) => _myMajors.contains(p.courseCode));
+      final second = c.where((p) => _secondMajors.contains(p.courseCode));
+      // 고른 두 학과 말고 다른 학과 전공은 없다.
+      expect(mine.length + second.length, c.length);
+      final mainShare =
+          mine.fold(0.0, (s, p) => s + p.credit) / _credit(c) * 100;
+      expect((mainShare - 50).abs(), lessThanOrEqualTo(30));
+      expect(_credit(c), greaterThanOrEqualTo(15));
+    }
+  });
+
+  test('타전공 학과를 안 고르면 다른 학과 전공은 담지 않는다', () {
+    for (final c in _generate(
+      AiRecommendAnswers(majorRatio: 100, majorSubRatio: 50),
+      profile: _profile,
+    )) {
+      expect(c.where((p) => _secondMajors.contains(p.courseCode)), isEmpty);
+    }
   });
 }

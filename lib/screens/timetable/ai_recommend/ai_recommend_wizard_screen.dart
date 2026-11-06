@@ -9,6 +9,7 @@ import '../../../widgets/primary_button.dart';
 import '../models/ai_recommend_answers.dart';
 import '../timetable_colors.dart';
 import 'ai_recommend_widgets.dart';
+import 'second_major_picker_sheet.dart';
 
 const List<Weekday> _weekdayValues = [
   Weekday.mon,
@@ -686,54 +687,10 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 16,
-                    ),
-                    decoration: _cardDecoration,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Opacity(
-                          opacity: 0.85,
-                          child: Text(
-                            '전공 비중 중에서, 주전공과 타전공 비율',
-                            style: TextStyle(
-                              color: AppColors.textStrong,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '주전공 ${answers.majorSubRatio.round()}%',
-                              style: _labelStyle,
-                            ),
-                            Opacity(
-                              opacity: 0.8,
-                              child: Text(
-                                '타전공 ${(100 - answers.majorSubRatio).round()}%',
-                                style: _labelStyle,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        AiSlider(
-                          value: answers.majorSubRatio,
-                          min: 0,
-                          max: 100,
-                          onChanged: (value) {
-                            setState(() => answers.majorSubRatio = value);
-                          },
-                        ),
-                      ],
-                    ),
+                  _SecondMajorCard(
+                    answers: answers,
+                    labelStyle: _labelStyle,
+                    onChanged: () => setState(() {}),
                   ),
                 ],
               ),
@@ -751,6 +708,104 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
         nextLabel: '다음',
         onNext: widget.onNext,
         onBack: widget.onBack,
+      ),
+    );
+  }
+}
+
+/// 4/5의 타전공 카드. 복수전공 학과를 고르기 전에는 고르는 줄만, 고른 뒤에는
+/// 주전공/타전공 비율 슬라이더도 보여준다(학과를 모르면 반영할 수 없어서).
+class _SecondMajorCard extends StatelessWidget {
+  const _SecondMajorCard({
+    required this.answers,
+    required this.labelStyle,
+    required this.onChanged,
+  });
+
+  final AiRecommendAnswers answers;
+  final TextStyle labelStyle;
+  final VoidCallback onChanged;
+
+  Future<void> _pick(BuildContext context) async {
+    final picked = await showSecondMajorPickerSheet(
+      context,
+      current: answers.secondMajorDepartment,
+    );
+    if (picked == null) return; // 그냥 닫음
+    answers.secondMajorDepartment = picked.isEmpty ? null : picked;
+    onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final second = answers.secondMajorDepartment;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: _cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Pressable(
+            pressedScale: 0.98,
+            onTap: () => _pick(context),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '타전공(복수전공) 학과',
+                    style: TextStyle(
+                      color: AppColors.textStrong,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  second ?? '선택 안 함',
+                  style: TextStyle(
+                    color: second == null ? AppColors.textSub : AppColors.blue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSub,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+          if (second != null) ...[
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '주전공 ${answers.majorSubRatio.round()}%',
+                  style: labelStyle,
+                ),
+                Opacity(
+                  opacity: 0.8,
+                  child: Text(
+                    '타전공 ${(100 - answers.majorSubRatio).round()}%',
+                    style: labelStyle,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AiSlider(
+              value: answers.majorSubRatio,
+              min: 0,
+              max: 100,
+              onChanged: (value) {
+                answers.majorSubRatio = value;
+                onChanged();
+              },
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -46,7 +46,7 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
       return;
     }
 
-    final profile = await _loadAiRecommendProfile();
+    final profile = await _loadAiRecommendProfile(answers);
     if (!stepContext.mounted) return;
 
     await Navigator.of(stepContext).push(
@@ -79,10 +79,13 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
     );
   }
 
-  /// 자동 생성이 참고할 내 학과 전공 목록과 학년. 학생 정보는 홈에서 이미
-  /// 불러와 저장돼 있어 보통 새 요청이 없고, 학과별 개설과목은 학기마다 한
-  /// 번만 학교에 묻고 기기에 저장한다. 못 구하면 학과·학년을 가리지 않는다.
-  Future<AiRecommendProfile> _loadAiRecommendProfile() async {
+  /// 자동 생성이 참고할 내 학과 전공 목록, 타전공(복수전공) 학과 전공 목록,
+  /// 학년. 학생 정보는 홈에서 이미 불러와 저장돼 있어 보통 새 요청이 없고,
+  /// 학과별 개설과목은 학과·학기마다 한 번만 학교에 묻고 기기에 저장한다.
+  /// 못 구하면 그 부분은 가리지 않는다.
+  Future<AiRecommendProfile> _loadAiRecommendProfile(
+    AiRecommendAnswers answers,
+  ) async {
     final userId2 = widget.userId2;
     if (!_hasFullSession || userId2 == null) {
       return const AiRecommendProfile();
@@ -96,25 +99,42 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
         RegExp(r'[1-4]').firstMatch(info.grade ?? '')?.group(0) ?? '',
       );
       final deptName = matchDepartmentName(info.department);
-      final deptCode = deptName == null ? null : kDepartmentCodes[deptName];
-      Set<String>? majors;
-      if (deptCode != null) {
-        final dept = await SessionCache.getCourseCatalog(
-          _courseCatalogService,
-          year: _year,
-          semester: _semester,
-          jsessionId: widget.jsessionId!,
-          wmonid: widget.wmonid!,
-          icKwa: 'B41005',
-          icKwa1: deptCode,
-          userId: userId2,
-        );
-        if (dept.isNotEmpty) majors = {for (final i in dept) i.courseCode};
-      }
-      return AiRecommendProfile(myMajorCourseCodes: majors, myGrade: grade);
+      final majors = await _departmentMajorCodes(deptName, userId2);
+      final second = answers.secondMajorDepartment;
+      final secondMajors = second == null || second == deptName
+          ? null
+          : await _departmentMajorCodes(second, userId2);
+      return AiRecommendProfile(
+        myMajorCourseCodes: majors,
+        secondMajorCourseCodes: secondMajors,
+        myGrade: grade,
+      );
     } catch (e) {
       debugPrint('[AiRecommend] 내 학과·학년 읽기 실패: $e');
       return const AiRecommendProfile();
     }
+  }
+
+  /// [departmentName] 학과의 이번 학기 전공 과목코드. 학과 코드를 모르거나
+  /// 목록이 비면 null.
+  Future<Set<String>?> _departmentMajorCodes(
+    String? departmentName,
+    String userId2,
+  ) async {
+    final code = departmentName == null
+        ? null
+        : kDepartmentCodes[departmentName];
+    if (code == null) return null;
+    final dept = await SessionCache.getCourseCatalog(
+      _courseCatalogService,
+      year: _year,
+      semester: _semester,
+      jsessionId: widget.jsessionId!,
+      wmonid: widget.wmonid!,
+      icKwa: 'B41005',
+      icKwa1: code,
+      userId: userId2,
+    );
+    return dept.isEmpty ? null : {for (final i in dept) i.courseCode};
   }
 }
