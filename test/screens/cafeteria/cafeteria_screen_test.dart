@@ -114,14 +114,14 @@ void main() {
   testWidgets('하트를 누르면 즐겨찾기가 켜지고 다시 누르면 꺼진다', (tester) async {
     await _pump(tester);
 
-    expect(find.byIcon(Icons.favorite), findsNothing);
-    await tester.tap(find.byIcon(Icons.favorite_border));
+    expect(find.byIcon(Icons.favorite_rounded), findsNothing);
+    await tester.tap(find.byIcon(Icons.favorite_border_rounded));
     await tester.pump();
-    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.tap(find.byIcon(Icons.favorite_rounded));
     await tester.pump();
-    expect(find.byIcon(Icons.favorite), findsNothing);
+    expect(find.byIcon(Icons.favorite_rounded), findsNothing);
   });
 
   testWidgets('요일 칩을 누르면 그 날 메뉴로 바뀌고, 메뉴가 없는 날은 안내 문구가 나온다', (tester) async {
@@ -150,7 +150,7 @@ void main() {
   testWidgets('날짜 선택 버튼을 누르면 날짜 팝업이 뜨고 취소로 닫을 수 있다', (tester) async {
     await _pump(tester);
 
-    await tester.tap(find.byIcon(Icons.calendar_month));
+    await tester.tap(find.byIcon(Icons.calendar_month_rounded));
     await tester.pumpAndSettle();
     expect(find.text('날짜 선택'), findsOneWidget);
 
@@ -164,7 +164,7 @@ void main() {
     await _pump(tester);
     final now = DateTime.now();
 
-    await tester.tap(find.byIcon(Icons.calendar_month));
+    await tester.tap(find.byIcon(Icons.calendar_month_rounded));
     await tester.pumpAndSettle();
     expect(find.text('${now.year}년'), findsOneWidget);
     expect(find.text('${now.month}월'), findsOneWidget);

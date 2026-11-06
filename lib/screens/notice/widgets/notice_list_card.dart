@@ -38,7 +38,9 @@ class NoticeListCard extends StatelessWidget {
   /// 상세 화면이 본문을 받을 때 쓸 서비스(테스트에서 가짜를 넘긴다).
   final NoticeServiceBase? detailService;
 
-  static const _mutedText = Color(0xFF6B6B70);
+  /// v7 시안의 새 글 점(빨강)과 꺼진 북마크 아이콘(따뜻한 회색).
+  static const _unreadDot = Color(0xFFE64343);
+  static const _bookmarkOff = Color(0xFFC9C5BD);
 
   /// "2026.10.08" → "10.08".
   String get _shortDate {
@@ -68,68 +70,77 @@ class NoticeListCard extends StatelessWidget {
       pressedScale: 0.97,
       pressedOpacity: 0.85,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.cardShadow,
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            SizedBox(
+              height: 25,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      NoticeTagChips(notice: notice),
-                      if (unread) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF4D4F),
-                            shape: BoxShape.circle,
+                  NoticeTagChips(notice: notice),
+                  if (unread) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: _unreadDot,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  // 아이콘은 17이지만 누르기 쉽게 왼쪽으로 넓힌 영역을 받는다.
+                  Pressable.icon(
+                    onTap: onBookmarkTap,
+                    child: SizedBox(
+                      width: 40,
+                      height: 25,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          transitionBuilder: (child, animation) =>
+                              ScaleTransition(scale: animation, child: child),
+                          child: Icon(
+                            bookmarked
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                            key: ValueKey(bookmarked),
+                            size: 17,
+                            color: bookmarked ? AppColors.blue : _bookmarkOff,
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    notice.title,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${notice.author} · $_shortDate',
-                    style: const TextStyle(color: _mutedText, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            Pressable.icon(
-              onTap: onBookmarkTap,
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  transitionBuilder: (child, animation) =>
-                      ScaleTransition(scale: animation, child: child),
-                  child: Icon(
-                    bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    key: ValueKey(bookmarked),
-                    color: bookmarked
-                        ? AppColors.cobalt
-                        : const Color(0xFFB5B5BC),
-                  ),
-                ),
+            const SizedBox(height: 7),
+            Text(
+              notice.title,
+              style: const TextStyle(
+                color: AppColors.textStrong,
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              '${notice.author} · $_shortDate',
+              style: const TextStyle(
+                color: AppColors.textBody,
+                fontSize: 12,
+                height: 1.4,
               ),
             ),
           ],

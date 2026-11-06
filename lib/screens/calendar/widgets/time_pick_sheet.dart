@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import 'calendar_colors.dart';
 import 'sheet_buttons.dart';
 import 'sheet_header.dart';
 import 'time_wheel_picker.dart';
@@ -16,8 +17,9 @@ Future<TimeOfDay?> showTimePickSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
+    barrierColor: CalendarColors.barrier,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
     builder: (sheetContext) {
       var selected = initialTime;
@@ -36,7 +38,7 @@ Future<TimeOfDay?> showTimePickSheet(
             Text(
               title,
               style: const TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textStrong,
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),

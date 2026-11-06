@@ -4,13 +4,12 @@ import 'package:flutter/services.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
+import 'calendar_colors.dart';
 import 'ringing_bell.dart';
-
-const Color _mutedText = Color(0xFF6B6B70);
 
 /// 선택한 날짜의 일정 한 줄 — 왼쪽 시간(시작 시간과 끝 시간. 시간이 없는 일정은
 /// 이 칸 없이 바로 막대부터), 일정 색 세로 막대, 라벨 칩/제목/장소(없으면 기간)가 든 카드, 오른쪽의
-/// 원형 알림 종 버튼. 카드를 누르면 상세 팝업이 열리고, 종 버튼으로는 알림을 바로
+/// 둥근 사각 알림 종 버튼. 카드를 누르면 상세 팝업이 열리고, 종 버튼으로는 알림을 바로
 /// 켜고 끈다.
 class EventRow extends StatelessWidget {
   const EventRow({
@@ -54,39 +53,45 @@ class EventRow extends StatelessWidget {
         children: [
           // 시간이 없는 일정(학사일정 등)은 "종일" 글자와 그 칸을 빼서 카드를 왼쪽으로
           // 붙인다(사용자 요청, 2026-10-31).
-          if (event.startTime != null)
+          if (event.startTime != null) ...[
             SizedBox(
-              width: 48,
-              // 카드 높이의 세로 가운데, 칸의 가로 가운데에 놓는다.
-              child: Center(
+              width: 44,
+              // 시작 시간은 위, 끝 시간은 아래 끝에 둔다(v7).
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _formatTime(event.startTime!),
                       style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 14,
+                        color: AppColors.textStrong,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (event.endTime != null) ...[
-                      const SizedBox(height: 4),
+                    if (event.endTime != null)
                       Text(
                         _formatTime(event.endTime!),
-                        style: const TextStyle(color: _mutedText, fontSize: 11),
+                        style: const TextStyle(
+                          color: AppColors.textSub,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ],
                   ],
                 ),
               ),
             ),
+            const SizedBox(width: 12),
+          ],
           Container(
-            width: 4,
-            margin: const EdgeInsets.only(right: 10),
+            width: 5,
+            margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
               color: event.color,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
           Expanded(
@@ -94,10 +99,10 @@ class EventRow extends StatelessWidget {
               onTap: onTap,
               pressedOpacity: 0.75,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F1F5),
-                  borderRadius: BorderRadius.circular(18),
+                  color: AppColors.fill,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -105,49 +110,52 @@ class EventRow extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
-                              vertical: 4,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(99),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               event.label,
                               style: const TextStyle(
-                                color: AppColors.cobalt,
-                                fontSize: 11,
+                                color: AppColors.blue,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Text(
                             event.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: AppColors.ink,
-                              fontSize: 16,
+                              color: AppColors.textStrong,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 4),
                           Text(
                             _subtitle,
                             style: const TextStyle(
-                              color: _mutedText,
+                              color: AppColors.textSub,
                               fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // 알림 켜짐: 파란 원 + 흰 종 / 꺼짐: 흰 원 + 회색 종.
+                    // 알림 켜짐: 남색 칸 + 흰 종 / 꺼짐: 흰 칸(테두리) + 회색 종.
                     Pressable(
                       onTap: () => onReminderToggled(!event.hasReminder),
                       pressedScale: 0.88,
@@ -158,20 +166,23 @@ class EventRow extends StatelessWidget {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         curve: Curves.easeOut,
-                        width: 40,
-                        height: 40,
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
                           color: event.hasReminder
-                              ? AppColors.cobalt
+                              ? AppColors.inkNavy
                               : Colors.white,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(9),
+                          border: event.hasReminder
+                              ? null
+                              : Border.all(color: CalendarColors.bellOffLine),
                         ),
                         child: Center(
                           child: RingingBell(
                             active: event.hasReminder,
-                            size: 20,
+                            size: 16,
                             activeColor: Colors.white,
-                            inactiveColor: const Color(0xFF9A9A9E),
+                            inactiveColor: CalendarColors.bellOffIcon,
                           ),
                         ),
                       ),

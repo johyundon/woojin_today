@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
+import 'calendar_colors.dart';
 import 'ringing_bell.dart';
 
-/// 시간 정보가 없는 일정(학사일정 등)에 알림을 걸었을 때 띄우는 안내 팝업(v4
-/// 스타일). 알림이 언제 울리는지([dates] 각각의 오전 9시)를 알려주고 "확인"으로
+/// 시간 정보가 없는 일정(학사일정 등)에 알림을 걸었을 때 띄우는 안내 팝업(v7).
+/// 알림이 언제 울리는지([dates] 각각의 오전 9시)를 알려주고 "확인"으로
 /// 닫는다. 날짜가 둘이면 "10월 14일, 15일 오전 9시에"처럼 함께 보여준다.
 Future<void> showReminderSetDialog(
   BuildContext context, {
@@ -21,20 +22,23 @@ Future<void> showReminderSetDialog(
   }
   return showDialog<void>(
     context: context,
+    barrierColor: CalendarColors.barrier,
     builder: (dialogContext) => Dialog(
       backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 28),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 26, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 56,
+              height: 56,
               decoration: const BoxDecoration(
-                color: Color(0xFFDCE6FB),
+                color: AppColors.blueSoft,
                 shape: BoxShape.circle,
               ),
               // 팝업이 뜨면서 종이 한 번 울린다.
@@ -43,8 +47,8 @@ Future<void> showReminderSetDialog(
                   active: true,
                   playOnStart: true,
                   size: 26,
-                  activeColor: AppColors.cobalt,
-                  inactiveColor: AppColors.cobalt,
+                  activeColor: AppColors.blue,
+                  inactiveColor: AppColors.blue,
                 ),
               ),
             ),
@@ -52,9 +56,10 @@ Future<void> showReminderSetDialog(
             const Text(
               '알림이 설정됐어요',
               style: TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textStrong,
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
+                letterSpacing: -0.51,
               ),
             ),
             const SizedBox(height: 8),
@@ -62,7 +67,7 @@ Future<void> showReminderSetDialog(
               '$label 오전 9시에\n알림이 울립니다',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF6B6B70),
+                color: AppColors.textBody,
                 fontSize: 13,
                 height: 1.4,
               ),
@@ -70,15 +75,17 @@ Future<void> showReminderSetDialog(
             const SizedBox(height: 22),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 52,
               child: Pressable.effect(
                 pressedScale: 0.97,
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.cobalt,
+                    backgroundColor: AppColors.blue,
                     elevation: 0,
-                    shape: const StadiumBorder(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: const Text(
                     '확인',

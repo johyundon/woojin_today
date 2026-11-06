@@ -69,7 +69,7 @@ void main() {
 
     await _tapTab(tester, '시간표');
     await _tapTab(tester, '캘린더');
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget); // 캘린더의 달 이동 버튼
+    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget); // 캘린더의 달 이동 버튼
 
     await _tapTab(tester, '모아보기');
     expect(find.text('오늘 필요한 걸 모았어요'), findsOneWidget);

@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
-import '../cafeteria_colors.dart';
 
 /// "날짜 선택" 팝업 (Figma node 6:71). 년/월/일 3열 휠 — 전부 숫자 뒤에
 /// 한글 단위("2026년", "9월", "7일")를 직접 붙인다. 앱 전체에 한국어
@@ -86,8 +86,9 @@ class _CafeteriaDatePickerDialogState
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: CafeteriaColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 28),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -98,7 +99,7 @@ class _CafeteriaDatePickerDialogState
             const Text(
               '날짜 선택',
               style: TextStyle(
-                color: CafeteriaColors.textPrimary,
+                color: AppColors.textStrong,
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -151,13 +152,16 @@ class _CafeteriaDatePickerDialogState
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: CafeteriaColors.textPrimary,
-                      side: const BorderSide(color: CafeteriaColors.border),
+                      foregroundColor: AppColors.textStrong,
+                      backgroundColor: AppColors.fill,
+                      side: BorderSide.none,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 13,
                       ),
-                      shape: const StadiumBorder(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text(
                       '취소',
@@ -175,13 +179,16 @@ class _CafeteriaDatePickerDialogState
                         Navigator.of(context)
                             .pop(DateTime(_year, _month, _day)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: CafeteriaColors.accent,
+                      backgroundColor: AppColors.blue,
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 28,
                         vertical: 13,
                       ),
-                      shape: const StadiumBorder(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text(
                       '확인',
@@ -201,7 +208,7 @@ class _CafeteriaDatePickerDialogState
   }
 }
 
-/// 휠 한 열. 가운데(선택된) 값만 크고 굵은 흰 글씨, 나머지는 작고 흐린
+/// 휠 한 열. 가운데(선택된) 값만 굵은 진한 글씨, 나머지는 흐린
 /// 회색 — Figma의 "가운데 값이 강조되는 숫자 휠" 느낌을 낸다.
 class _WheelColumn extends StatelessWidget {
   const _WheelColumn({
@@ -232,14 +239,11 @@ class _WheelColumn extends StatelessWidget {
               labelBuilder(i),
               style: isSelected(i)
                   ? const TextStyle(
-                      color: CafeteriaColors.textPrimary,
+                      color: AppColors.textStrong,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                     )
-                  : const TextStyle(
-                      color: CafeteriaColors.textSecondary,
-                      fontSize: 20,
-                    ),
+                  : const TextStyle(color: AppColors.textMuted, fontSize: 20),
             ),
           ),
       ],

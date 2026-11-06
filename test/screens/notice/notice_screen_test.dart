@@ -171,11 +171,10 @@ void main() {
     expect(service.detailCalls, ['/a1']);
     expect(find.textContaining('이수신청 대상 : 재학생'), findsOneWidget);
     expect(find.text('95'), findsOneWidget);
-    expect(find.text('첨부파일'), findsOneWidget);
     expect(find.text('붙임 1 안내문.xlsx'), findsOneWidget);
     expect(find.text('붙임 2 서식.hwp'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
     await tester.pumpAndSettle();
     expect(find.text('새 글 1개'), findsOneWidget);
 
@@ -193,11 +192,11 @@ void main() {
     double topOf(String text) => tester.getTopLeft(find.text(text)).dy;
     expect(topOf(target), greaterThan(topOf(newest)));
 
-    await tester.tap(find.byIcon(Icons.bookmark_border).at(2));
+    await tester.tap(find.byIcon(Icons.bookmark_border_rounded).at(2));
     await tester.pumpAndSettle();
     expect(topOf(target), lessThan(topOf(newest)));
 
-    await tester.tap(find.byIcon(Icons.bookmark));
+    await tester.tap(find.byIcon(Icons.bookmark_rounded));
     await tester.pumpAndSettle();
     expect(topOf(target), greaterThan(topOf(newest)));
   });
@@ -334,7 +333,7 @@ void main() {
       File? opened;
       await pumpDetail(tester, service, (f) async => opened = f);
 
-      await tester.tap(find.text('미리보기').first);
+      await tester.tap(find.byIcon(Icons.download_rounded).first);
       // 파일 쓰기는 실제 입출력이라, 실제 시간을 흘려보내며 화면도 함께 돌린다.
       for (var i = 0; i < 50 && opened == null; i++) {
         await tester.runAsync(
@@ -348,7 +347,7 @@ void main() {
       expect(opened!.path, endsWith('붙임 1 안내문.xlsx'));
       final bytes = await tester.runAsync(() => opened!.readAsBytes());
       expect(bytes, [1, 2, 3]);
-      expect(find.text('받는 중'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
     testWidgets('로그인이 만료됐으면 다시 로그인하라고 알린다', (tester) async {
@@ -357,7 +356,7 @@ void main() {
       var opened = false;
       await pumpDetail(tester, service, (_) async => opened = true);
 
-      await tester.tap(find.text('미리보기').first);
+      await tester.tap(find.byIcon(Icons.download_rounded).first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 

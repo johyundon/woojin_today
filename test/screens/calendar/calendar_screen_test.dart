@@ -1,4 +1,4 @@
-// CalendarScreen이 새 레이아웃(헤더 월 이동 / 월간 격자 / 선택일 일정 목록)을
+// CalendarScreen이 v7 레이아웃(헤더 월 이동 / 월간 격자 / 선택일 일정 목록)을
 // 오버플로우 없이 보여주고, 날짜 선택·월 이동·알림 종 버튼이 동작하는지 확인한다.
 
 import 'package:flutter/foundation.dart';
@@ -111,13 +111,12 @@ void main() {
     final now = DateTime.now();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('${now.year}'), findsOneWidget);
-    expect(find.text('${now.month}월'), findsOneWidget);
+    expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
     for (final label in ['월', '화', '수', '목', '금', '토', '일']) {
       expect(find.text(label), findsWidgets);
     }
     expect(find.textContaining('일정 '), findsWidgets); // "일정 N개"
-    expect(find.byIcon(Icons.add), findsOneWidget);
+    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
   });
 
   testWidgets('학사일정이 있는 날을 누르면 그날 일정 카드가 보인다', (tester) async {
@@ -151,15 +150,15 @@ void main() {
     final now = DateTime.now();
     final next = DateTime(now.year, now.month + 1);
 
-    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
     await tester.pumpAndSettle();
-    expect(find.text('${next.month}월'), findsOneWidget);
+    expect(find.text('${next.year}년 ${next.month}월'), findsOneWidget);
     expect(find.textContaining('${next.month}월 1일'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.tap(find.byIcon(Icons.chevron_left_rounded));
     await tester.pumpAndSettle();
-    expect(find.text('${now.month}월'), findsOneWidget);
+    expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
   });
 
   testWidgets('일정이 많아 스크롤해도 달력 격자와 날짜 줄은 제자리에 있다', (tester) async {
@@ -171,14 +170,19 @@ void main() {
     await tester.tap(find.text('21').first);
     await tester.pumpAndSettle();
 
-    final gridTop = tester.getTopLeft(find.text('${now.month}월').first);
+    final gridTop = tester.getTopLeft(
+      find.text('${now.year}년 ${now.month}월').first,
+    );
     final headerFinder = find.textContaining('월 21일');
     final headerBefore = tester.getTopLeft(headerFinder);
 
     await tester.drag(find.byType(ListView).last, const Offset(0, -300));
     await tester.pumpAndSettle();
 
-    expect(tester.getTopLeft(find.text('${now.month}월').first), gridTop);
+    expect(
+      tester.getTopLeft(find.text('${now.year}년 ${now.month}월').first),
+      gridTop,
+    );
     expect(tester.getTopLeft(headerFinder), headerBefore);
     expect(tester.takeException(), isNull);
   });
@@ -235,7 +239,7 @@ void main() {
     const sunFirst = ['일', '월', '화', '수', '목', '금', '토'];
     String pill(DateTime d) => '${d.month}.${d.day} ${sunFirst[d.weekday % 7]}';
 
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byIcon(Icons.add_rounded));
     await tester.pumpAndSettle();
     await tester.tap(find.text(pill(now)).first);
     await tester.pumpAndSettle();
@@ -246,7 +250,7 @@ void main() {
     expect(find.text('OK'), findsNothing);
 
     // 다음 달로 넘겨 3일 → 1일(시작보다 앞이라 새 시작) → 4일을 누르면 1~4일.
-    await tester.tap(find.byIcon(Icons.chevron_right).last);
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded).last);
     await tester.pumpAndSettle();
     final first = DateTime(now.year, now.month + 1, 1);
     final fourth = DateTime(now.year, now.month + 1, 4);
@@ -276,11 +280,11 @@ void main() {
     const sunFirst = ['일', '월', '화', '수', '목', '금', '토'];
     String pill(DateTime d) => '${d.month}.${d.day} ${sunFirst[d.weekday % 7]}';
 
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byIcon(Icons.add_rounded));
     await tester.pumpAndSettle();
     await tester.tap(find.text(pill(now)).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.chevron_right).last);
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('2').last);
     await tester.pump();
@@ -323,7 +327,7 @@ void main() {
       final now = DateTime.now();
       final next = DateTime(now.year, now.month + 1);
 
-      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.tap(find.byIcon(Icons.chevron_right_rounded));
       await tester.pumpAndSettle();
       expect(schedule.requested.last, '${next.year}-${next.month}');
     });
@@ -377,7 +381,7 @@ void main() {
       final todayDate = DateTime(today.year, today.month, today.day);
       if (todayDate.isBefore(start) || todayDate.isAfter(end)) {
         if (start.month != today.month) {
-          await tester.tap(find.byIcon(Icons.chevron_right));
+          await tester.tap(find.byIcon(Icons.chevron_right_rounded));
         } else {
           await tester.tap(find.text('${start.day}').first);
         }
@@ -466,7 +470,9 @@ void main() {
         if (yesterday.month == DateTime.now().month) {
           await tester.tap(find.text('${yesterday.day}').first);
         } else {
-          await tester.tap(find.byIcon(Icons.chevron_left)); // 지난달 말일이 어제
+          await tester.tap(
+            find.byIcon(Icons.chevron_left_rounded),
+          ); // 지난달 말일이 어제
           await tester.pumpAndSettle();
           await tester.tap(find.text('${yesterday.day}').first);
         }
@@ -511,7 +517,7 @@ void main() {
       if (daysAhead > 0) {
         // 내일이 다음 달이면 달을 넘긴다(넘기면 그 달 1일 = 내일이 선택된다).
         if (date.month != today.month) {
-          await tester.tap(find.byIcon(Icons.chevron_right));
+          await tester.tap(find.byIcon(Icons.chevron_right_rounded));
         } else {
           await tester.tap(find.text('${date.day}').first);
         }
@@ -751,7 +757,7 @@ void main() {
       await tester.tap(find.text('수정하기'));
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, '팀플 회의'), '바꾼 제목');
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text('팀플 회의'), findsOneWidget);
@@ -763,7 +769,7 @@ void main() {
     testWidgets('+ 버튼: 제목이 비면 저장 비활성 → 입력하고 저장하면 목록에 추가된다', (tester) async {
       await _pump(tester);
 
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
       expect(find.text('새 일정'), findsOneWidget);
       // 시간은 하나(09:00)뿐이고, 알림 칩이 있다.
@@ -800,7 +806,7 @@ void main() {
     testWidgets('종일 스위치를 켜면 시간 칸이 사라지고, 저장하면 종일 일정이 된다', (tester) async {
       await _pump(tester);
 
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
       expect(find.text('시간'), findsOneWidget);
 
@@ -839,7 +845,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10)); // 팝업 닫기
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });

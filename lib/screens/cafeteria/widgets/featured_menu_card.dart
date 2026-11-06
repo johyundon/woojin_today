@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
-import '../../../widgets/mascot_sticker.dart';
 import '../../../widgets/pressable.dart';
+import '../cafeteria_colors.dart';
 import '../models/cafeteria_menu.dart';
 
-/// 큰 라임색 대표 메뉴 카드 — 분류/인기 칩, 즐겨찾기 하트, 대표 메뉴 두 줄, 곁들임
-/// 칩, 가격(오른쪽 아래), 마스코트.
+/// 맨 앞 메뉴를 크게 보여주는 대표 카드 — 분류/인기 배지, 즐겨찾기 하트, 대표 메뉴
+/// 두 줄, 곁들임 칩, 가격. v7 디자인 48에는 대표 카드가 따로 없어서, 같은 화면의
+/// 메뉴 카드 모양(흰 바탕·테두리·옅은 그림자·파란 배지와 가격)을 넓게 늘려 썼다.
 class FeaturedMenuCard extends StatelessWidget {
   const FeaturedMenuCard({
     required this.item,
@@ -27,129 +28,115 @@ class FeaturedMenuCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.lime,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.ink.withValues(alpha: 0.25),
-            offset: const Offset(0, 8),
-            blurRadius: 18,
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CafeteriaColors.cardBorder),
+        boxShadow: AppColors.cardShadow,
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  if (item.category != null) ...[
-                    _Chip(
-                      label: item.category!,
-                      background: AppColors.ink,
-                      foreground: Colors.white,
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  if (item.popularRank != null)
-                    _Chip(
-                      label: '인기 ${item.popularRank}위',
-                      icon: Icons.local_fire_department,
-                      background: Colors.white,
-                      foreground: AppColors.ink,
-                    ),
-                  const Spacer(),
-                  Pressable.icon(
-                    onTap: onFavoriteTap,
-                    child: Icon(
-                      favorite ? Icons.favorite : Icons.favorite_border,
-                      color: AppColors.ink,
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.only(right: 90),
-                child: Text(
-                  mains.join('\n'),
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                    letterSpacing: -0.5,
-                  ),
+              if (item.category != null) ...[
+                _Chip(
+                  label: item.category!,
+                  background: AppColors.blueSoft,
+                  foreground: AppColors.blueText,
                 ),
-              ),
-              if (sides.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final side in sides)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          side,
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                const SizedBox(width: 6),
               ],
-              const SizedBox(height: 18),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.payments,
-                    size: 16,
-                    color: AppColors.ink.withValues(alpha: 0.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    item.venue.priceLabel,
-                    style: TextStyle(
-                      color: AppColors.ink.withValues(alpha: 0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    item.priceText,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+              if (item.popularRank != null)
+                _Chip(
+                  label: '인기 ${item.popularRank}위',
+                  icon: Icons.local_fire_department_rounded,
+                  background: AppColors.fill,
+                  foreground: AppColors.textBody,
+                ),
+              const Spacer(),
+              Pressable.icon(
+                onTap: onFavoriteTap,
+                child: Icon(
+                  favorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: favorite ? AppColors.blue : AppColors.textSub,
+                  size: 24,
+                  semanticLabel: favorite ? '즐겨찾기 해제' : '즐겨찾기',
+                ),
               ),
             ],
           ),
-          const Positioned(
-            right: 4,
-            top: 38,
-            child: MascotSticker(width: 84, angle: 0.08),
+          const SizedBox(height: 12),
+          Text(
+            mains.join('\n'),
+            style: const TextStyle(
+              color: AppColors.textStrong,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              height: 1.35,
+              letterSpacing: -0.66,
+            ),
+          ),
+          if (sides.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final side in sides)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.fill,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      side,
+                      style: const TextStyle(
+                        color: AppColors.textBody,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(
+                Icons.payments_rounded,
+                size: 16,
+                color: AppColors.textSub,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                item.venue.priceLabel,
+                style: const TextStyle(
+                  color: AppColors.textSub,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                item.priceText,
+                style: const TextStyle(
+                  color: AppColors.blueText,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -176,7 +163,7 @@ class _Chip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(99),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -189,8 +176,9 @@ class _Chip extends StatelessWidget {
             label,
             style: TextStyle(
               color: foreground,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.4,
             ),
           ),
         ],

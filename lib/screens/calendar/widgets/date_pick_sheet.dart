@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
+import 'calendar_colors.dart';
 import 'calendar_month_grid.dart';
 import 'sheet_buttons.dart';
 import 'sheet_header.dart';
 
-/// 날짜를 고르는 바텀시트. 캘린더 화면과 같은 월간 격자(월요일 시작, 한국어 요일,
-/// 파란 선택 원)를 쓰고, 위쪽 화살표로 달을 넘긴다. 저장하면 고른 날짜를, 취소하면
+/// 날짜를 고르는 바텀시트. 캘린더 화면과 같은 월간 격자(일요일 시작, 한국어 요일,
+/// 파란 선택 칸)를 쓰고, 위쪽 화살표로 달을 넘긴다. 저장하면 고른 날짜를, 취소하면
 /// null을 반환한다. 일정 수정 화면의 시작/끝 날짜 칸에서 쓴다.
 ///
 /// 예전에는 플러터 기본 날짜 창(showDatePicker)을 썼는데, 앱에 한국어 설정이 없고
@@ -22,8 +23,9 @@ Future<DateTime?> showDatePickSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
+    barrierColor: CalendarColors.barrier,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
     builder: (_) => _DatePickSheet(
       title: title,
@@ -78,7 +80,7 @@ class _DatePickSheetState extends State<_DatePickSheet> {
           Text(
             widget.title,
             style: const TextStyle(
-              color: AppColors.ink,
+              color: AppColors.textStrong,
               fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
@@ -87,7 +89,7 @@ class _DatePickSheetState extends State<_DatePickSheet> {
           Row(
             children: [
               _MonthArrow(
-                icon: Icons.chevron_left,
+                icon: Icons.chevron_left_rounded,
                 onTap: () => _moveMonth(-1),
               ),
               Expanded(
@@ -95,14 +97,14 @@ class _DatePickSheetState extends State<_DatePickSheet> {
                   '${_month.year}년 ${_month.month}월',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.textStrong,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               _MonthArrow(
-                icon: Icons.chevron_right,
+                icon: Icons.chevron_right_rounded,
                 onTap: () => _moveMonth(1),
               ),
             ],
@@ -142,8 +144,9 @@ Future<DateTimeRange?> showDateRangePickSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
+    barrierColor: CalendarColors.barrier,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
     builder: (_) => _DateRangePickSheet(
       initialStart: initialStart,
@@ -217,7 +220,7 @@ class _DateRangePickSheetState extends State<_DateRangePickSheet> {
           const Text(
             '날짜 고르기',
             style: TextStyle(
-              color: AppColors.ink,
+              color: AppColors.textStrong,
               fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
@@ -226,7 +229,7 @@ class _DateRangePickSheetState extends State<_DateRangePickSheet> {
           Text(
             summary,
             style: TextStyle(
-              color: end == null ? AppColors.cobalt : const Color(0xFF6B6B70),
+              color: end == null ? AppColors.blue : AppColors.textSub,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -235,7 +238,7 @@ class _DateRangePickSheetState extends State<_DateRangePickSheet> {
           Row(
             children: [
               _MonthArrow(
-                icon: Icons.chevron_left,
+                icon: Icons.chevron_left_rounded,
                 onTap: () => _moveMonth(-1),
               ),
               Expanded(
@@ -243,14 +246,14 @@ class _DateRangePickSheetState extends State<_DateRangePickSheet> {
                   '${_month.year}년 ${_month.month}월',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.textStrong,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               _MonthArrow(
-                icon: Icons.chevron_right,
+                icon: Icons.chevron_right_rounded,
                 onTap: () => _moveMonth(1),
               ),
             ],
@@ -278,7 +281,7 @@ class _DateRangePickSheetState extends State<_DateRangePickSheet> {
   }
 }
 
-/// 달 넘기기 둥근 버튼(캘린더 화면 헤더의 화살표와 같은 모양, 밝은 바탕용).
+/// 달 넘기기 둥근 사각 버튼(흰 시트 위라 연한 회색 바탕).
 class _MonthArrow extends StatelessWidget {
   const _MonthArrow({required this.icon, required this.onTap});
 
@@ -292,11 +295,11 @@ class _MonthArrow extends StatelessWidget {
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF1F1F5),
-          shape: BoxShape.circle,
+        decoration: BoxDecoration(
+          color: AppColors.fill,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: AppColors.ink, size: 22),
+        child: Icon(icon, color: AppColors.textStrong, size: 22),
       ),
     );
   }

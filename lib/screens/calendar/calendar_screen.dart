@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/academic_schedule_service.dart';
 import '../../services/notification_service.dart';
@@ -21,8 +22,9 @@ import 'widgets/reminder_set_dialog.dart';
 /// [_CalendarScreenState._syncReminder]의 결과.
 enum _ReminderResult { ok, denied, past }
 
-/// "캘린더" 화면(v4 리디자인). 코발트 헤더에서 달을 넘기고, 흰 패널의 월간
-/// 격자에서 날짜를 고르면 그날의 일정이 시간순 카드로 아래에 나온다.
+/// "캘린더" 화면(v7). 거의 흰 바탕 위쪽에서 달을 넘기고, 흰 패널의 월간
+/// 격자에서 날짜를 고르면 그날의 일정이 시간순 카드로 아래에 나온다. 일정 추가는
+/// 하단 탭 바 위 오른쪽의 "+" 버튼으로 한다.
 ///
 /// 학사일정은 보고 있는 달을 학교 홈페이지에서 받아([AcademicScheduleService],
 /// 달별 하루 캐시) 저장된 일정에 합친다([mergeAcademicSchedule]). 예전에 넣어 둔
@@ -336,9 +338,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
-      return const Scaffold(
-        backgroundColor: AppColors.cobalt,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      return const AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          backgroundColor: AppColors.canvas,
+          body: Center(child: CircularProgressIndicator(color: AppColors.blue)),
+        ),
       );
     }
 
@@ -346,135 +351,110 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final selectedDate = _selectedDate;
     final dayEvents = _selectedDateEvents;
 
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      extendBody: true,
-      // 다른 탭은 홈이 그 탭 화면으로 바꿔 준다(콜백이 없으면 이전 화면으로 돌아감).
-      bottomNavigationBar: HomeBottomNav(
-        selectedIndex: 3,
-        onTap: (index) {
-          if (index == 3) return;
-          final onTabTap = widget.onTabTap;
-          if (onTabTap != null) {
-            onTabTap(index);
-          } else {
-            Navigator.of(context).pop();
-          }
-        },
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+    // 거의 흰 바탕이라 상태 표시줄 글자를 어둡게 둔다(앱 테마는 아직 어두운 테마).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        extendBody: true,
+        // "+"는 하단 탭 바 바로 위 오른쪽에 떠 있다(v7).
+        floatingActionButton: _addButton(),
+        // 다른 탭은 홈이 그 탭 화면으로 바꿔 준다(콜백이 없으면 이전 화면으로 돌아감).
+        bottomNavigationBar: HomeBottomNav(
+          selectedIndex: 3,
+          onTap: (index) {
+            if (index == 3) return;
+            final onTabTap = widget.onTabTap;
+            if (onTabTap != null) {
+              onTabTap(index);
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                child: Row(
+                  children: [
+                    _monthButton(
+                      Icons.chevron_left_rounded,
+                      _goToPreviousMonth,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.lime,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Text(
-                      '${_focusedMonth.year}',
-                      style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Text(
+                        '${_focusedMonth.year}년 ${_focusedMonth.month}월',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.textStrong,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.88,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${_focusedMonth.month}월',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.04,
-                    ),
-                  ),
-                  const Spacer(),
-                  _monthButton(Icons.chevron_left, _goToPreviousMonth),
-                  const SizedBox(width: 8),
-                  _monthButton(Icons.chevron_right, _goToNextMonth),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(32),
+                    _monthButton(Icons.chevron_right_rounded, _goToNextMonth),
+                  ],
                 ),
-                child: ColoredBox(
-                  color: Colors.white,
+              ),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(36),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        offset: Offset(0, -4),
+                        blurRadius: 20,
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 달력 격자와 날짜 줄은 고정하고, 아래 일정 목록만
                       // 스크롤된다.
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                        child: CalendarMonthGrid(
-                          focusedMonth: _focusedMonth,
-                          events: _eventsInFocusedMonth,
-                          selectedDay: selectedDay,
-                          today: DateTime.now(),
-                          onDaySelected: _onDaySelected,
-                        ),
+                      CalendarMonthGrid(
+                        focusedMonth: _focusedMonth,
+                        events: _eventsInFocusedMonth,
+                        selectedDay: selectedDay,
+                        today: DateTime.now(),
+                        onDaySelected: _onDaySelected,
                       ),
                       if (selectedDay != null && selectedDate != null) ...[
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 22, 20, 14),
+                          padding: const EdgeInsets.fromLTRB(4, 26, 4, 12),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
                             children: [
                               Text(
                                 '${selectedDate.month}월 ${selectedDate.day}일 '
                                 '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
                                 style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 16,
+                                  color: AppColors.textStrong,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.45,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 '일정 ${dayEvents.length}개',
                                 style: const TextStyle(
-                                  color: AppColors.cobalt,
+                                  color: AppColors.blue,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Spacer(),
-                              Pressable.icon(
-                                onTap: _onAddPressed,
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.cobalt,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.cobalt.withValues(
-                                          alpha: 0.35,
-                                        ),
-                                        offset: const Offset(0, 4),
-                                        blurRadius: 10,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                  ),
                                 ),
                               ),
                             ],
@@ -486,30 +466,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   child: Text(
                                     '이 날은 일정이 없어요',
                                     style: TextStyle(
-                                      color: Color(0xFF6B6B70),
+                                      color: AppColors.textSub,
                                       fontSize: 14,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 )
-                              : ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    0,
-                                    20,
-                                    130,
+                              : Builder(
+                                  builder: (context) => ListView.separated(
+                                    // 하단 탭 바(extendBody라 아래 여백에 들어 있다)와
+                                    // "+" 버튼에 마지막 카드가 가리지 않게.
+                                    padding: EdgeInsets.only(
+                                      bottom:
+                                          MediaQuery.paddingOf(context).bottom +
+                                          80,
+                                    ),
+                                    itemCount: dayEvents.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final event = dayEvents[index];
+                                      return EventRow(
+                                        event: event,
+                                        onReminderToggled: (turnOn) =>
+                                            _onReminderToggled(event, turnOn),
+                                        onTap: () => _openEventDetail(event),
+                                      );
+                                    },
                                   ),
-                                  itemCount: dayEvents.length,
-                                  separatorBuilder: (_, _) =>
-                                      const SizedBox(height: 10),
-                                  itemBuilder: (context, index) {
-                                    final event = dayEvents[index];
-                                    return EventRow(
-                                      event: event,
-                                      onReminderToggled: (turnOn) =>
-                                          _onReminderToggled(event, turnOn),
-                                      onTap: () => _openEventDetail(event),
-                                    );
-                                  },
                                 ),
                         ),
                       ],
@@ -517,24 +501,49 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  /// 일정 추가 버튼(파란 둥근 사각형, 파란 그림자).
+  Widget _addButton() {
+    return Pressable.icon(
+      onTap: _onAddPressed,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: AppColors.blue,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.blue.withValues(alpha: 0.28),
+              offset: const Offset(0, 6),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        child: const Icon(Icons.add_rounded, size: 28, color: Colors.white),
+      ),
+    );
+  }
+
+  /// 달 넘기기 버튼(흰 둥근 사각형, 옅은 그림자).
   Widget _monthButton(IconData icon, VoidCallback onTap) {
     return Pressable.icon(
       onTap: onTap,
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
-          color: AppColors.cobaltDeep,
-          shape: BoxShape.circle,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: AppColors.cardShadow,
         ),
-        child: Icon(icon, color: Colors.white),
+        child: Icon(icon, size: 22, color: AppColors.textStrong),
       ),
     );
   }

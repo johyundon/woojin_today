@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../campus_map_colors.dart';
 
@@ -26,15 +27,21 @@ class CampusSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      constraints: const BoxConstraints(minHeight: 52),
+      padding: const EdgeInsets.only(left: 18, right: 6),
       decoration: BoxDecoration(
-        color: CampusMapColors.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: CampusMapColors.cardShadow,
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const Icon(
+            Icons.search_rounded,
+            color: CampusMapColors.textPrimary,
+            size: 19,
+          ),
+          const SizedBox(width: 6),
           Expanded(
             child: _BuildingField(
               caption: '출발지',
@@ -43,13 +50,10 @@ class CampusSearchBar extends StatelessWidget {
               onTap: onTapOrigin,
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Icon(
-              Icons.arrow_forward,
-              color: CampusMapColors.textSecondary,
-              size: 18,
-            ),
+          const Icon(
+            Icons.arrow_forward_rounded,
+            color: CampusMapColors.textSecondary,
+            size: 16,
           ),
           Expanded(
             child: _BuildingField(
@@ -61,14 +65,16 @@ class CampusSearchBar extends StatelessWidget {
           ),
           // 초기화할 게 있을 때(출발지/목적지 중 하나라도 선택됨)만 보인다.
           if (originName != null || destinationName != null)
-            Pressable.effect(
-              pressedScale: 0.85,
-              child: IconButton(
-                onPressed: onReset,
-                icon: const Icon(
-                  Icons.close,
-                  color: CampusMapColors.danger,
-                  size: 20,
+            Pressable.icon(
+              onTap: onReset,
+              child: const SizedBox(
+                width: 36,
+                height: 44,
+                child: Icon(
+                  Icons.close_rounded,
+                  color: CampusMapColors.textSecondary,
+                  size: 18,
+                  semanticLabel: '초기화',
                 ),
               ),
             ),
@@ -92,7 +98,7 @@ class _BuildingField extends StatelessWidget {
   final String label;
 
   /// true면 아직 건물을 안 고른 상태(label이 "건물 선택" placeholder)라
-  /// 흐린 회색으로, 실제로 고른 건물명이면 흰색으로 보여준다.
+  /// 회색 보통 굵기로, 실제로 고른 건물명이면 진한 글자로 보여준다.
   final bool isPlaceholder;
   final VoidCallback onTap;
 
@@ -101,7 +107,7 @@ class _BuildingField extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -110,11 +116,12 @@ class _BuildingField extends StatelessWidget {
               caption,
               style: const TextStyle(
                 color: CampusMapColors.textSecondary,
-                fontSize: 13,
+                fontSize: 11,
+                height: 1.3,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 1),
             Text(
               label,
               maxLines: 1,
@@ -123,8 +130,9 @@ class _BuildingField extends StatelessWidget {
                 color: isPlaceholder
                     ? CampusMapColors.textSecondary
                     : CampusMapColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: isPlaceholder ? FontWeight.w400 : FontWeight.w700,
               ),
             ),
           ],

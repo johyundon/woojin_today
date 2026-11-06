@@ -4,16 +4,11 @@ import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
 import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
+import 'calendar_colors.dart';
 
-const Color _weekendRed = Color(0xFFE5484D);
-const Color _mutedText = Color(0xFF6B6B70);
-
-/// 기간 선택 띠 색(연한 파랑, 앱의 다른 연파랑 칸과 같은 값).
-const Color _rangeFill = Color(0xFFDCE6FB);
-
-/// 월요일부터 시작하는 월간 날짜 격자. 일정이 있는 날짜는 숫자 아래에 일정
-/// 색 점(최대 3개)을 찍고, 선택한 날짜는 파란 원, 오늘은 파란 테두리 원으로
-/// 표시한다.
+/// 일요일부터 시작하는 월간 날짜 격자(v7). 일정이 있는 날짜는 숫자 아래에 일정
+/// 색 점(최대 3개)을 찍고, 선택한 날짜는 파란 둥근 사각형, 오늘은 파란 테두리
+/// 둥근 사각형으로 표시한다.
 class CalendarMonthGrid extends StatelessWidget {
   const CalendarMonthGrid({
     required this.focusedMonth,
@@ -73,9 +68,9 @@ class CalendarMonthGrid extends StatelessWidget {
       focusedMonth.month + 1,
       0,
     ).day;
-    // DateTime.weekday는 월=1~일=7이라, 월요일 시작 격자의 앞 빈칸 수는 -1.
+    // DateTime.weekday는 월=1~일=7이라, 일요일 시작 격자의 앞 빈칸 수는 % 7.
     final leadingBlanks =
-        DateTime(focusedMonth.year, focusedMonth.month, 1).weekday - 1;
+        DateTime(focusedMonth.year, focusedMonth.month, 1).weekday % 7;
     final weekCount = ((leadingBlanks + daysInMonth) / 7).ceil();
     final isTodayMonth =
         today.year == focusedMonth.year && today.month == focusedMonth.month;
@@ -84,13 +79,15 @@ class CalendarMonthGrid extends StatelessWidget {
       children: [
         Row(
           children: [
-            for (var i = 0; i < weekdayLabelsMonFirst.length; i++)
+            for (var i = 0; i < weekdayLabelsSunFirst.length; i++)
               Expanded(
                 child: Center(
                   child: Text(
-                    weekdayLabelsMonFirst[i],
+                    weekdayLabelsSunFirst[i],
                     style: TextStyle(
-                      color: i >= 5 ? _weekendRed : _mutedText,
+                      color: i == 0 || i == 6
+                          ? CalendarColors.weekendRed
+                          : AppColors.textSub,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -101,24 +98,27 @@ class CalendarMonthGrid extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         for (var week = 0; week < weekCount; week++)
-          Row(
-            children: [
-              for (var col = 0; col < 7; col++)
-                Expanded(
-                  child: _buildCell(
-                    week * 7 + col - leadingBlanks + 1,
-                    daysInMonth,
-                    isTodayMonth,
+          Padding(
+            padding: EdgeInsets.only(top: week == 0 ? 0 : 2),
+            child: Row(
+              children: [
+                for (var col = 0; col < 7; col++)
+                  Expanded(
+                    child: _buildCell(
+                      week * 7 + col - leadingBlanks + 1,
+                      daysInMonth,
+                      isTodayMonth,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
       ],
     );
   }
 
   Widget _buildCell(int day, int daysInMonth, bool isTodayMonth) {
-    if (day < 1 || day > daysInMonth) return const SizedBox(height: 52);
+    if (day < 1 || day > daysInMonth) return const SizedBox(height: 44);
 
     final date = DateTime(focusedMonth.year, focusedMonth.month, day);
     final start = rangeStart;
@@ -138,9 +138,8 @@ class CalendarMonthGrid extends StatelessWidget {
       onTap: () => onDaySelected(day),
       pressedScale: 0.9,
       child: SizedBox(
-        height: 52,
+        height: 44,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(
               alignment: Alignment.center,
@@ -152,43 +151,39 @@ class CalendarMonthGrid extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Container(
-                          height: 34,
-                          color: isRangeStart ? Colors.transparent : _rangeFill,
+                          height: 36,
+                          color: isRangeStart
+                              ? Colors.transparent
+                              : AppColors.blueSoft,
                         ),
                       ),
                       Expanded(
                         child: Container(
-                          height: 34,
-                          color: isRangeEnd ? Colors.transparent : _rangeFill,
+                          height: 36,
+                          color: isRangeEnd
+                              ? Colors.transparent
+                              : AppColors.blueSoft,
                         ),
                       ),
                     ],
                   ),
                 Container(
-                  width: 34,
-                  height: 34,
+                  width: 36,
+                  height: 36,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected ? AppColors.cobalt : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    color: selected ? AppColors.blue : Colors.transparent,
                     border: !selected && isToday
-                        ? Border.all(color: AppColors.cobalt, width: 1.5)
+                        ? Border.all(color: AppColors.blue, width: 1.5)
                         : null,
-                    boxShadow: selected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.cobalt.withValues(alpha: 0.35),
-                              offset: const Offset(0, 4),
-                              blurRadius: 8,
-                            ),
-                          ]
-                        : null,
+                    boxShadow: selected ? AppColors.cardShadow : null,
                   ),
                   child: Text(
                     '$day',
                     style: TextStyle(
-                      color: selected ? Colors.white : AppColors.ink,
-                      fontSize: 15,
+                      color: selected ? Colors.white : AppColors.textStrong,
+                      fontSize: 14,
                       fontWeight: selected || isToday
                           ? FontWeight.w800
                           : FontWeight.w600,

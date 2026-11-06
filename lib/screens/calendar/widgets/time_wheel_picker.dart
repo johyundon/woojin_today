@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
 
-/// iOS풍 시/분 휠 피커(v4 스타일).
+/// iOS풍 시/분 휠 피커(v7).
 ///
 /// 가운데 값만 굵고 크게, 위아래 값은 흐린 회색으로 보이게 [ListWheelScrollView]의
 /// 텍스트 스타일을 가운데 기준 거리로 바꾼다. 선택된 줄 뒤에는 연한 파란 알약
@@ -39,7 +39,7 @@ class _TimeWheelPickerState extends State<TimeWheelPicker> {
           Container(
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFDCE6FB),
+              color: AppColors.blueSoft,
               borderRadius: BorderRadius.circular(16),
             ),
           ),
@@ -123,7 +123,7 @@ class _WheelColumnState extends State<_WheelColumn> {
             child: Text(
               widget.labelBuilder(index),
               style: TextStyle(
-                color: isSelected ? AppColors.cobalt : const Color(0xFFB5B5BC),
+                color: isSelected ? AppColors.blue : AppColors.textMuted,
                 fontSize: isSelected ? 22 : 16,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
               ),

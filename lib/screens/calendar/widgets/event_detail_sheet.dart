@@ -4,17 +4,16 @@ import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
 import '../../../widgets/pressable.dart';
 import '../models/calendar_event.dart';
+import 'calendar_colors.dart';
 import 'sheet_header.dart';
-
-const Color _mutedText = Color(0xFF6B6B70);
 
 /// 상세 팝업에서 사용자가 고른 동작.
 enum EventDetailAction { edit, delete }
 
-/// 일정 카드를 눌렀을 때 아래에서 올라오는 상세 팝업(v4 스타일). 날짜/시간/
+/// 일정 카드를 눌렀을 때 아래에서 올라오는 상세 팝업(v7). 날짜/시간/
 /// 장소/알림을 보여주고, 알림은 여기서 바로 켜고 끌 수 있다. 직접 만든 일정이면
 /// "삭제하기"/"수정하기" 버튼이 나오고, 누르면 그 동작을 반환하며 닫힌다.
-/// 학사일정은 버튼 없이 보기만 된다.
+/// 학사일정은 수정·삭제할 수 없다는 안내와 "닫기" 버튼만 나온다.
 Future<EventDetailAction?> showEventDetailSheet(
   BuildContext context, {
   required CalendarEvent event,
@@ -24,8 +23,9 @@ Future<EventDetailAction?> showEventDetailSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
+    barrierColor: CalendarColors.barrier,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
     builder: (_) =>
         _EventDetailBody(event: event, onReminderToggled: onReminderToggled),
@@ -65,7 +65,7 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
     final start = event.startTime;
     if (start == null) return '종일';
     final end = event.endTime;
-    return end == null ? _time(start) : '${_time(start)} ~ ${_time(end)}';
+    return end == null ? _time(start) : '${_time(start)} – ${_time(end)}';
   }
 
   /// 알림 줄 문구. 시간 정보가 없는 종일 일정(학사일정 등)의 "정각" 알림은 오전 9시에
@@ -91,139 +91,210 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
     final editable = event.isUserEvent;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        10,
-        20,
-        20 + MediaQuery.of(context).padding.bottom,
-      ),
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 38),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Center(child: SheetGrabber()),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0xFFDCE6FB),
-                borderRadius: BorderRadius.circular(99),
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 event.label,
                 style: const TextStyle(
-                  color: AppColors.cobalt,
-                  fontSize: 11,
+                  color: AppColors.blueText,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               event.title,
               style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 22,
+                color: AppColors.textStrong,
+                fontSize: 21,
                 fontWeight: FontWeight.w800,
+                letterSpacing: -0.63,
               ),
             ),
-            const SizedBox(height: 18),
-            _InfoRow(icon: Icons.calendar_today, label: '날짜', value: _dateText),
+            _InfoRow(
+              icon: Icons.calendar_today_rounded,
+              label: '날짜',
+              value: _dateText,
+            ),
             // 시간이 없는 일정은 "시간: 종일" 줄을 빼서 보여준다(사용자 요청, 2026-10-31).
             if (!event.isAllDay)
-              _InfoRow(icon: Icons.access_time, label: '시간', value: _timeText),
+              _InfoRow(
+                icon: Icons.watch_later_rounded,
+                label: '시간',
+                value: _timeText,
+              ),
             if (event.location != null && event.location!.isNotEmpty)
               _InfoRow(
-                icon: Icons.location_on,
+                icon: Icons.location_on_rounded,
                 label: '장소',
                 value: event.location!,
               ),
             _InfoRow(
-              icon: Icons.notifications_active,
+              icon: Icons.notifications_active_rounded,
               label: '알림',
               value: _reminderText,
-              trailing: Switch(
-                value: event.hasReminder,
-                onChanged: _toggle,
-                activeThumbColor: Colors.white,
-                activeTrackColor: AppColors.cobalt,
-                inactiveThumbColor: Colors.white,
-                inactiveTrackColor: const Color(0xFFD8D8DE),
-                trackOutlineColor: const WidgetStatePropertyAll(
-                  Colors.transparent,
+              trailing: SizedBox(
+                width: 48,
+                height: 28,
+                child: FittedBox(
+                  child: Switch(
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    value: event.hasReminder,
+                    onChanged: _toggle,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: AppColors.inkNavy,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: AppColors.checkLine,
+                    trackOutlineColor: const WidgetStatePropertyAll(
+                      Colors.transparent,
+                    ),
+                  ),
                 ),
               ),
             ),
-            if (editable) ...[
-              const SizedBox(height: 8),
+            if (!editable) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.fill,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.lock_rounded,
+                      size: 15,
+                      color: AppColors.textBody,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '학교에서 등록한 일정은 수정, 삭제할 수 없어요',
+                        style: TextStyle(
+                          color: AppColors.textBody,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            SizedBox(height: editable ? 20 : 16),
+            if (editable)
               Row(
                 children: [
                   Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: Pressable.effect(
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              Navigator.of(context)
-                                  .pop(EventDetailAction.delete),
-                          icon: const Icon(
-                            Icons.delete,
-                            size: 18,
-                            color: Color(0xFFE5484D),
-                          ),
-                          label: const Text(
-                            '삭제하기',
-                            style: TextStyle(
-                              color: Color(0xFFE5484D),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFDECEC),
-                            elevation: 0,
-                            shape: const StadiumBorder(),
-                          ),
-                        ),
-                      ),
+                    child: _SheetButton(
+                      icon: Icons.delete_rounded,
+                      label: '삭제하기',
+                      background: CalendarColors.deleteSoft,
+                      foreground: CalendarColors.deleteRed,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      onPressed: () =>
+                          Navigator.of(context).pop(EventDetailAction.delete),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: Pressable.effect(
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              Navigator.of(context).pop(EventDetailAction.edit),
-                          icon: const Icon(
-                            Icons.edit,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          label: const Text(
-                            '수정하기',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.cobalt,
-                            elevation: 0,
-                            shape: const StadiumBorder(),
-                          ),
-                        ),
-                      ),
+                    child: _SheetButton(
+                      icon: Icons.edit_rounded,
+                      label: '수정하기',
+                      background: AppColors.blue,
+                      foreground: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      onPressed: () =>
+                          Navigator.of(context).pop(EventDetailAction.edit),
                     ),
                   ),
                 ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: _SheetButton(
+                  label: '닫기',
+                  background: AppColors.blue,
+                  foreground: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
-            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 상세 팝업 아래쪽 버튼(높이 52, 모서리 16).
+class _SheetButton extends StatelessWidget {
+  const _SheetButton({
+    this.icon,
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.fontSize,
+    required this.fontWeight,
+    required this.onPressed,
+  });
+
+  final IconData? icon;
+  final String label;
+  final Color background;
+  final Color foreground;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Text(
+      label,
+      style: TextStyle(
+        color: foreground,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+      ),
+    );
+    final style = ElevatedButton.styleFrom(
+      backgroundColor: background,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    );
+    return SizedBox(
+      height: 52,
+      child: Pressable.effect(
+        child: icon == null
+            ? ElevatedButton(onPressed: onPressed, style: style, child: text)
+            : ElevatedButton.icon(
+                onPressed: onPressed,
+                icon: Icon(icon, size: 17, color: foreground),
+                label: text,
+                style: style,
+              ),
       ),
     );
   }
@@ -245,17 +316,17 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(top: 16),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFFDCE6FB),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.blueSoft,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 20, color: AppColors.cobalt),
+            child: Icon(icon, size: 17, color: AppColors.blueText),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -264,21 +335,25 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: _mutedText, fontSize: 11),
+                  style: const TextStyle(
+                    color: AppColors.textSub,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   value,
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.textStrong,
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
-          ?trailing,
+          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
         ],
       ),
     );

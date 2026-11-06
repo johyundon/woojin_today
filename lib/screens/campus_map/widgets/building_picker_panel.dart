@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../campus_map_colors.dart';
 import '../models/campus_building.dart';
@@ -41,7 +42,7 @@ class _BuildingPickerPanelState extends State<BuildingPickerPanel> {
       decoration: BoxDecoration(
         color: CampusMapColors.surface,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: CampusMapColors.cardShadow,
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -56,6 +57,7 @@ class _BuildingPickerPanelState extends State<BuildingPickerPanel> {
                   color: CampusMapColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
                 ),
               ),
             ),
@@ -63,35 +65,45 @@ class _BuildingPickerPanelState extends State<BuildingPickerPanel> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Container(
-              decoration: const BoxDecoration(
-                color: CampusMapColors.surfaceElevated,
-                borderRadius: BorderRadius.all(Radius.circular(26)),
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: AppColors.fill,
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _query = value),
-                style: const TextStyle(
-                  color: CampusMapColors.textPrimary,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  icon: const Padding(
-                    padding: EdgeInsets.only(left: 14),
-                    child: Icon(
-                      Icons.search,
-                      color: CampusMapColors.textSecondary,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.search_rounded,
+                    color: CampusMapColors.textPrimary,
+                    size: 19,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _query = value),
+                      cursorColor: AppColors.blue,
+                      style: const TextStyle(
+                        color: CampusMapColors.textPrimary,
+                        fontSize: 15,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: '건물 이름 검색',
+                        hintStyle: TextStyle(
+                          color: CampusMapColors.textSecondary,
+                          fontSize: 15,
+                        ),
+                        filled: false,
+                        isDense: true,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                  hintText: '건물 이름 검색',
-                  hintStyle: const TextStyle(
-                    color: CampusMapColors.textSecondary,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 10,
-                  ),
-                ),
+                ],
               ),
             ),
           ),

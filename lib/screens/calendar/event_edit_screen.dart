@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
 import '../../utils/weekday_labels.dart';
 import '../../widgets/mascot_sticker.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/primary_button.dart';
 import 'models/calendar_event.dart';
+import 'widgets/calendar_colors.dart';
 import 'widgets/date_pick_sheet.dart';
 import 'widgets/time_pick_sheet.dart';
 
-const Color _fieldBackground = Color(0xFFF1F1F5);
-const Color _mutedText = Color(0xFF6B6B70);
-const Color _hintText = Color(0xFFB4B4BA);
-const Color _divider = Color(0xFFE4E4EA);
-const Color _iconTileBackground = Color(0xFFDCE6FB);
-const Color _errorText = Color(0xFFE5484D);
-
-/// 일정 수정/추가 화면(v4 리디자인). [event]가 있으면 그 일정을 고치는
+/// 일정 수정/추가 화면(v7). [event]가 있으면 그 일정을 고치는
 /// "일정 수정", 없으면 [initialDate]에 새로 만드는 "새 일정"이다.
 ///
 /// 저장하면 새 [CalendarEvent]를 반환하며 닫힌다(고치는 경우 id/색/라벨은
@@ -42,6 +38,10 @@ class _EventEditScreenState extends State<EventEditScreen> {
     text: widget.event?.location ?? '',
   );
 
+  /// 입력 중인 칸은 흰 바탕 + 파란 테두리로 바꿔 보여준다(v7).
+  final _titleFocus = FocusNode();
+  final _locationFocus = FocusNode();
+
   late DateTime _startDate = _dateOnly(
     widget.event?.startDate ?? widget.initialDate,
   );
@@ -62,9 +62,20 @@ class _EventEditScreenState extends State<EventEditScreen> {
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   @override
+  void initState() {
+    super.initState();
+    _titleFocus.addListener(_onFocusChanged);
+    _locationFocus.addListener(_onFocusChanged);
+  }
+
+  void _onFocusChanged() => setState(() {});
+
+  @override
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
+    _titleFocus.dispose();
+    _locationFocus.dispose();
     super.dispose();
   }
 
@@ -109,7 +120,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
         endDate: _endDate,
         label: original?.label ?? '내 일정',
         title: _titleController.text.trim(),
-        color: original?.color ?? AppColors.cobalt,
+        color: original?.color ?? AppColors.blue,
         startTime: _allDay ? null : _time,
         endTime: null,
         location: location.isEmpty ? null : location,
@@ -122,485 +133,418 @@ class _EventEditScreenState extends State<EventEditScreen> {
   Widget build(BuildContext context) {
     final error = _rangeError;
 
-    return Scaffold(
-      // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐 파랑이 보이지
-      // 않도록, 바탕은 흰색으로 두고 파랑은 body 영역에만 깐다.
-      backgroundColor: Colors.white,
-      body: ColoredBox(
-        color: AppColors.cobalt,
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 닫기(X)와 라벨 칩을 한 줄에 둬서 머리 영역을 낮춘다
-                          // (키보드가 올라와도 입력 칸이 넉넉히 보이게).
-                          Row(
-                            children: [
-                              Pressable.icon(
-                                onTap: () => Navigator.of(context).pop(),
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.cobaltDeep,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.lime,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Text(
-                                  widget.event?.label ?? '내 일정',
-                                  style: const TextStyle(
-                                    color: AppColors.ink,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            _isEdit ? '일정 수정' : '새 일정',
-                            style: const TextStyle(
+    // 거의 흰 바탕이라 상태 표시줄 글자를 어둡게 둔다(앱 테마는 아직 어두운 테마).
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        // 키보드 양옆 둥근 모서리 틈으로 Scaffold 바탕이 비쳐도 어색하지 않게
+        // 바탕은 흰색으로 두고, 위쪽 연한 바탕은 body 영역에만 깐다.
+        backgroundColor: Colors.white,
+        // 앱 테마가 어두운 테마라 글자 선택 손잡이·선택 영역 색을 직접 정한다.
+        body: Theme(
+          data: Theme.of(context).copyWith(
+            textSelectionTheme: const TextSelectionThemeData(
+              cursorColor: AppColors.blue,
+              selectionColor: AppColors.blueSoftLine,
+              selectionHandleColor: AppColors.blue,
+            ),
+          ),
+          child: ColoredBox(
+            color: AppColors.canvas,
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 마스코트를 오른쪽 끝에 붙이려고 머리 영역을 화면 폭만큼 넓힌다.
+                      const SizedBox(width: double.infinity),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                        child: Pressable.icon(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
                               color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.04,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: AppColors.cardShadow,
                             ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: AppColors.textStrong,
+                              size: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 64, 24, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.blueSoft,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                widget.event?.label ?? '내 일정',
+                                style: const TextStyle(
+                                  color: AppColors.blue,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _isEdit ? '일정 수정' : '새 일정',
+                              style: const TextStyle(
+                                color: AppColors.textStrong,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1.04,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Positioned(
+                        right: 10,
+                        top: 13,
+                        child: MascotSticker(width: 93, angle: 0.14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(36),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            offset: Offset(0, -4),
+                            blurRadius: 20,
                           ),
                         ],
                       ),
-                    ),
-                    const Positioned(
-                      right: 0,
-                      top: 0,
-                      child: MascotSticker(width: 76, angle: 0.08),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
-                  ),
-                  child: ColoredBox(
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: ListView(
-                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                            children: [
-                              // 제목: 상세 팝업의 제목처럼 크게 쓰고, 밑줄만 둔다.
-                              TextField(
-                                controller: _titleController,
-                                onChanged: (_) => setState(() {}),
-                                cursorColor: AppColors.cobalt,
-                                style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: '일정 제목',
-                                  hintStyle: TextStyle(
-                                    color: _hintText,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.fromLTRB(
-                                    2,
-                                    6,
-                                    2,
-                                    12,
-                                  ),
-                                  enabledBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: _divider,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  focusedBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: AppColors.cobalt,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                24,
+                                20,
+                                16,
                               ),
-                              const SizedBox(height: 22),
-                              _SectionCard(
-                                children: [
-                                  _FieldRow(
-                                    icon: Icons.calendar_today,
-                                    label: '날짜',
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _ValuePill(
+                              children: [
+                                _Section(
+                                  label: '제목',
+                                  child: _InputBox(
+                                    focused: _titleFocus.hasFocus,
+                                    child: TextField(
+                                      controller: _titleController,
+                                      focusNode: _titleFocus,
+                                      onChanged: (_) => setState(() {}),
+                                      cursorColor: AppColors.blue,
+                                      style: _valueStyle,
+                                      decoration: _inputDecoration('일정 제목'),
+                                    ),
+                                  ),
+                                ),
+                                _Section(
+                                  label: '날짜',
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: _ValueBox(
+                                          icon: Icons.calendar_today_rounded,
                                           text: _dateLabel(_startDate),
                                           onTap: _pickDates,
                                         ),
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                          ),
-                                          child: Icon(
-                                            Icons.arrow_forward,
-                                            size: 14,
-                                            color: _mutedText,
-                                          ),
-                                        ),
-                                        _ValuePill(
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _ValueBox(
+                                          icon: Icons.calendar_today_rounded,
                                           text: _dateLabel(_endDate),
                                           onTap: _pickDates,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (error != null)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      4,
+                                      0,
+                                      4,
+                                      16,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.error_outline_rounded,
+                                          size: 14,
+                                          color: CalendarColors.deleteRed,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            error,
+                                            style: const TextStyle(
+                                              color: CalendarColors.deleteRed,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  _FieldRow(
-                                    icon: Icons.wb_sunny_outlined,
-                                    label: '종일',
-                                    trailing: Switch(
-                                      value: _allDay,
-                                      onChanged: (v) =>
-                                          setState(() => _allDay = v),
-                                      activeThumbColor: Colors.white,
-                                      activeTrackColor: AppColors.cobalt,
-                                      inactiveThumbColor: Colors.white,
-                                      inactiveTrackColor: const Color(
-                                        0xFFD8D8DE,
-                                      ),
-                                      trackOutlineColor:
-                                          const WidgetStatePropertyAll(
-                                            Colors.transparent,
-                                          ),
-                                    ),
-                                  ),
-                                  if (!_allDay)
-                                    _FieldRow(
-                                      icon: Icons.access_time,
-                                      label: '시간',
-                                      trailing: _ValuePill(
-                                        text: _timeLabel(_time),
-                                        onTap: _pickTime,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              if (error != null)
                                 Padding(
                                   padding: const EdgeInsets.fromLTRB(
                                     4,
-                                    8,
-                                    4,
                                     0,
+                                    4,
+                                    16,
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(
-                                        Icons.error_outline,
-                                        size: 14,
-                                        color: _errorText,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Expanded(
+                                      const Expanded(
                                         child: Text(
-                                          error,
-                                          style: const TextStyle(
-                                            color: _errorText,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
+                                          '종일',
+                                          style: TextStyle(
+                                            color: AppColors.textStrong,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 48,
+                                        height: 28,
+                                        child: FittedBox(
+                                          child: Switch(
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
+                                            value: _allDay,
+                                            onChanged: (v) =>
+                                                setState(() => _allDay = v),
+                                            activeThumbColor: Colors.white,
+                                            activeTrackColor: AppColors.inkNavy,
+                                            inactiveThumbColor: Colors.white,
+                                            inactiveTrackColor:
+                                                AppColors.checkLine,
+                                            trackOutlineColor:
+                                                const WidgetStatePropertyAll(
+                                                  Colors.transparent,
+                                                ),
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _locationController,
-                                cursorColor: AppColors.cobalt,
-                                style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                decoration: _fieldDecoration(
-                                  hint: '장소 (선택)',
-                                  icon: Icons.location_on,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _SectionCard(
-                                children: [
-                                  const _FieldRow(
-                                    icon: Icons.notifications_none,
-                                    label: '알림',
-                                  ),
-                                  // 칩이 카드 가운데로 몰리지 않고 왼쪽부터 채워지게 폭을 꽉 채운다.
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      14,
-                                      0,
-                                      14,
-                                      14,
+                                // 시간은 하나만 고른다(끝나는 시간 칸 없음).
+                                if (!_allDay)
+                                  _Section(
+                                    label: '시간',
+                                    child: _ValueBox(
+                                      icon: Icons.watch_later_rounded,
+                                      text: _timeLabel(_time),
+                                      onTap: _pickTime,
                                     ),
-                                    child: Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
+                                  ),
+                                _Section(
+                                  label: '장소',
+                                  child: _InputBox(
+                                    focused: _locationFocus.hasFocus,
+                                    icon: Icons.location_on_rounded,
+                                    child: TextField(
+                                      controller: _locationController,
+                                      focusNode: _locationFocus,
+                                      cursorColor: AppColors.blue,
+                                      style: _valueStyle,
+                                      decoration: _inputDecoration('장소 (선택)'),
+                                    ),
+                                  ),
+                                ),
+                                _Section(
+                                  label: '알림',
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _OffsetChip(
+                                        label: '없음',
+                                        selected: _offset == null,
+                                        onTap: () =>
+                                            setState(() => _offset = null),
+                                      ),
+                                      for (final offset
+                                          in ReminderOffset.values)
                                         _OffsetChip(
-                                          label: '없음',
-                                          selected: _offset == null,
+                                          label: offset.label,
+                                          selected: _offset == offset,
                                           onTap: () =>
-                                              setState(() => _offset = null),
+                                              setState(() => _offset = offset),
                                         ),
-                                        for (final offset
-                                            in ReminderOffset.values)
-                                          _OffsetChip(
-                                            label: offset.label,
-                                            selected: _offset == offset,
-                                            onTap: () => setState(
-                                              () => _offset = offset,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            4,
-                            20,
-                            16 + MediaQuery.of(context).padding.bottom,
-                          ),
-                          child: Pressable.effect(
-                            enabled: _canSave,
-                            pressedScale: 0.97,
-                            child: Container(
-                              height: 56,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                boxShadow: _canSave
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.cobalt.withValues(
-                                            alpha: 0.35,
-                                          ),
-                                          offset: const Offset(0, 6),
-                                          blurRadius: 14,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: SizedBox.expand(
-                                child: ElevatedButton(
-                                  onPressed: _canSave ? _save : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.cobalt,
-                                    disabledBackgroundColor: const Color(
-                                      0xFFC9D3F2,
-                                    ),
-                                    elevation: 0,
-                                    shape: const StadiumBorder(),
-                                  ),
-                                  child: const Text(
-                                    '저장하기',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                    ],
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              4,
+                              24,
+                              16 + MediaQuery.of(context).padding.bottom,
+                            ),
+                            child: PrimaryButton(
+                              label: '저장하기',
+                              enabled: _canSave,
+                              onPressed: _save,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  static const TextStyle _valueStyle = TextStyle(
+    color: AppColors.textStrong,
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// 칸 모양은 [_InputBox]가 그리므로 입력칸 자체는 테두리·바탕 없이 둔다
+  /// (앱 테마가 어두운 테마라 기본값에 기대지 않고 전부 정한다).
+  static InputDecoration _inputDecoration(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(
+      color: AppColors.textMuted,
+      fontSize: 15,
+      fontWeight: FontWeight.w700,
+    ),
+    isDense: true,
+    filled: false,
+    contentPadding: EdgeInsets.zero,
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+  );
+
   static String _dateLabel(DateTime d) =>
       '${d.month}.${d.day} ${weekdayLabelsSunFirst[d.weekday % 7]}';
 
   static String _timeLabel(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  /// 장소 칸. 로그인 화면 입력칸처럼 왼쪽에 파란 아이콘 타일을 둔다.
-  InputDecoration _fieldDecoration({required String hint, IconData? icon}) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: _hintText, fontWeight: FontWeight.w700),
-      prefixIcon: icon == null
-          ? null
-          : Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-              child: _IconTile(icon: icon),
-            ),
-      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-      filled: true,
-      fillColor: _fieldBackground,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: AppColors.cobalt, width: 1.5),
-      ),
-    );
-  }
 }
 
-/// 연한 회색 둥근 카드. 안의 줄들 사이에 얇은 구분선을 넣는다.
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.children});
+/// 칸 이름(작은 회색 글자) + 그 아래 칸. 섹션 사이는 16 띄운다.
+class _Section extends StatelessWidget {
+  const _Section({required this.label, required this.child});
 
-  final List<Widget> children;
+  final String label;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _fieldBackground,
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0 && children[i] is _FieldRow)
-              const Divider(
-                height: 1,
-                thickness: 1,
-                indent: 62,
-                endIndent: 14,
-                color: _divider,
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSub,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
-            children[i],
-          ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          child,
         ],
       ),
     );
   }
 }
 
-/// 카드 안의 한 줄: [아이콘 타일] 라벨 ........ [trailing].
-class _FieldRow extends StatelessWidget {
-  const _FieldRow({required this.icon, required this.label, this.trailing});
+/// 글자를 입력하는 칸(높이 58). 평소엔 연회색, 입력 중엔 흰 바탕 + 파란 테두리.
+class _InputBox extends StatelessWidget {
+  const _InputBox({required this.focused, required this.child, this.icon});
 
-  final IconData icon;
-  final String label;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 60),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            _IconTile(icon: icon),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Spacer(),
-            // 좁은 화면에서 날짜 두 개가 안 들어가면 넘치지 않게 살짝 줄인다.
-            if (trailing != null)
-              Flexible(
-                flex: 100,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: trailing,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 상세 팝업의 줄 아이콘과 같은 연파랑 사각 타일.
-class _IconTile extends StatelessWidget {
-  const _IconTile({required this.icon});
-
-  final IconData icon;
+  final bool focused;
+  final IconData? icon;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 36,
-      height: 36,
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: _iconTileBackground,
+        color: focused ? Colors.white : AppColors.fill,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: focused ? AppColors.blue : Colors.transparent,
+          width: 2,
+        ),
       ),
-      child: Icon(icon, size: 18, color: AppColors.cobalt),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 17, color: AppColors.blue),
+            const SizedBox(width: 10),
+          ],
+          Expanded(child: child),
+        ],
+      ),
     );
   }
 }
 
-/// 눌러서 고르는 값(날짜/시간)을 보여주는 흰 알약 버튼.
-class _ValuePill extends StatelessWidget {
-  const _ValuePill({required this.text, required this.onTap});
+/// 눌러서 고르는 값(날짜/시간) 칸. 연회색 바탕에 파란 아이콘과 값.
+class _ValueBox extends StatelessWidget {
+  const _ValueBox({
+    required this.icon,
+    required this.text,
+    required this.onTap,
+  });
 
+  final IconData icon;
   final String text;
   final VoidCallback onTap;
 
@@ -608,26 +552,35 @@ class _ValuePill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Pressable(
       onTap: onTap,
-      pressedScale: 0.93,
+      pressedScale: 0.97,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.fill,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.transparent, width: 2),
         ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: AppColors.ink,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-          ),
+        child: Row(
+          children: [
+            Icon(icon, size: 17, color: AppColors.blue),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _EventEditScreenState._valueStyle,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+/// 알림 시점 칩. 고른 칩은 남색 바탕 + 흰 글자.
 class _OffsetChip extends StatelessWidget {
   const _OffsetChip({
     required this.label,
@@ -646,31 +599,18 @@ class _OffsetChip extends StatelessWidget {
       pressedScale: 0.93,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppColors.cobalt : Colors.white,
-          borderRadius: BorderRadius.circular(99),
-          border: Border.all(
-            color: selected ? AppColors.cobalt : _divider,
-            width: 1.5,
-          ),
+          color: selected ? AppColors.inkNavy : AppColors.fill,
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (selected) ...[
-              const Icon(Icons.check, size: 14, color: AppColors.lime),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : AppColors.ink,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textStrong,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );

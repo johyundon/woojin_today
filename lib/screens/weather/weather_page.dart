@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/air_quality_service.dart';
 import '../../services/weather_service.dart';
@@ -65,60 +66,72 @@ class _WeatherPageState extends State<WeatherPage> {
       return WeatherScreen(weather: weather, airQuality: _airQuality);
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 0, 0),
-              child: Pressable.icon(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: AppColors.cobaltDeep,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                    size: 18,
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 8, 0, 0),
+                child: Pressable.icon(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppColors.cardShadow,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: AppColors.textStrong,
+                      size: 15,
+                      semanticLabel: '뒤로',
+                    ),
                   ),
                 ),
               ),
-            ),
-            Center(
-              child: _hasError
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          '날씨를 불러오지 못했어요',
-                          style: TextStyle(color: Colors.white, fontSize: 15),
-                        ),
-                        const SizedBox(height: 12),
-                        Pressable.effect(
-                          child: ElevatedButton(
-                            onPressed: _load,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.lime,
-                              foregroundColor: AppColors.ink,
-                              elevation: 0,
-                              shape: const StadiumBorder(),
-                            ),
-                            child: const Text(
-                              '다시 시도',
-                              style: TextStyle(fontWeight: FontWeight.w800),
+              Center(
+                child: _hasError
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '날씨를 불러오지 못했어요',
+                            style: TextStyle(
+                              color: AppColors.textStrong,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : const CircularProgressIndicator(color: Colors.white),
-            ),
-          ],
+                          const SizedBox(height: 12),
+                          Pressable.effect(
+                            child: ElevatedButton(
+                              onPressed: _load,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.blue,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                '다시 시도',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : const CircularProgressIndicator(color: AppColors.blue),
+              ),
+            ],
+          ),
         ),
       ),
     );

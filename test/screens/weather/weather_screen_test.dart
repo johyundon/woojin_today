@@ -62,7 +62,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('오늘 날씨 어때?'), findsOneWidget);
-    expect(find.text('14°'), findsWidgets);
+    expect(find.text('14'), findsWidgets); // 숫자와 "°"는 따로 그린다
     expect(find.text('지금 · 구름 많음'), findsOneWidget);
     expect(find.text('최고 18° · 최저 7° · 체감 12°'), findsOneWidget);
     expect(find.text('20%'), findsOneWidget);

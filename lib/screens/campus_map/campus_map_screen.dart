@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
 import '../../theme/app_colors.dart';
@@ -50,7 +51,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   // 바로 아래에 오도록 한다(timetable_grid_resize_mixin.dart와 같은
   // GlobalKey 실측 패턴). 측정 전엔 적당한 기본값을 쓴다.
   final _headerKey = GlobalKey();
-  double _headerHeight = 72;
+  double _headerHeight = 120;
 
   void _scheduleHeaderMeasurement() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -196,88 +197,100 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     final selected = _selectedBuilding;
     _scheduleHeaderMeasurement();
 
-    return Scaffold(
-      backgroundColor: CampusMapColors.background,
-      body: Stack(
-        children: [
-          KakaoMap(
-            center: _defaultCenter,
-            currentLevel: 4,
-            markers: _markers,
-            polylines: _polylines,
-            onMapCreated: (controller) => _mapController = controller,
-            onMarkerTap: (markerId, latLng, zoomLevel) =>
-                _onMarkerTap(markerId),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: KakaoMapPointerInterceptor(
-              child: SafeArea(
-                key: _headerKey,
-                bottom: false,
-                // 뒤로가기 버튼과 출발지/목적지 검색바를 한 줄에 나란히 둔다.
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: Row(
-                    children: [
-                      Pressable.icon(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: const Material(
-                          color: AppColors.cobaltDeep,
-                          shape: CircleBorder(),
-                          child: SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: CampusSearchBar(
-                          originName: _origin?.name,
-                          destinationName: _destination?.name,
-                          onTapOrigin: _openOriginPicker,
-                          onTapDestination: _openDestinationPicker,
-                          onReset: _reset,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+    // 위쪽 검색 영역이 흰색이라 상태 표시줄 글자를 어둡게 한다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: CampusMapColors.background,
+        body: Stack(
+          children: [
+            KakaoMap(
+              center: _defaultCenter,
+              currentLevel: 4,
+              markers: _markers,
+              polylines: _polylines,
+              onMapCreated: (controller) => _mapController = controller,
+              onMarkerTap: (markerId, latLng, zoomLevel) =>
+                  _onMarkerTap(markerId),
             ),
-          ),
-          // "건물 선택" 패널이 열려있는 동안엔 경로 배너/건물 상세 카드를
-          // 같이 보여주면 화면이 복잡해지니 숨긴다.
-          if (route != null && _pickerTarget == _PickerTarget.none)
             Positioned(
-              top: _headerHeight,
+              top: 0,
               left: 0,
               right: 0,
               child: KakaoMapPointerInterceptor(
-                child: Center(
-                  child: RouteInfoBanner(
-                    walkMinutes: route.walkMinutes,
-                    distanceMeters: route.distanceMeters,
+                // 상태 표시줄까지 덮는 흰 영역(아래 모서리만 둥글게).
+                child: Container(
+                  key: _headerKey,
+                  decoration: const BoxDecoration(
+                    color: CampusMapColors.surface,
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(24),
+                    ),
+                    boxShadow: CampusMapColors.headerShadow,
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    // 뒤로가기 버튼과 출발지/목적지 검색바를 한 줄에 나란히 둔다.
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                      child: Row(
+                        children: [
+                          Pressable.icon(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.fill,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: AppColors.textStrong,
+                                size: 15,
+                                semanticLabel: '뒤로',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: CampusSearchBar(
+                              originName: _origin?.name,
+                              destinationName: _destination?.name,
+                              onTapOrigin: _openOriginPicker,
+                              onTapDestination: _openDestinationPicker,
+                              onReset: _reset,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          if (selected != null && _pickerTarget == _PickerTarget.none)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: KakaoMapPointerInterceptor(
-                child: SafeArea(
-                  top: false,
+            // "건물 선택" 패널이 열려있는 동안엔 경로 배너/건물 상세 카드를
+            // 같이 보여주면 화면이 복잡해지니 숨긴다.
+            if (route != null && _pickerTarget == _PickerTarget.none)
+              Positioned(
+                top: _headerHeight,
+                left: 0,
+                right: 0,
+                child: KakaoMapPointerInterceptor(
+                  child: Center(
+                    child: RouteInfoBanner(
+                      walkMinutes: route.walkMinutes,
+                      distanceMeters: route.distanceMeters,
+                    ),
+                  ),
+                ),
+              ),
+            if (selected != null && _pickerTarget == _PickerTarget.none)
+              Positioned(
+                left: 10,
+                right: 10,
+                bottom: 22,
+                child: KakaoMapPointerInterceptor(
                   child: BuildingDetailCard(
                     buildingName: selected.name,
                     onClose: () => setState(() => _selectedBuilding = null),
@@ -286,29 +299,31 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
                 ),
               ),
-            ),
-          if (_pickerTarget != _PickerTarget.none) ...[
-            // 패널이 열려있는 동안 지도를 어둡게 깔아 패널에 시선이 가도록
-            // 하고, 이 영역을 탭하면 패널이 닫힌다.
-            Positioned.fill(
-              child: KakaoMapPointerInterceptor(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _closePicker,
-                  child: Container(color: Colors.black.withValues(alpha: 0.5)),
+            if (_pickerTarget != _PickerTarget.none) ...[
+              // 패널이 열려있는 동안 지도를 어둡게 깔아 패널에 시선이 가도록
+              // 하고, 이 영역을 탭하면 패널이 닫힌다.
+              Positioned.fill(
+                child: KakaoMapPointerInterceptor(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _closePicker,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              top: _headerHeight,
-              left: 16,
-              right: 16,
-              child: KakaoMapPointerInterceptor(
-                child: BuildingPickerPanel(onSelected: _onBuildingPicked),
+              Positioned(
+                top: _headerHeight,
+                left: 16,
+                right: 16,
+                child: KakaoMapPointerInterceptor(
+                  child: BuildingPickerPanel(onSelected: _onBuildingPicked),
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

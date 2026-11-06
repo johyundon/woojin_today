@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/notice_service.dart';
 import '../../services/notice_watcher.dart';
@@ -14,7 +15,7 @@ import 'models/notice_item.dart';
 import 'services/notice_read_storage.dart';
 import 'widgets/notice_list_card.dart';
 
-/// "공지사항" 화면("놓치면 안 되는 공지" v4 리디자인). 전체/학사/장학/학과/행사
+/// "공지사항" 화면("놓치면 안 되는 공지" v7 디자인). 전체/학사/장학/학과/행사
 /// 칩으로 거르고, 카드의 북마크로 중요한 공지를 표시해 둘 수 있다(북마크는
 /// 저장하지 않고 화면이 열려 있는 동안만 유지된다).
 ///
@@ -31,12 +32,7 @@ import 'widgets/notice_list_card.dart';
 /// 띄운다([NoticeWatcher]). 켤 때 알림 권한을 묻고, 기본은 꺼짐이다.
 /// 이 화면을 열면 홈 종 아이콘의 "새 공지" 점을 지운다.
 class NoticeScreen extends StatefulWidget {
-  const NoticeScreen({
-    this.service,
-    this.watcher,
-    this.loginCookie,
-    super.key,
-  });
+  const NoticeScreen({this.service, this.watcher, this.loginCookie, super.key});
 
   /// 로그인 때 홈페이지가 준 쿠키. 없으면 [SessionCache.homepageCookie]를 쓴다
   /// (테스트에서 직접 넣는다). 있어야 종합강의시간표 공지를 읽을 수 있다.
@@ -122,9 +118,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
               NoticeBoard.academic => '학사공지',
               NoticeBoard.mileage => '마일리지장학 공지',
               NoticeBoard.timetable =>
-                loginExpired
-                    ? '종합강의시간표 공지(다시 로그인 필요)'
-                    : '종합강의시간표 공지',
+                loginExpired ? '종합강의시간표 공지(다시 로그인 필요)' : '종합강의시간표 공지',
             },
       ];
       // 날짜가 "2026.10.29" 형식이라 문자열 비교가 곧 날짜 비교다.
@@ -165,181 +159,92 @@ class _NoticeScreenState extends State<NoticeScreen> {
     ];
     final newCount = _notices.where(_isUnread).length;
 
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Pressable.icon(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: const BoxDecoration(
-                              color: AppColors.cobaltDeep,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.lime,
-                                borderRadius: BorderRadius.circular(99),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.campaign,
-                                    size: 14,
-                                    color: AppColors.ink,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '새 글 $newCount개',
-                                    style: const TextStyle(
-                                      color: AppColors.ink,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // 시안에는 없지만 기존 "새 글 알림 받기" 기능을 남긴
-                            // 작은 종 버튼.
-                            // 켜는 순간 종이 흔들리며 울린다.
-                            Pressable.icon(
-                              onTap: () => _onNotifyToggled(!_notifyEnabled),
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.cobaltDeep,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: RingingBell(
-                                    active: _notifyEnabled,
-                                    size: 16,
-                                    activeColor: Colors.white,
-                                    inactiveColor: Colors.white.withValues(
-                                      alpha: 0.6,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          '놓치면 안 되는 공지',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.04,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Positioned(
-                    right: 0,
-                    top: 0,
-                    child: MascotSticker(width: 76, angle: 0.08),
-                  ),
-                ],
+    // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Header(
+                newCount: newCount,
+                notifyEnabled: _notifyEnabled,
+                onNotifyTap: () => _onNotifyToggled(!_notifyEnabled),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 40,
-              child: ListView(
+              const SizedBox(height: 18),
+              // 칩 그림자가 위아래로 잘리지 않게 자르지 않는다.
+              SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _FilterChip(
-                    label: '전체',
-                    selected: _filter == null,
-                    onTap: () => setState(() => _filter = null),
-                  ),
-                  for (final tag in _visibleTags) ...[
-                    const SizedBox(width: 8),
+                clipBehavior: Clip.none,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Row(
+                  children: [
                     _FilterChip(
-                      label: tag.label,
-                      selected: _filter == tag,
-                      onTap: () => setState(() => _filter = tag),
+                      label: '전체',
+                      selected: _filter == null,
+                      onTap: () => setState(() => _filter = null),
                     ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => _loadNotices(forceRefresh: true),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                        children: [
-                          if (_failedBoards.isNotEmpty)
-                            _LoadErrorCard(
-                              boards: _failedBoards,
-                              onRetry: () {
-                                setState(() => _loading = true);
-                                _loadNotices(forceRefresh: true);
-                              },
-                            ),
-                          for (final notice in notices) ...[
-                            NoticeListCard(
-                              notice: notice,
-                              bookmarked: _bookmarked.contains(notice.key),
-                              unread: _isUnread(notice),
-                              detailService: _service,
-                              onBookmarkTap: () => setState(() {
-                                if (!_bookmarked.remove(notice.key)) {
-                                  _bookmarked.add(notice.key);
-                                }
-                              }),
-                              onOpened: () => _markRead(notice),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                        ],
+                    for (final tag in _visibleTags) ...[
+                      const SizedBox(width: 6),
+                      _FilterChip(
+                        label: tag.label,
+                        selected: _filter == tag,
+                        onTap: () => setState(() => _filter = tag),
                       ),
-                    ),
-            ),
-          ],
+                    ],
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.blue),
+                      )
+                    : RefreshIndicator(
+                        color: AppColors.blue,
+                        backgroundColor: Colors.white,
+                        onRefresh: () => _loadNotices(forceRefresh: true),
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            18,
+                            12,
+                            18,
+                            24 + MediaQuery.paddingOf(context).bottom,
+                          ),
+                          children: [
+                            if (_failedBoards.isNotEmpty)
+                              _LoadErrorCard(
+                                boards: _failedBoards,
+                                onRetry: () {
+                                  setState(() => _loading = true);
+                                  _loadNotices(forceRefresh: true);
+                                },
+                              ),
+                            for (final notice in notices) ...[
+                              NoticeListCard(
+                                notice: notice,
+                                bookmarked: _bookmarked.contains(notice.key),
+                                unread: _isUnread(notice),
+                                detailService: _service,
+                                onBookmarkTap: () => setState(() {
+                                  if (!_bookmarked.remove(notice.key)) {
+                                    _bookmarked.add(notice.key);
+                                  }
+                                }),
+                                onOpened: () => _markRead(notice),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -382,6 +287,133 @@ class _NoticeScreenState extends State<NoticeScreen> {
   }
 }
 
+/// 헤더: 흰 네모 뒤로가기, "새 글 N개" 배지 + 알림 종 버튼, 큰 제목, 오른쪽 위
+/// 마스코트 스티커.
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.newCount,
+    required this.notifyEnabled,
+    required this.onNotifyTap,
+  });
+
+  final int newCount;
+  final bool notifyEnabled;
+  final VoidCallback onNotifyTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Positioned(
+          right: 14,
+          top: -5,
+          child: IgnorePointer(child: MascotSticker(width: 86, angle: 0.14)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Pressable.icon(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppColors.cardShadow,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.textStrong,
+                    size: 15,
+                    semanticLabel: '뒤로',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blueSoft,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.campaign_rounded,
+                          size: 14,
+                          color: AppColors.blue,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '새 글 $newCount개',
+                          style: const TextStyle(
+                            color: AppColors.blue,
+                            fontSize: 12,
+                            height: 1.4,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // 시안에는 없지만 기존 "새 글 알림 받기" 기능을 남긴 작은 종
+                  // 버튼. 켜는 순간 종이 흔들리며 울린다.
+                  Pressable.icon(
+                    onTap: onNotifyTap,
+                    child: Container(
+                      width: 31,
+                      height: 31,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: AppColors.cardShadow,
+                      ),
+                      child: Center(
+                        child: RingingBell(
+                          active: notifyEnabled,
+                          size: 16,
+                          activeColor: AppColors.blue,
+                          inactiveColor: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Padding(
+                // 오른쪽 마스코트와 겹치지 않게 비워 둔다.
+                padding: EdgeInsets.only(right: 80),
+                child: Text(
+                  '놓치면 안 되는 공지',
+                  style: TextStyle(
+                    color: AppColors.textStrong,
+                    fontSize: 26,
+                    height: 1.4,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.91,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// 게시판을 불러오지 못했을 때 목록 위에 띄우는 안내.
 class _LoadErrorCard extends StatelessWidget {
   const _LoadErrorCard({required this.boards, required this.onRetry});
@@ -396,7 +428,8 @@ class _LoadErrorCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Row(
         children: [
@@ -404,7 +437,7 @@ class _LoadErrorCard extends StatelessWidget {
             child: Text(
               '${boards.join(', ')}를 불러오지 못했어요',
               style: const TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textStrong,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -415,7 +448,7 @@ class _LoadErrorCard extends StatelessWidget {
             child: const Text(
               '다시 시도',
               style: TextStyle(
-                color: AppColors.cobalt,
+                color: AppColors.blue,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -445,18 +478,21 @@ class _FilterChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.lime : AppColors.cobaltDeep,
-          borderRadius: BorderRadius.circular(99),
+          color: selected ? AppColors.blueSoft : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: selected ? null : AppColors.cardShadow,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppColors.ink : Colors.white,
+            color: selected ? AppColors.blue : AppColors.textStrong,
             fontSize: 13,
-            fontWeight: FontWeight.w800,
+            height: 1.4,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ),

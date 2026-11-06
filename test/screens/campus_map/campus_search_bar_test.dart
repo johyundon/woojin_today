@@ -21,14 +21,14 @@ void main() {
   testWidgets('아무것도 선택하지 않았으면 X 버튼이 없다', (tester) async {
     await tester.pumpWidget(_bar());
 
-    expect(find.byIcon(Icons.close), findsNothing);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
   });
 
   testWidgets('출발지나 목적지가 선택되면 X 버튼이 보인다', (tester) async {
     await tester.pumpWidget(_bar(origin: '진리관'));
-    expect(find.byIcon(Icons.close), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
     await tester.pumpWidget(_bar(destination: '진리관'));
-    expect(find.byIcon(Icons.close), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 }
