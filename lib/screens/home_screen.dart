@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/cafeteria_menu_service.dart';
 import '../services/class_schedule_parser.dart';
@@ -32,11 +33,10 @@ import 'notice/notice_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
 
-/// "우진이의 하루" 홈 화면(메인 대시보드) (Figma node 6:14 다크 / 6:20 라이트).
+/// "우진이의 하루" 홈 화면(메인 대시보드) (v7 디자인 12 수업 있는 날 / 13 공강인 날).
 ///
-/// 다른 화면은 전부 다크 전용(theme/app_colors.dart의 AppColors)이지만, 이 화면만
-/// 라이트/다크 테마 토글을 지원한다. 전역 테마나 다른 화면에는 영향을 주지 않도록
-/// 로컬 State(`_isDark`)로만 관리하고, 색상도 이 파일 안의 [HomeColors]로 분리했다.
+/// 거의 흰 바탕 위에 인사말, "다음 수업" 카드, 학과 등수·오늘 점심 작은 카드를 둔다.
+/// 홈 카드 전용 색은 `home/home_colors.dart`의 [HomeV7Colors]에 있다.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -514,140 +514,152 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ? '내일'
         : '${weekdayLabelsMonFirst[Weekday.values.indexOf(upcoming.day)]}요일';
 
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      extendBody: true,
-      bottomNavigationBar: HomeBottomNav(selectedIndex: 2, onTap: _onTabTap),
-      body: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                    child: Row(
-                      children: [
-                        const Spacer(),
-                        HomeTopIconButton(
-                          icon: Icons.search,
-                          onTap: _openTimetable,
-                        ),
-                        const SizedBox(width: 8),
-                        HomeTopIconButton(
-                          icon: Icons.notifications_none,
-                          onTap: _openNotice,
-                          dot: _hasNewNotice,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.lime,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  dateBadge,
-                                  style: const TextStyle(
-                                    color: AppColors.ink,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Padding(
-                                padding: const EdgeInsets.only(right: 70),
-                                child: Text(
-                                  greeting,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    height: 1.22,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
+    // 흰 바탕이라 상태 표시줄 글자(시계·배터리)를 어둡게 그린다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        extendBody: true,
+        bottomNavigationBar: HomeBottomNav(selectedIndex: 2, onTap: _onTabTap),
+        body: SafeArea(
+          bottom: false,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 2, 18, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          HomeV7IconButton(
+                            icon: Icons.search_rounded,
+                            onTap: _openTimetable,
                           ),
-                        ),
-                        const Positioned(
-                          right: -20,
-                          top: 10,
-                          child: MascotSticker(width: 100, angle: 0.1),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          HomeV7IconButton(
+                            icon: Icons.notifications_rounded,
+                            onTap: _openNotice,
+                            dot: _hasNewNotice,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: NextClassCard(
-                      next: next,
-                      nowMinutes: nowMinutes,
-                      timetableLoaded: _timetableLoaded,
-                      hasClassesToday: _todayClasses.isNotEmpty,
-                      upcoming: upcoming,
-                      upcomingDayLabel: upcomingDayLabel,
-                      onDirectionsTap: _openCampusMap,
-                      onTimetableTap: _openTimetable,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: HomeMiniCard(
-                            icon: Icons.bar_chart_rounded,
-                            iconBackground: AppColors.lime,
-                            iconColor: AppColors.ink,
-                            label: '학과 등수',
-                            title: '나는 학과에서\n몇등일까?',
-                            titleColor: AppColors.lime,
-                            footer: const Text(
-                              '두근두근',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: HomeV7Colors.dateBadge,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    dateBadge,
+                                    style: const TextStyle(
+                                      color: AppColors.textStrong,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // 인사말이 한 줄이어도 디자인처럼 두 줄 높이를
+                                // 잡아, 오른쪽 마스코트가 아래 카드를 덮지 않게 한다.
+                                Container(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 73,
+                                  ),
+                                  padding: const EdgeInsets.only(right: 80),
+                                  child: Text(
+                                    greeting,
+                                    style: const TextStyle(
+                                      color: AppColors.inkNavy,
+                                      fontSize: 26,
+                                      height: 1.4,
+                                      letterSpacing: -0.91,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            backgroundColor: AppColors.ink,
-                            textColor: Colors.white,
-                            onTap: _openDepartmentRank,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: CafeteriaMenuCard(
-                            now: now,
-                            onTap: _openCafeteria,
-                            service: widget.cafeteriaMenuService,
+                          const Positioned(
+                            right: -13,
+                            top: 23,
+                            child: MascotSticker(width: 90, angle: 0.14),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 140),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                      child: NextClassCard(
+                        next: next,
+                        nowMinutes: nowMinutes,
+                        timetableLoaded: _timetableLoaded,
+                        hasClassesToday: _todayClasses.isNotEmpty,
+                        upcoming: upcoming,
+                        upcomingDayLabel: upcomingDayLabel,
+                        onDirectionsTap: _openCampusMap,
+                        onTimetableTap: _openTimetable,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: HomeMiniCard(
+                              icon: Icons.leaderboard_rounded,
+                              iconColor: AppColors.blue,
+                              label: '학과 등수',
+                              labelColor: HomeV7Colors.onNavySub,
+                              title: '나는 학과에서\n몇등일까?',
+                              titleColor: Colors.white,
+                              footer: const Text(
+                                '두근두근',
+                                style: TextStyle(
+                                  color: HomeV7Colors.onNavySub,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              backgroundColor: AppColors.inkNavy,
+                              onTap: _openDepartmentRank,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: CafeteriaMenuCard(
+                              now: now,
+                              onTap: _openCafeteria,
+                              service: widget.cafeteriaMenuService,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 140),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

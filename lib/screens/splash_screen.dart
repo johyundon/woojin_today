@@ -11,8 +11,8 @@ import '../widgets/mascot_sticker.dart';
 import 'login_screen.dart';
 import 'post_login_route.dart';
 
-/// 스플래시 화면 ("우진이의 하루" v4 리디자인).
-/// 코발트 배경 + 마스코트를 2초간 보여주는 동안, 저장된 로그인 자격증명이
+/// 스플래시 화면 ("우진이의 하루" v7 디자인 00).
+/// 파란 그라데이션 배경 + 마스코트를 2초간 보여주는 동안, 저장된 로그인 자격증명이
 /// 있으면 조용히 재로그인을 시도한다. 성공하면 로그인 화면을 거치지
 /// 않고 로그인 후 화면(post_login_route.dart)으로, 저장된 값이 없거나 재로그인에 실패하면
 /// 로그인 화면으로 이동한다.
@@ -102,77 +102,107 @@ class _SplashScreenState extends State<SplashScreen> {
     super.dispose();
   }
 
+  // v7 디자인 00: 위에서 아래로 연한 하늘색 → 파랑으로 바뀌는 바탕.
+  static const _gradientTop = Color(0xFF8CC2F7);
+  static const _gradientMid = Color(0xFF3E93EE);
+  static const _footerText = Color(0xFFE6F0FF);
+
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Spacer(flex: 3),
-              Container(
-                width: 260,
-                height: 260,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.cobaltDeep,
-                  shape: BoxShape.circle,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [_gradientTop, _gradientMid, AppColors.blue],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: Center(
+                        child: MascotSticker(width: 225, angle: -0.1047),
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueSoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '대진대 새내기 가이드',
+                        style: TextStyle(
+                          color: AppColors.blueText,
+                          fontSize: 13,
+                          height: 1.4,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '우진이의 하루',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 44,
+                        height: 1.4,
+                        letterSpacing: -1.98,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-                child: const MascotSticker(width: 190),
               ),
-              const Spacer(flex: 1),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.lime,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '대진대 새내기 가이드',
-                  style: TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+            ),
+            // 디자인에는 없지만 자동 로그인을 기다리는 중임을 알리던 표시는 남긴다.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 52 + 17 + 20,
+              child: const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white70,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                '우진이의 하루',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: AppColors.lime,
-                ),
-              ),
-              const Spacer(flex: 2),
-              const Text(
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bottomInset > 52 ? bottomInset : 52,
+              child: const Text(
                 'DAEJIN UNIVERSITY',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: _footerText,
                   fontSize: 12,
+                  height: 1.4,
+                  letterSpacing: 2.16,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
                 ),
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

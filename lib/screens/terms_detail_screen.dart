@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/pressable.dart';
@@ -274,67 +275,110 @@ class TermsDetailScreen extends StatelessWidget {
   • 본 방침 최종 개정일자: 2026.08.10
 ''';
 
+  /// 약관 본문 글자색(v7 디자인 03 값).
+  static const _bodyColor = Color(0xFF3F444B);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              child: Row(
-                children: [
-                  Pressable.effect(
-                    pressedScale: 0.85,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFF5F3EF),
-                        shape: const CircleBorder(),
-                      ),
-                      icon: const Icon(
-                        Icons.chevron_left,
-                        color: AppColors.ink,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    // 흰 바탕이라 상태 표시줄 글자(시계·배터리)를 어둡게 그린다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 6, 22, 14),
+                child: Row(
                   children: [
-                    if (agreedAt != null) ...[
-                      Text(
-                        '동의 일시: $agreedAt',
-                        style: const TextStyle(
-                          color: Color(0xFF5A5852),
-                          fontSize: 13,
+                    Pressable.icon(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.fill,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 15,
+                          color: AppColors.textStrong,
+                          semanticLabel: '뒤로',
                         ),
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                    ..._buildBodyWidgets(body),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: AppColors.textStrong,
+                          fontSize: 17,
+                          height: 1.4,
+                          letterSpacing: -0.34,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Stack(
+                  children: [
+                    SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        26,
+                        12,
+                        26,
+                        32 + MediaQuery.paddingOf(context).bottom,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (agreedAt != null) ...[
+                            Text(
+                              '동의 일시: $agreedAt',
+                              style: const TextStyle(
+                                color: AppColors.textSub,
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          ..._buildBodyWidgets(body),
+                        ],
+                      ),
+                    ),
+                    // 화면 아래쪽 글자가 흰색으로 흐려지며 끝나는 효과(디자인 03).
+                    const Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 90,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0x00FFFFFF), Colors.white],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -363,14 +407,14 @@ class TermsDetailScreen extends StatelessWidget {
       if (heading != null) {
         widgets.add(
           Padding(
-            padding: EdgeInsets.only(top: i == 0 ? 0 : 24, bottom: 8),
+            padding: EdgeInsets.only(top: i == 0 ? 0 : 22, bottom: 8),
             child: Text(
               heading,
               style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 16,
+                color: AppColors.textStrong,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
-                height: 1.6,
+                height: 1.4,
               ),
             ),
           ),
@@ -381,9 +425,10 @@ class TermsDetailScreen extends StatelessWidget {
           Text(
             rest,
             style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 13,
-              height: 1.6,
+              color: _bodyColor,
+              fontSize: 12.5,
+              height: 1.4,
+              letterSpacing: -0.125,
               fontWeight: FontWeight.w400,
             ),
           ),

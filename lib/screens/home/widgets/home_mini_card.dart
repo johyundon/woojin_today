@@ -2,54 +2,49 @@ import 'package:flutter/material.dart';
 
 import '../../../widgets/pressable.dart';
 
-/// 홈 화면 "다음 수업" 카드 아래 나란히 놓이는 작은 카드
-/// ("우진이의 하루" v4 리디자인). 둥근 네모 아이콘 + 라벨 + 제목 + 아래 [footer].
-/// 배경/글자 색을 받아서 검은 카드와 분홍 카드에 함께 쓴다.
+/// 홈 화면 "다음 수업" 카드 아래 나란히 놓이는 작은 정사각 카드 (v7 디자인 12·13).
+/// 흰 네모 아이콘 + 라벨 → 제목(두 줄까지) → 맨 아래 [footer] 순서.
+/// 바탕·글자 색을 받아서 남색 "학과 등수" 카드와 연한 파랑 "오늘 점심" 카드에 함께 쓴다.
 class HomeMiniCard extends StatelessWidget {
   const HomeMiniCard({
     super.key,
     required this.icon,
-    required this.iconBackground,
     required this.iconColor,
     required this.label,
+    required this.labelColor,
     required this.title,
+    required this.titleColor,
     required this.footer,
     required this.onTap,
     required this.backgroundColor,
-    required this.textColor,
-    this.titleColor,
+    this.borderColor,
   });
 
   final IconData icon;
-  final Color iconBackground;
   final Color iconColor;
   final String label;
+  final Color labelColor;
   final String title;
+  final Color titleColor;
   final Widget footer;
   final VoidCallback onTap;
   final Color backgroundColor;
-  final Color textColor;
 
-  /// 제목 색. null이면 [textColor]를 쓴다(검은 카드에서만 라임색 등으로 다르게 준다).
-  final Color? titleColor;
+  /// 테두리 색. null이면 테두리 없음.
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
+    final border = borderColor;
     return Pressable(
       onTap: onTap,
       child: Container(
-        height: 156,
+        height: 171,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF030A7F).withValues(alpha: 0.22),
-              offset: const Offset(0, 10),
-              blurRadius: 24,
-            ),
-          ],
+          borderRadius: BorderRadius.circular(16),
+          border: border == null ? null : Border.all(color: border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,13 +52,13 @@ class HomeMiniCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: iconBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, size: 18, color: iconColor),
+                  child: Icon(icon, size: 17, color: iconColor),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -72,25 +67,29 @@ class HomeMiniCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: textColor.withValues(alpha: 0.75),
+                      color: labelColor,
                       fontSize: 12,
+                      height: 1.4,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 12),
             Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: titleColor ?? textColor,
+                color: titleColor,
                 fontSize: 18,
-                height: 1.2,
-                fontWeight: FontWeight.w900,
+                height: 1.4,
+                letterSpacing: -0.54,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
+            const Spacer(),
             footer,
           ],
         ),

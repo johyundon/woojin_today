@@ -96,6 +96,9 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: CollectionScreen()));
     await tester.pumpAndSettle();
 
+    // "캠퍼스 · 도구" 칸은 화면 아래쪽이라 먼저 보이게 스크롤한다.
+    await tester.ensureVisible(find.text('날씨'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('날씨'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

@@ -58,69 +58,93 @@ class _StudentIdLoginCompleteScreenState
     super.dispose();
   }
 
+  // 스플래시 화면(splash_screen.dart, v7 디자인 00)과 같은 그라데이션.
+  static const _gradientTop = Color(0xFF8CC2F7);
+  static const _gradientMid = Color(0xFF3E93EE);
+  static const _footerText = Color(0xFFE6F0FF);
+
   @override
   Widget build(BuildContext context) {
-    // 스플래시 화면(splash_screen.dart)과 같은 구성: 코발트 배경 + 원 안의 마스코트.
+    // 디자인에 따로 없는 화면이라 스플래시 화면(v7 디자인 00)과 같은 구성으로
+    // 맞춘다: 파란 그라데이션 배경 + 마스코트 + 이름표 + 큰 제목.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Spacer(flex: 3),
-              Container(
-                width: 260,
-                height: 260,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.cobaltDeep,
-                  shape: BoxShape.circle,
-                ),
-                child: const MascotSticker(width: 190),
-              ),
-              const Spacer(flex: 1),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.lime,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '학생 정보를 불러왔어요',
-                  style: TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                '로그인되었습니다',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const Spacer(flex: 3),
-              const Text(
-                'DAEJIN UNIVERSITY',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [_gradientTop, _gradientMid, AppColors.blue],
           ),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: Center(
+                        child: MascotSticker(width: 225, angle: -0.1047),
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueSoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '학생 정보를 불러왔어요',
+                        style: TextStyle(
+                          color: AppColors.blueText,
+                          fontSize: 13,
+                          height: 1.4,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '로그인되었습니다',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        height: 1.4,
+                        letterSpacing: -1.62,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bottomInset > 52 ? bottomInset : 52,
+              child: const Text(
+                'DAEJIN UNIVERSITY',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _footerText,
+                  fontSize: 12,
+                  height: 1.4,
+                  letterSpacing: 2.16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

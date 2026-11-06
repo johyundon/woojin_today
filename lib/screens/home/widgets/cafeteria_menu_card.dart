@@ -4,9 +4,10 @@ import '../../../services/cafeteria_menu_service.dart';
 import '../../../services/service_factory.dart';
 import '../../../theme/app_colors.dart';
 import '../../cafeteria/models/cafeteria_menu.dart';
+import '../home_colors.dart';
 import 'home_mini_card.dart';
 
-/// 분홍색 "오늘 학식" 카드. 오늘 점심 메뉴가 있으면 첫 번째 식당의 메뉴 두 가지와
+/// 연한 파랑 "오늘 점심" 카드(v7). 오늘 점심 메뉴가 있으면 첫 번째 식당의 메뉴 두 가지와
 /// 가격을, 없거나 아직 불러오는 중이거나 불러오지 못했으면 안내 문구를 보여준다.
 class CafeteriaMenuCard extends StatefulWidget {
   const CafeteriaMenuCard({
@@ -53,20 +54,21 @@ class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
     final title = item == null
         ? '오늘의 메뉴는\n무엇일까?'
         : item.dishes.take(2).join('\n');
+    const footerLabel = TextStyle(
+      color: HomeV7Colors.label,
+      fontSize: 12,
+      height: 1.4,
+      fontWeight: FontWeight.w700,
+    );
     return HomeMiniCard(
-      icon: Icons.restaurant,
-      iconBackground: Colors.white,
-      iconColor: AppColors.ink,
+      icon: Icons.restaurant_rounded,
+      iconColor: AppColors.blueText,
       label: '오늘 점심',
+      labelColor: AppColors.textStrong.withValues(alpha: 0.75),
       title: title,
+      titleColor: HomeV7Colors.lunchTitle,
       footer: item == null
-          ? Text(
-              '학식을 조회할 수 있어요',
-              style: TextStyle(
-                color: AppColors.ink.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            )
+          ? const Text('학식을 조회할 수 있어요', style: footerLabel)
           : Row(
               children: [
                 Expanded(
@@ -74,12 +76,10 @@ class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
                     item.restaurant,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.ink.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
+                    style: footerLabel,
                   ),
                 ),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -87,21 +87,22 @@ class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     item.priceText,
                     style: const TextStyle(
-                      color: AppColors.ink,
+                      color: HomeV7Colors.cardTitle,
                       fontSize: 12,
+                      height: 1.4,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
             ),
-      backgroundColor: AppColors.blushPink,
-      textColor: AppColors.ink,
+      backgroundColor: AppColors.blueSoft,
+      borderColor: AppColors.blueSoftLine,
       onTap: widget.onTap,
     );
   }

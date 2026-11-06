@@ -338,9 +338,10 @@ void main() {
       alert: ({required id, required title, required body}) async {},
     );
     bool bellDot() => tester
-        .widget<HomeTopIconButton>(
+        .widget<HomeV7IconButton>(
           find.byWidgetPredicate(
-            (w) => w is HomeTopIconButton && w.icon == Icons.notifications_none,
+            (w) =>
+                w is HomeV7IconButton && w.icon == Icons.notifications_rounded,
           ),
         )
         .dot;
@@ -363,7 +364,7 @@ void main() {
 
     // 공지사항 화면 안의 목록 조회는 이 테스트의 관심사가 아니라, 화면 전환만
     // 짧게 기다린다(실제 서버를 기다리지 않도록).
-    await tester.tap(find.byIcon(Icons.notifications_none));
+    await tester.tap(find.byIcon(Icons.notifications_rounded));
     await tester.pump(const Duration(milliseconds: 500));
     expect(bellDot(), isFalse);
     expect(await watcher.hasPending(), isFalse);

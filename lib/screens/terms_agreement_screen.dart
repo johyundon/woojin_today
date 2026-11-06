@@ -69,69 +69,63 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
         .pushReplacement(MaterialPageRoute(builder: (_) => next));
   }
 
+  /// 전체 동의 아래 구분선(디자인 값, 팔레트의 line보다 조금 옅다).
+  static const _dividerColor = Color(0xFFE8EAEE);
+
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      backgroundColor: AppColors.cobalt,
+      backgroundColor: AppColors.blue,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
             SizedBox(
               width: double.infinity,
-              height: 210,
+              height: 242,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // 원 → 마스코트 → 글자 순서로 겹친다.
-                  Positioned(
-                    right: -70,
-                    top: 20,
-                    child: Container(
-                      width: 240,
-                      height: 240,
-                      decoration: const BoxDecoration(
-                        color: AppColors.cobaltDeep,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
+                  // 마스코트 → 글자 순서로 겹친다.
                   const Positioned(
-                    right: 28,
-                    top: 20,
-                    child: MascotSticker(width: 130, angle: 0.08),
+                    right: 6,
+                    top: 8,
+                    child: MascotSticker(width: 156, angle: 0.1222),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                    padding: const EdgeInsets.fromLTRB(28, 42, 24, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
+                            horizontal: 12,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.lime,
-                            borderRadius: BorderRadius.circular(20),
+                            color: AppColors.blueSoft,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
                             '시작하기',
                             style: TextStyle(
-                              color: AppColors.ink,
+                              color: AppColors.blue,
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              height: 1.4,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         const Text(
                           '이용약관에\n동의해 주세요',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 30,
-                            height: 1.15,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 29,
+                            height: 1.4,
+                            letterSpacing: -1.16,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -144,62 +138,69 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
               child: Container(
                 width: double.infinity,
                 padding: EdgeInsets.fromLTRB(
-                  20,
-                  24,
-                  20,
-                  24 + MediaQuery.of(context).padding.bottom,
+                  22,
+                  28,
+                  22,
+                  bottomInset + 10 > 44 ? bottomInset + 10 : 44,
                 ),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      offset: const Offset(0, -12),
-                      blurRadius: 30,
+                      color: Color(0x0F000000),
+                      offset: Offset(0, -4),
+                      blurRadius: 20,
                     ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '서비스 이용을 위해 아래 약관을 확인하고 모두 동의해주세요',
-                      style: TextStyle(color: Color(0xFF5A5852), fontSize: 13),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        '서비스 이용을 위해 아래 약관을 확인하고 모두 동의해주세요',
+                        style: TextStyle(
+                          color: AppColors.textSub,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    Container(
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE9EEFC),
-                        borderRadius: BorderRadius.circular(16),
+                        color: _allChecked
+                            ? AppColors.blue.withValues(alpha: 0.1)
+                            : AppColors.fill,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: AppCheckboxRow(
                         label: '전체 동의합니다',
                         checked: _allChecked,
                         onChanged: _toggleAll,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        labelStyle: const TextStyle(
-                          color: AppColors.ink,
-                          fontSize: 16,
+                        padding: const EdgeInsets.all(18),
+                        labelStyle: TextStyle(
+                          color: _allChecked
+                              ? AppColors.textStrong
+                              : AppColors.textBody,
+                          fontSize: 15,
+                          height: 1.4,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Divider(color: Color(0xFFEDEBE6), height: 1),
+                    const SizedBox(height: 16),
+                    const Divider(color: _dividerColor, height: 1),
+                    const SizedBox(height: 10),
                     AppCheckboxRow(
                       label: '이용약관 동의 (필수)',
                       checked: _termsChecked,
                       onChanged: (v) => setState(() => _termsChecked = v),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                      padding: _itemPadding,
+                      labelStyle: _itemLabelStyle,
                       onViewPressed: () => _openDetail(
                         '이용약관',
                         TermsDetailScreen.termsOfServiceBody,
@@ -209,10 +210,8 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
                       label: '개인정보 처리방침 동의 (필수)',
                       checked: _privacyChecked,
                       onChanged: (v) => setState(() => _privacyChecked = v),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                      padding: _itemPadding,
+                      labelStyle: _itemLabelStyle,
                       onViewPressed: () => _openDetail(
                         '개인정보 처리방침',
                         TermsDetailScreen.privacyPolicyBody,
@@ -233,4 +232,12 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
       ),
     );
   }
+
+  static const _itemPadding = EdgeInsets.symmetric(horizontal: 4, vertical: 6);
+  static const _itemLabelStyle = TextStyle(
+    color: AppColors.textStrong,
+    fontSize: 15,
+    height: 1.4,
+    fontWeight: FontWeight.w600,
+  );
 }

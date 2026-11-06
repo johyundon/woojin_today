@@ -4,10 +4,11 @@ import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/time_format.dart';
 import '../../../widgets/pressable.dart';
+import '../home_colors.dart';
 
-/// 홈 화면의 "다음 수업" 흰색 큰 카드 ("우진이의 하루" v4 리디자인).
+/// 홈 화면의 "다음 수업" 큰 카드 (v7 디자인 12 수업 있는 날 / 13 공강인 날).
 /// [next]가 null이면 시간표를 아직 못 불러왔거나(= ![timetableLoaded]) 오늘
-/// 남은 수업이 없는 경우라, 대신 "오늘 수업 없음" 안내 + [upcoming](다음
+/// 남은 수업이 없는 경우라, 대신 "오늘은 수업 없음" 안내 + [upcoming](다음
 /// 수업일의 첫 수업)을 보여준다.
 class NextClassCard extends StatelessWidget {
   const NextClassCard({
@@ -42,9 +43,10 @@ class NextClassCard extends StatelessWidget {
   /// [upcoming]이 있는 날을 가리키는 라벨("내일" 또는 "금요일" 등).
   final String upcomingDayLabel;
 
+  /// "길찾기" 버튼(캠퍼스 지도 열기).
   final VoidCallback onDirectionsTap;
 
-  /// [upcoming] 블록의 "시간표 →" 버튼을 눌렀을 때.
+  /// [upcoming] 블록의 "시간표" 버튼을 눌렀을 때.
   final VoidCallback onTimetableTap;
 
   static String _remainingLabel(int minutes) {
@@ -54,230 +56,237 @@ class NextClassCard extends StatelessWidget {
     return m == 0 ? '$h시간 남음' : '$h시간 $m분 남음';
   }
 
-  static const _cardRadius = 28.0;
+  static const _radius = 16.0;
 
   @override
   Widget build(BuildContext context) {
     final item = next;
-    final showEmptyDecoration = timetableLoaded && item == null;
+    if (!timetableLoaded) return _buildLoading();
+    if (item != null) return _buildContent(item);
+    return _buildEmpty();
+  }
+
+  /// 흰 바탕 + 테두리 카드 틀. 안쪽(파란 칸, 장식 원, 노치)이 둥근 모서리를
+  /// 넘지 않도록 잘라낸다.
+  Widget _frame({required Color borderColor, required Widget child}) {
     return Container(
       width: double.infinity,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(_cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF030A7F).withValues(alpha: 0.22),
-            offset: const Offset(0, 10),
-            blurRadius: 24,
-          ),
-        ],
+        borderRadius: BorderRadius.circular(_radius),
+        border: Border.all(color: borderColor),
       ),
-      // 티켓 노치(카드 밖으로 삐져나와야 하는 반원)는 clip 없이 그리고,
-      // "공강" 장식 원(카드 모서리에 잘려야 하는 원)만 따로 카드 전체
-      // 영역에 맞춰 clip한다 — 두 요소의 clip 요구사항이 서로 반대라
-      // 레이어를 분리했다.
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (showEmptyDecoration)
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(_cardRadius),
-                child: const Stack(
-                  children: [
-                    Positioned(
-                      top: -56,
-                      right: -56,
-                      child: _EmptyDecorationCircle(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: !timetableLoaded
-                ? _buildLoading()
-                : item != null
-                ? _buildContent(item)
-                : _buildEmpty(),
-          ),
-        ],
-      ),
+      child: child,
     );
   }
 
   Widget _buildLoading() {
-    return const Row(
-      children: [
-        SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2.5),
-        ),
-        SizedBox(width: 12),
-        Text(
-          '수업 정보를 불러오는 중이에요',
-          style: TextStyle(
-            color: AppColors.ink,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmpty() {
-    final headline = hasClassesToday ? '오늘 수업\n다 끝났어!' : '오늘은\n공강이야!';
-    final subtitle = hasClassesToday ? '오늘 하루도 수고했어!' : '학식 먹고 캠퍼스 한 바퀴 어때?';
-    final badge = hasClassesToday ? '완료' : '공강';
-    final item = upcoming;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
+    return _frame(
+      borderColor: AppColors.fillDisabled,
+      child: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Row(
           children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: AppColors.cobalt.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.event_available,
-                color: AppColors.cobalt,
-                size: 17,
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.blue,
               ),
             ),
-            const SizedBox(width: 8),
-            const Text(
-              '오늘 수업',
-              style: TextStyle(
-                color: Color(0xFF5A5852),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: AppColors.ink,
-                borderRadius: BorderRadius.circular(20),
-              ),
+            SizedBox(width: 12),
+            Expanded(
               child: Text(
-                badge,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
+                '수업 정보를 불러오는 중이에요',
+                style: TextStyle(
+                  color: AppColors.textStrong,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        Text(
-          headline,
-          style: const TextStyle(
-            color: AppColors.ink,
-            fontSize: 30,
-            height: 1.18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: Color(0xFF9A978F),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (item != null) ...[
-          const SizedBox(height: 16),
-          const _TicketDivider(),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.cobalt.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.wb_sunny,
-                  color: AppColors.cobalt,
-                  size: 20,
-                ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    final headline = hasClassesToday ? '오늘 수업 다 끝났어!' : '오늘은 수업 없음!';
+    final subtitle = hasClassesToday ? '오늘 하루도 수고했어!' : '학식 먹고 캠퍼스 한 바퀴 어때?';
+    final badge = hasClassesToday ? '완료' : '공강';
+    final item = upcoming;
+
+    return _frame(
+      borderColor: AppColors.fillDisabled,
+      child: Stack(
+        children: [
+          Positioned(
+            top: -29,
+            right: -29,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: const BoxDecoration(
+                color: AppColors.blueSoft,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 12),
-              Expanded(
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  18,
+                  20,
+                  item == null ? 18 : 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '$upcomingDayLabel 첫 수업',
-                      style: const TextStyle(
-                        color: Color(0xFF9A978F),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: AppColors.blueSoft,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(
+                            Icons.event_available_rounded,
+                            color: AppColors.blue,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            '오늘 수업',
+                            style: TextStyle(
+                              color: HomeV7Colors.label,
+                              fontSize: 13,
+                              height: 1.4,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.blue,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            badge,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              height: 1.4,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 18),
                     Text(
-                      '${formatMinutesAsTime(item.slot.startMinutes)} ${item.course.courseName}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      headline,
                       style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 15,
+                        color: HomeV7Colors.emptyHeadline,
+                        fontSize: 27,
+                        height: 1.4,
+                        letterSpacing: -1.08,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppColors.textBody,
+                        fontSize: 13,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),
-              Pressable(
-                onTap: onTimetableTap,
-                pressedScale: 0.92,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.cobalt,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.cobalt.withValues(alpha: 0.4),
-                        offset: const Offset(0, 6),
-                        blurRadius: 14,
+              if (item != null) ...[
+                const _TicketDivider(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.blueSoft,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.wb_sunny_rounded,
+                          color: AppColors.blue,
+                          size: 21,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$upcomingDayLabel 첫 수업',
+                              style: const TextStyle(
+                                color: AppColors.textBody,
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${formatMinutesAsTime(item.slot.startMinutes)} ${item.course.courseName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: HomeV7Colors.cardTitle,
+                                fontSize: 15,
+                                height: 1.4,
+                                letterSpacing: -0.3,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      _ActionButton(
+                        label: '시간표',
+                        onTap: onTimetableTap,
+                        radius: 16,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
                       ),
                     ],
                   ),
-                  child: const Text(
-                    '시간표 →',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],
-      ],
+      ),
     );
   }
 
@@ -287,264 +296,296 @@ class NextClassCard extends StatelessWidget {
         ? '수업 중'
         : _remainingLabel(item.slot.startMinutes - nowMinutes);
     final professor = item.course.professor.trim();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: AppColors.cobalt.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.schedule,
-                color: AppColors.cobalt,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              '다음 수업',
-              style: TextStyle(
-                color: Color(0xFF5A5852),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.ink,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.timer, color: AppColors.lime, size: 14),
-                  const SizedBox(width: 4),
-                  Text(
-                    badge,
-                    style: const TextStyle(
-                      color: AppColors.lime,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+    return _frame(
+      borderColor: HomeV7Colors.nextCardBorder,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            color: AppColors.blue,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule_rounded,
+                      color: Colors.white,
+                      size: 17,
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              formatMinutesAsTime(item.slot.startMinutes),
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 46,
-                height: 1.1,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                '– ${formatMinutesAsTime(item.slot.endMinutes)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF9A978F),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          item.course.courseName,
-          style: const TextStyle(
-            color: AppColors.ink,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 16),
-        const _TicketDivider(),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.cobalt.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.location_on,
-                color: AppColors.cobalt,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.course.room.isEmpty ? '강의실 정보 없음' : item.course.room,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  if (professor.isNotEmpty)
-                    Text(
-                      '$professor 교수님',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF9A978F),
-                        fontSize: 11,
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text(
+                        '다음 수업',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                ],
-              ),
-            ),
-            Pressable(
-              onTap: onDirectionsTap,
-              pressedScale: 0.92,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.cobalt,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.cobalt.withValues(alpha: 0.4),
-                      offset: const Offset(0, 6),
-                      blurRadius: 14,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: HomeV7Colors.remainBadge,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: AppColors.blueText,
+                          fontSize: 13,
+                          height: 1.4,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: const Text(
-                  '길찾기 →',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      formatMinutesAsTime(item.slot.startMinutes),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 40,
+                        height: 1.4,
+                        letterSpacing: -1.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        '~ ${formatMinutesAsTime(item.slot.endMinutes)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: HomeV7Colors.onBlueSub,
+                          fontSize: 15,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.course.courseName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: HomeV7Colors.onBlueTitle,
+                    fontSize: 16,
+                    height: 1.4,
+                    letterSpacing: -0.32,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// "공강"/"완료" 배지 뒤에 깔리는 라임색 장식 원. 카드 모서리에 걸쳐서
-/// [NextClassCard.build]의 [ClipRRect]가 카드 둥근 모서리 모양 그대로
-/// 잘라낸다.
-class _EmptyDecorationCircle extends StatelessWidget {
-  const _EmptyDecorationCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      height: 160,
-      decoration: const BoxDecoration(
-        color: AppColors.lime,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-/// 티켓처럼 보이는 점선 구분선. 카드 양쪽 가장자리에 파란 반원이 파여 있다
-/// (배경색 [AppColors.cobalt] 원을 카드 가장자리에 걸쳐 놓는 방식).
-class _TicketDivider extends StatelessWidget {
-  const _TicketDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 20,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final count = (constraints.maxWidth / 8).floor();
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(
-                  count,
-                  (_) => Container(
-                    width: 4,
-                    height: 1.5,
-                    color: const Color(0xFFD9D6CF),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.blueSoft,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.blueText,
+                    size: 22,
                   ),
                 ),
-              );
-            },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.course.room.isEmpty
+                            ? '강의실 정보 없음'
+                            : item.course.room,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: HomeV7Colors.cardTitle,
+                          fontSize: 16,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (professor.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '$professor 교수님',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: HomeV7Colors.cardSub,
+                            fontSize: 13,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _ActionButton(
+                  label: '길찾기',
+                  onTap: onDirectionsTap,
+                  radius: 12,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [HomeV7Colors.directionsStart, AppColors.blue],
+                  ),
+                  shadow: const [
+                    BoxShadow(
+                      color: HomeV7Colors.directionsShadow,
+                      offset: Offset(0, 3),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const _TicketNotches(),
         ],
       ),
     );
   }
 }
 
-/// 카드 양쪽 가장자리에 파란 반원이 파인 티켓 절취선 느낌을 내는 노치 한 쌍.
-/// 카드 안쪽 어디서든(구분선 위, 내용이 한 줄뿐인 빈 상태 위) 같은 자리에
-/// 겹쳐 쓸 수 있도록 별도 위젯으로 뺐다.
-class _TicketNotches extends StatelessWidget {
-  const _TicketNotches();
+/// 카드 오른쪽 아래의 파란 버튼("길찾기 →", "시간표 →"). 높이 46.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.onTap,
+    required this.radius,
+    required this.fontSize,
+    required this.fontWeight,
+    this.gradient,
+    this.shadow,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final double radius;
+  final double fontSize;
+  final FontWeight fontWeight;
+
+  /// null이면 [AppColors.blue] 단색.
+  final Gradient? gradient;
+  final List<BoxShadow>? shadow;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        for (final left in [true, false])
-          Positioned(
-            left: left ? -30 : null,
-            right: left ? null : -30,
-            top: 0,
-            bottom: 0,
-            child: const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.cobalt,
-                    shape: BoxShape.circle,
+    return Pressable(
+      onTap: onTap,
+      pressedScale: 0.92,
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        decoration: BoxDecoration(
+          color: gradient == null ? AppColors.blue : null,
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(radius),
+          boxShadow: shadow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: fontSize,
+                height: 1.4,
+                fontWeight: fontWeight,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.arrow_forward_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 티켓처럼 보이는 점선 구분선. 카드 양쪽 가장자리에 바탕색 반원이 파여 있다
+/// (화면 바탕색 원을 카드 가장자리에 걸쳐 놓고, 카드 밖으로 나간 반쪽은 카드가
+/// 잘라낸다).
+class _TicketDivider extends StatelessWidget {
+  const _TicketDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 1,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final count = (constraints.maxWidth / 6).floor();
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    count,
+                    (_) => Container(
+                      width: 3,
+                      height: 1,
+                      color: HomeV7Colors.dashLine,
+                    ),
                   ),
+                );
+              },
+            ),
+          ),
+          for (final left in [true, false])
+            Positioned(
+              top: -10.5,
+              left: left ? -10 : null,
+              right: left ? null : -10,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: const BoxDecoration(
+                  color: AppColors.canvas,
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

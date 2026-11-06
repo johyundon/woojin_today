@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
+import 'package:daejin_app/screens/home/widgets/home_bottom_nav.dart';
 import 'package:daejin_app/screens/home_screen.dart';
 import 'package:daejin_app/services/weather_service.dart';
 
@@ -41,9 +42,12 @@ Future<void> _openHome(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 하단 탭 바의 [label] 탭을 누른다.
+/// 하단 탭 바의 [label] 탭을 누른다. 화면 안에도 같은 글자(예: 모아보기 제목,
+/// "시간표" 카드)가 있어서 탭 바 안에서만 찾는다.
 Future<void> _tapTab(WidgetTester tester, String label) async {
-  await tester.tap(find.text(label));
+  await tester.tap(
+    find.descendant(of: find.byType(HomeBottomNav), matching: find.text(label)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -55,7 +59,7 @@ void main() {
     expect(find.text('내 시간표'), findsOneWidget);
 
     await _tapTab(tester, '모아보기');
-    expect(find.text('필요한 거 다 있음'), findsOneWidget); // 모아보기 화면
+    expect(find.text('오늘 필요한 걸 모았어요'), findsOneWidget); // 모아보기 화면
     expect(find.text('내 시간표'), findsNothing); // 시간표는 걷혀 있다
     expect(tester.takeException(), isNull);
   });
@@ -68,7 +72,7 @@ void main() {
     expect(find.byIcon(Icons.chevron_right), findsOneWidget); // 캘린더의 달 이동 버튼
 
     await _tapTab(tester, '모아보기');
-    expect(find.text('필요한 거 다 있음'), findsOneWidget);
+    expect(find.text('오늘 필요한 걸 모았어요'), findsOneWidget);
 
     await _tapTab(tester, '시간표');
     expect(find.text('내 시간표'), findsOneWidget);
@@ -84,7 +88,7 @@ void main() {
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     expect(await navigator.maybePop(), isTrue);
     await tester.pumpAndSettle();
-    expect(find.text('필요한 거 다 있음'), findsNothing);
+    expect(find.text('오늘 필요한 걸 모았어요'), findsNothing);
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(await navigator.maybePop(), isFalse); // 더 닫을 화면이 없다 = 홈
 
@@ -92,7 +96,7 @@ void main() {
     await _tapTab(tester, '모아보기');
     await tester.tap(find.byIcon(Icons.home_rounded)); // 가운데 홈 버튼
     await tester.pumpAndSettle();
-    expect(find.text('필요한 거 다 있음'), findsNothing);
+    expect(find.text('오늘 필요한 걸 모았어요'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

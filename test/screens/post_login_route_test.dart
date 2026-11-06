@@ -64,11 +64,11 @@ void main() {
     expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(await storage.hasCompletedOnboarding(_id), isFalse);
 
-    await tester.tap(find.text('다음 →'));
+    await tester.tap(find.text('다음'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('다음 →'));
+    await tester.tap(find.text('다음'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('시작하기 →'));
+    await tester.tap(find.text('시작하기'));
     await tester.pump();
     await tester.pump();
 

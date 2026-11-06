@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/terms_acceptance_storage.dart';
 import '../theme/app_colors.dart';
@@ -6,7 +7,7 @@ import '../widgets/mascot_sticker.dart';
 import '../widgets/pressable.dart';
 import 'student_id_login_complete_screen.dart';
 
-/// 온보딩 화면 ("우진이의 하루" v4 리디자인, 01 섹션 3~5번째 화면).
+/// 온보딩 화면 ("우진이의 하루" v7 디자인 09~11).
 /// 최초 로그인 후 이용약관 동의가 끝나면 학번별로 한 번 보여주는 3장짜리 소개
 /// 화면으로, 마지막 장의 "시작하기"를 누르면 완료를 기록하고 로그인 완료
 /// 화면으로 넘어간다. "시작하기" 전에 앱을 끄면 다음 로그인 때 다시 나온다.
@@ -72,119 +73,224 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cobalt,
-      body: SafeArea(
-        child: Column(
+    // 흰 바탕이라 상태 표시줄 글자(시계·배터리)를 어둡게 그린다.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.canvas,
+        body: Stack(
           children: [
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (i) => setState(() => _page = i),
-                children: const [
-                  _CampusPage(),
-                  _FeaturesPage(),
-                  _NotificationsPage(),
-                ],
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < _pageCount; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  _Dot(active: i == _page),
-                ],
-              ],
-            ),
-            const SizedBox(height: 40),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: Pressable.effect(
-                  pressedScale: 0.96,
-                  child: ElevatedButton(
-                    onPressed: _onNext,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.lime,
-                      foregroundColor: AppColors.ink,
-                      elevation: 0,
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Text(
-                      _isLastPage ? '시작하기 →' : '다음 →',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+            // 화면 가운데쯤 퍼지는 옅은 하늘색 원(디자인 09~11 배경).
+            Positioned(
+              left: -155,
+              top: 60,
+              child: Container(
+                width: 700,
+                height: 700,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [_glow, Color(0x8CDCEAFC), Color(0x00DCEAFC)],
+                    stops: [0, 0.38, 0.68],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      onPageChanged: (i) => setState(() => _page = i),
+                      children: const [
+                        _CampusPage(),
+                        _FeaturesPage(),
+                        _NotificationsPage(),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (var i = 0; i < _pageCount; i++) ...[
+                        if (i > 0) const SizedBox(width: 6),
+                        _Dot(active: i == _page),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: _NextButton(
+                      label: _isLastPage ? '시작하기' : '다음',
+                      onPressed: _onNext,
+                    ),
+                  ),
+                  // 디자인의 "일단 구경만 할래" 자리(앱에 해당 기능이 없어 버튼은
+                  // 두지 않고 자리만 남겨 버튼 위치를 디자인과 맞춘다).
+                  const SizedBox(height: 12 + 35 + 6),
+                ],
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  static const _glow = Color(0xFFDCEAFC);
+}
+
+/// 파란 "다음/시작하기" 버튼(글자 + 화살표).
+class _NextButton extends StatelessWidget {
+  const _NextButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable.effect(
+      pressedScale: 0.96,
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.blue,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.arrow_forward_rounded, size: 17),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// 온보딩 한 장의 공통 틀: 라임색 알약 + 큰 제목 + 아래 장식 영역.
+// 온보딩 장식 카드 색(디자인 09~11 값).
+const _softCardBg = Color(0xFFF5F8FE);
+const _softCardLine = Color(0xFFE3ECFA);
+const _dotOff = Color(0xFFD1D5DB);
+
+/// 장식 영역의 기준 크기. 디자인(390pt 폭 화면)에서 제목 아래부터 점 표시
+/// 위까지의 영역이며, 화면이 이보다 작으면 통째로 줄여서 넘치지 않게 한다.
+const _decorSize = Size(390, 408);
+
+/// 온보딩 한 장의 공통 틀: 파란 글자 이름표 + 큰 제목 + 아래 장식 영역.
 class _OnboardingPage extends StatelessWidget {
   const _OnboardingPage({
     required this.badge,
     required this.title,
-    required this.body,
-    this.gap = 16,
+    required this.decor,
   });
 
   final String badge;
   final String title;
-  final Widget body;
 
-  /// 제목과 [body] 사이 간격.
-  final double gap;
+  /// 장식 요소들. [_decorSize] 기준 좌표의 [_Placed]로 배치한다.
+  final List<Widget> decor;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.lime,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              badge,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 12,
-                height: 1.25,
-                fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 36, 28, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.blueSoft,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: AppColors.blue,
+                    fontSize: 12,
+                    height: 1.4,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textStrong,
+                  fontSize: 31,
+                  height: 1.4,
+                  letterSpacing: -1.395,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox.fromSize(
+                size: _decorSize,
+                child: Stack(clipBehavior: Clip.none, children: decor),
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              height: 1.1,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          SizedBox(height: gap),
-          Expanded(child: body),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+/// 장식 요소 하나를 중심점([cx], [cy]) 기준으로 놓고 [angle]만큼 기울인다.
+/// 디자인 값은 기울인 뒤의 바깥 상자라서, 중심점으로 맞추면 위치가 그대로 맞는다.
+class _Placed extends StatelessWidget {
+  const _Placed({
+    required this.cx,
+    required this.cy,
+    required this.child,
+    this.angle = 0,
+  });
+
+  final double cx;
+  final double cy;
+  final double angle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: cx,
+      top: cy,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: Transform.rotate(angle: angle, child: child),
       ),
     );
   }
@@ -196,53 +302,52 @@ class _CampusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _OnboardingPage(
+    return const _OnboardingPage(
       badge: '대진대 26학번 필수템',
       title: '캠퍼스 처음이지?\n내가 다\n알려줄게!',
-      gap: 100,
-      body: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _InfoChip(
-                icon: Icons.location_on,
-                iconColor: AppColors.cobalt,
-                backgroundColor: Colors.white,
-                label: '강의실 어디야',
-                angle: -0.1396, // -8˚
-              ),
-              const SizedBox(height: 28),
-              // 디자인에서 셔틀 칩만 오른쪽으로 더 들어가 있어서
-              // (강의실/학식 칩은 같은 왼쪽 선) 그대로 맞춘다.
-              const Padding(
-                padding: EdgeInsets.only(left: 24),
-                child: _InfoChip(
-                  icon: Icons.directions_bus,
-                  iconColor: AppColors.ink,
-                  backgroundColor: AppColors.blushPink,
-                  label: '셔틀 몇 분 남음?',
-                  angle: 0.0873, // +5˚
-                ),
-              ),
-              const SizedBox(height: 28),
-              const _InfoChip(
-                icon: Icons.restaurant,
-                iconColor: AppColors.ink,
-                backgroundColor: AppColors.lime,
-                label: '오늘 학식 뭐임',
-                angle: -0.0698, // -4˚
-              ),
-            ],
+      decor: [
+        _Placed(
+          cx: 89,
+          cy: 135,
+          angle: -0.1396, // -8˚
+          child: _InfoChip(
+            icon: Icons.location_on_rounded,
+            iconColor: AppColors.blue,
+            textColor: AppColors.textStrong,
+            soft: false,
+            label: '강의실 어디야',
           ),
-          const Positioned(
-            top: -40,
-            right: -220,
-            child: MascotSticker(width: 240, angle: 0.18),
+        ),
+        _Placed(
+          cx: 120.5,
+          cy: 201.5,
+          angle: 0.0873, // +5˚
+          child: _InfoChip(
+            icon: Icons.directions_bus_rounded,
+            iconColor: AppColors.textStrong,
+            textColor: AppColors.textStrong,
+            soft: true,
+            label: '셔틀 몇 분 남음?',
           ),
-        ],
-      ),
+        ),
+        _Placed(
+          cx: 88,
+          cy: 268,
+          angle: -0.0698, // -4˚
+          child: _InfoChip(
+            icon: Icons.restaurant_rounded,
+            iconColor: AppColors.blue,
+            textColor: AppColors.blue,
+            soft: true,
+            label: '오늘 학식 뭐임',
+          ),
+        ),
+        _Placed(
+          cx: 275.5,
+          cy: 229.5,
+          child: MascotSticker(width: 243, angle: 0.1047),
+        ),
+      ],
     );
   }
 }
@@ -253,68 +358,61 @@ class _FeaturesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _OnboardingPage(
+    return const _OnboardingPage(
       badge: '하루가 편해지는 기능',
       title: '시간표부터\n학식까지\n한 번에!',
-      body: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: const BoxDecoration(
-                color: AppColors.cobaltDeep,
-                shape: BoxShape.circle,
-              ),
-            ),
+      decor: [
+        _Placed(
+          cx: 212.5,
+          cy: 257,
+          child: MascotSticker(width: 261, angle: -0.0698),
+        ),
+        _Placed(
+          cx: 105,
+          cy: 116,
+          angle: -0.1047, // -6˚
+          child: _FeatureCard(
+            icon: Icons.calendar_month_rounded,
+            iconBoxSize: 40,
+            iconBackground: AppColors.blue,
+            iconColor: Colors.white,
+            soft: false,
+            textColor: AppColors.textStrong,
+            caption: '다음 수업',
+            value: '10:30 자료구조',
           ),
-          const Positioned(
-            left: 0,
-            top: 100,
-            child: _FeatureCard(
-              icon: Icons.calendar_today,
-              iconBackground: AppColors.cobalt,
-              iconColor: Colors.white,
-              backgroundColor: Colors.white,
-              caption: '다음 수업',
-              value: '10:30 자료구조',
-              angle: -0.14,
-            ),
+        ),
+        _Placed(
+          cx: 310.5,
+          cy: 228,
+          angle: 0.0873, // +5˚
+          child: _FeatureCard(
+            icon: Icons.leaderboard_rounded,
+            iconBoxSize: 39,
+            iconBackground: Colors.white,
+            iconColor: AppColors.textStrong,
+            soft: true,
+            textColor: AppColors.textStrong,
+            caption: '학과 등수',
+            value: '12위',
           ),
-          const Align(
-            alignment: Alignment(0.1, 0.9),
-            child: MascotSticker(width: 190, angle: 0.06),
+        ),
+        _Placed(
+          cx: 93,
+          cy: 356,
+          angle: -0.0524, // -3˚
+          child: _FeatureCard(
+            icon: Icons.stars_rounded,
+            iconBoxSize: 38,
+            iconBackground: AppColors.blue,
+            iconColor: Colors.white,
+            soft: true,
+            textColor: AppColors.blue,
+            caption: '마일리지',
+            value: '1,240 P',
           ),
-          const Positioned(
-            right: -4,
-            top: 128,
-            child: _FeatureCard(
-              icon: Icons.bar_chart,
-              iconBackground: AppColors.ink,
-              iconColor: Colors.white,
-              backgroundColor: AppColors.blushPink,
-              caption: '학교 등수',
-              value: '12위',
-              angle: 0.14,
-            ),
-          ),
-          const Positioned(
-            left: 8,
-            bottom: 20,
-            child: _FeatureCard(
-              icon: Icons.stars,
-              iconBackground: AppColors.ink,
-              iconColor: AppColors.lime,
-              backgroundColor: AppColors.lime,
-              caption: '마일리지',
-              value: '1,240 P',
-              angle: -0.1,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -325,66 +423,221 @@ class _NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _OnboardingPage(
+    return const _OnboardingPage(
       badge: '신입생 꿀팁',
       title: '공지도 일정도\n놓치지 않게\n챙겨줄게!',
-      body: Stack(
-        clipBehavior: Clip.none,
+      decor: [
+        _Placed(
+          cx: 324.5,
+          cy: 42.5,
+          child: MascotSticker(width: 119, angle: 0.1396),
+        ),
+        _Placed(
+          cx: 195.5,
+          cy: 148.5,
+          angle: -0.0349, // -2˚
+          child: _NotificationCard(
+            icon: Icons.campaign_rounded,
+            iconBackground: AppColors.blueSoft,
+            iconColor: AppColors.blue,
+            time: '지금',
+            title: '새 공지가 올라왔어요',
+            subtitle: '2학기 수강신청 안내',
+          ),
+        ),
+        _Placed(
+          cx: 205,
+          cy: 243,
+          angle: 0.0262, // +1.5˚
+          child: _NotificationCard(
+            icon: Icons.event_rounded,
+            iconBackground: AppColors.blueSoft,
+            iconColor: AppColors.textStrong,
+            time: '10분 전',
+            title: '중간고사 D-12',
+            subtitle: '학사일정에 등록했어요',
+          ),
+        ),
+        _Placed(
+          cx: 189.5,
+          cy: 336.5,
+          angle: -0.0175, // -1˚
+          child: _NotificationCard(
+            icon: Icons.forum_rounded,
+            iconBackground: AppColors.blue,
+            iconColor: Colors.white,
+            time: '1시간 전',
+            title: '상담 예약이 확정됐어요',
+            subtitle: '장윤석 교수님 · 10/28 14:00',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+BoxDecoration _decorCardDecoration({required bool soft, required double r}) {
+  return BoxDecoration(
+    color: soft ? _softCardBg : Colors.white,
+    borderRadius: BorderRadius.circular(r),
+    border: soft ? Border.all(color: _softCardLine) : null,
+    boxShadow: AppColors.cardShadow,
+  );
+}
+
+/// 2번째 장의 작은 기능 카드(아이콘 + 캡션 + 값).
+class _FeatureCard extends StatelessWidget {
+  const _FeatureCard({
+    required this.icon,
+    required this.iconBoxSize,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.soft,
+    required this.textColor,
+    required this.caption,
+    required this.value,
+  });
+
+  final IconData icon;
+  final double iconBoxSize;
+  final Color iconBackground;
+  final Color iconColor;
+
+  /// true면 옅은 하늘색 바탕 + 테두리, false면 흰 바탕.
+  final bool soft;
+  final Color textColor;
+  final String caption;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+      decoration: _decorCardDecoration(soft: soft, r: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned(
-            right: -80,
-            top: -20,
-            child: Container(
-              width: 240,
-              height: 240,
-              decoration: const BoxDecoration(
-                color: AppColors.cobaltDeep,
-                shape: BoxShape.circle,
+          Container(
+            width: iconBoxSize,
+            height: iconBoxSize,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 17, color: iconColor),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                caption,
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.6),
+                  fontSize: 12,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+              Text(
+                value,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14.5,
+                  height: 1.4,
+                  letterSpacing: -0.29,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 3번째 장의 알림 카드(앱 이름 + 시간 / 제목 / 부제).
+class _NotificationCard extends StatelessWidget {
+  const _NotificationCard({
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.time,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
+  final String time;
+  final String title;
+  final String subtitle;
+
+  static const _metaStyle = TextStyle(
+    color: AppColors.textSub,
+    fontSize: 12,
+    height: 1.4,
+    fontWeight: FontWeight.w700,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 340,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xF7FFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: iconBackground,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 21, color: iconColor),
             ),
           ),
-          const Positioned(
-            right: 8,
-            top: -50,
-            child: MascotSticker(width: 110, angle: 0.1),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 84,
-            child: _NotificationCard(
-              icon: Icons.campaign,
-              iconBackground: AppColors.lime,
-              time: '지금',
-              title: '새 공지가 올라왔어요',
-              subtitle: '2학기 수강신청 안내',
-              angle: -0.035,
-            ),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 176,
-            child: _NotificationCard(
-              icon: Icons.event,
-              iconBackground: AppColors.blushPink,
-              time: '10분 전',
-              title: '중간고사 D-12',
-              subtitle: '학사일정에 등록했어요',
-              angle: 0.03,
-            ),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 268,
-            child: _NotificationCard(
-              icon: Icons.chat_bubble,
-              iconBackground: AppColors.cobalt,
-              time: '1시간 전',
-              title: '상담 예약이 확정됐어요',
-              subtitle: '장윤석 교수님 · 10/28 14:00',
-              angle: -0.04,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: Text('우진이의 하루', style: _metaStyle)),
+                    Text(time, style: _metaStyle),
+                  ],
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textStrong,
+                    fontSize: 13.5,
+                    height: 1.4,
+                    letterSpacing: -0.27,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.textBody,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -393,241 +646,44 @@ class _NotificationsPage extends StatelessWidget {
   }
 }
 
-/// 2번째 장의 작은 기능 카드(아이콘 + 캡션 + 값). 스티커처럼 살짝 기울어져 있다.
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
-    required this.icon,
-    required this.iconBackground,
-    required this.iconColor,
-    required this.backgroundColor,
-    required this.caption,
-    required this.value,
-    required this.angle,
-  });
-
-  final IconData icon;
-  final Color iconBackground;
-  final Color iconColor;
-  final Color backgroundColor;
-  final String caption;
-  final String value;
-  final double angle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: angle,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF030A7F).withValues(alpha: 0.22),
-              offset: const Offset(0, 10),
-              blurRadius: 24,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: iconBackground,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 16, color: iconColor),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  caption,
-                  style: const TextStyle(
-                    color: Color(0xFF5A5852),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 3번째 장의 알림 카드(앱 이름 + 시간 / 제목 / 부제). 살짝 기울어져 있다.
-class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({
-    required this.icon,
-    required this.iconBackground,
-    required this.time,
-    required this.title,
-    required this.subtitle,
-    required this.angle,
-  });
-
-  final IconData icon;
-  final Color iconBackground;
-  final String time;
-  final String title;
-  final String subtitle;
-  final double angle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: angle,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF030A7F).withValues(alpha: 0.22),
-              offset: const Offset(0, 10),
-              blurRadius: 24,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: iconBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: iconBackground == AppColors.cobalt
-                    ? Colors.white
-                    : AppColors.ink,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          '우진이의 하루',
-                          style: TextStyle(
-                            color: Color(0xFF5A5852),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        time,
-                        style: const TextStyle(
-                          color: Color(0xFF5A5852),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF5A5852),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
+/// 1번째 장의 말풍선 같은 칩(아이콘 + 글자).
 class _InfoChip extends StatelessWidget {
   const _InfoChip({
     required this.icon,
     required this.iconColor,
-    required this.backgroundColor,
+    required this.textColor,
+    required this.soft,
     required this.label,
-    this.angle = 0,
   });
 
   final IconData icon;
   final Color iconColor;
-  final Color backgroundColor;
-  final String label;
+  final Color textColor;
 
-  /// 라디안 단위 기울기. 디자인에서 칩마다 제각각 살짝 기울어진 스티커처럼
-  /// 붙어있어서(CSS transform matrix 값을 그대로 역산한 각도), 칩마다 다른
-  /// 값을 넘긴다.
-  final double angle;
+  /// true면 옅은 하늘색 바탕 + 테두리, false면 흰 바탕.
+  final bool soft;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: angle,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF030A7F).withValues(alpha: 0.22),
-              offset: const Offset(0, 10),
-              blurRadius: 24,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: _decorCardDecoration(soft: soft, r: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: iconColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 13.5,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: iconColor),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -640,11 +696,12 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: active ? 18 : 6,
-      height: 10,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: active ? 22 : 6,
+      height: 6,
       decoration: BoxDecoration(
-        color: active ? Colors.white : Colors.white38,
+        color: active ? AppColors.blue : _dotOff,
         borderRadius: BorderRadius.circular(3),
       ),
     );
