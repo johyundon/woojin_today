@@ -392,7 +392,7 @@ void main() {
     });
   });
 
-  group('기기에 저장(7일)', () {
+  group('기기에 저장(90일)', () {
     var now = DateTime(2026, 11, 6, 9);
     late int calls;
     SyllabusService service() => SyllabusService(
@@ -418,7 +418,7 @@ void main() {
       now = DateTime(2026, 11, 6, 9);
     });
 
-    test('앱을 다시 켜도(메모리 비움) 7일 안에는 요청 없이 같은 내용을 연다', () async {
+    test('앱을 다시 켜도(메모리 비움) 90일 안에는 요청 없이 같은 내용을 연다', () async {
       final first = await open(service());
       SyllabusService.clearCache();
       final second = await open(service());
@@ -441,10 +441,19 @@ void main() {
       expect(second.section('1.')!.weeks, isNull);
     });
 
-    test('7일이 지나면 목록과 상세를 새로 받는다', () async {
+    test('89일째에는 아직 저장된 것을 쓴다', () async {
       await open(service());
       SyllabusService.clearCache();
-      now = now.add(const Duration(days: 7));
+      now = now.add(const Duration(days: 89));
+      await open(service());
+
+      expect(calls, 2);
+    });
+
+    test('90일이 지나면 목록과 상세를 새로 받는다', () async {
+      await open(service());
+      SyllabusService.clearCache();
+      now = now.add(const Duration(days: 90));
       await open(service());
 
       expect(calls, 4);

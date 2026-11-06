@@ -133,8 +133,8 @@ class SyllabusService implements SyllabusServiceBase {
   final DateTime Function() _now;
 
   /// 기기에 저장한 목록·상세를 다시 쓰는 기간. 교수번호와 강의계획서 내용은
-  /// 학기 중 거의 바뀌지 않지만, 학기 초에 교수가 고칠 수 있어 7일로 둔다.
-  static const cacheDuration = Duration(days: 7);
+  /// 학기 중 거의 바뀌지 않아 한 학기 정도인 3개월(90일)로 둔다(사용자 요청).
+  static const cacheDuration = Duration(days: 90);
   static const _listPrefsPrefix = 'syllabus_list_';
   static const _detailPrefsPrefix = 'syllabus_detail_';
 
