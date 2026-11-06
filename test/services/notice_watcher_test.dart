@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
 import 'package:daejin_app/services/notice_service.dart';
 import 'package:daejin_app/services/notice_watcher.dart';
@@ -31,6 +33,10 @@ class _FakeNotices implements NoticeServiceBase {
 
   @override
   Future<NoticeDetail> fetchDetail(String detailPath) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Uint8List> downloadAttachment(String url) =>
       throw UnimplementedError();
 }
 

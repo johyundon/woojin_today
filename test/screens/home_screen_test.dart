@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cp949_codec/cp949_codec.dart';
 import 'package:flutter/material.dart';
@@ -388,5 +389,9 @@ class _FakeNotices implements NoticeServiceBase {
 
   @override
   Future<NoticeDetail> fetchDetail(String detailPath) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Uint8List> downloadAttachment(String url) =>
       throw UnimplementedError();
 }

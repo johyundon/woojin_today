@@ -1,6 +1,9 @@
 // NoticeScreen이 학사공지·마일리지장학 공지를 받아 최신순으로 보여주고, 분류 칩·
 // 읽음·북마크·상세(실제 본문/첨부)·불러오기 실패·새로고침이 동작하는지 확인한다.
 
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +11,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
+import 'package:daejin_app/screens/notice/notice_detail_screen.dart';
 import 'package:daejin_app/screens/notice/notice_screen.dart';
 import 'package:daejin_app/services/notice_service.dart';
 
@@ -17,6 +21,8 @@ class _FakeNotices implements NoticeServiceBase {
   final boards = <NoticeBoard>[];
   final forceFlags = <bool>[];
   final detailCalls = <String>[];
+  final downloadCalls = <String>[];
+  Object? downloadError;
 
   @override
   Future<List<NoticeItem>> fetchNotices(
@@ -81,6 +87,13 @@ class _FakeNotices implements NoticeServiceBase {
         detailPath: '/a3',
       ),
     ];
+  }
+
+  @override
+  Future<Uint8List> downloadAttachment(String url) async {
+    downloadCalls.add(url);
+    if (downloadError case final e?) throw e;
+    return Uint8List.fromList([1, 2, 3]);
   }
 
   @override
@@ -161,10 +174,6 @@ void main() {
     expect(find.text('첨부파일'), findsOneWidget);
     expect(find.text('붙임 1 안내문.xlsx'), findsOneWidget);
     expect(find.text('붙임 2 서식.hwp'), findsOneWidget);
-
-    await tester.tap(find.text('미리보기').first);
-    await tester.pump();
-    expect(find.text('미리보기는 지원하지 않아요'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
     await tester.pumpAndSettle();
@@ -287,6 +296,74 @@ void main() {
       expect(find.textContaining('다시 로그인 필요'), findsOneWidget);
       // 나머지 공지는 그대로 보인다.
       expect(find.text('부·복수전공 이수신청 안내'), findsOneWidget);
+    });
+  });
+
+  group('첨부파일 미리보기', () {
+    const notice = NoticeItem(
+      title: '부·복수전공 이수신청 안내',
+      author: '학사팀',
+      date: '2026.10.29',
+      viewCount: 94,
+      tag: NoticeTag.academic,
+      detailPath: '/a1',
+    );
+
+    Future<void> pumpDetail(
+      WidgetTester tester,
+      _FakeNotices service,
+      Future<void> Function(File) openFile,
+    ) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NoticeDetailScreen(
+            notice: notice,
+            service: service,
+            openFile: openFile,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('누르면 첨부를 받아 파일로 저장한 뒤 연다', (tester) async {
+      final service = _FakeNotices();
+      File? opened;
+      await pumpDetail(tester, service, (f) async => opened = f);
+
+      await tester.tap(find.text('미리보기').first);
+      // 파일 쓰기는 실제 입출력이라, 실제 시간을 흘려보내며 화면도 함께 돌린다.
+      for (var i = 0; i < 50 && opened == null; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(service.downloadCalls, ['https://x/1']);
+      expect(opened!.path, endsWith('붙임 1 안내문.xlsx'));
+      final bytes = await tester.runAsync(() => opened!.readAsBytes());
+      expect(bytes, [1, 2, 3]);
+      expect(find.text('받는 중'), findsNothing);
+    });
+
+    testWidgets('로그인이 만료됐으면 다시 로그인하라고 알린다', (tester) async {
+      final service = _FakeNotices()
+        ..downloadError = const NoticeLoginRequiredException();
+      var opened = false;
+      await pumpDetail(tester, service, (_) async => opened = true);
+
+      await tester.tap(find.text('미리보기').first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(opened, isFalse);
+      expect(find.text('로그인이 필요해요. 다시 로그인해 주세요.'), findsOneWidget);
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     });
   });
 }

@@ -315,6 +315,10 @@ void main() {
             utf8.encode(loggedIn ? _detail : noPermission),
             200,
           );
+        case '/bbs/daejin/188/1/download.do':
+          return loggedIn
+              ? http.Response.bytes([0x25, 0x50, 0x44, 0x46], 200)
+              : http.Response.bytes(utf8.encode(noPermission), 200);
         case '/daejin/1003/subview.do':
           return http.Response.bytes(utf8.encode(_list([_row(title: 'A')])), 200);
       }
@@ -380,6 +384,38 @@ void main() {
       final detail = await service.fetchDetail(ttPath);
       expect(detail.title, '2학기 이수신청 안내');
       expect(log.last.headers['Cookie'], 'JSESSIONID=j1');
+    });
+
+    test('종합강의시간표 글의 첨부는 로그인 쿠키를 실어 받고, 권한이 없으면 알린다', () async {
+      const url = 'https://www.daejin.ac.kr/bbs/daejin/188/1/download.do';
+      final log = <http.Request>[];
+      final service = NoticeService(
+        client: loginServer(log),
+        loginCookie: 'JSESSIONID=j1',
+      );
+      await service.fetchNotices(NoticeBoard.timetable);
+      await service.fetchDetail(ttPath);
+      expect(await service.downloadAttachment(url), [0x25, 0x50, 0x44, 0x46]);
+      expect(log.last.headers['Cookie'], 'JSESSIONID=j1');
+
+      NoticeService.clearMemoryCache();
+      final expired = NoticeService(
+        client: loginServer(log),
+        loginCookie: 'JSESSIONID=j1',
+      );
+      await expired.fetchNotices(NoticeBoard.timetable);
+      await expired.fetchDetail(ttPath);
+      // 세션이 끊긴 상황: 첨부 요청만 권한 없음 안내가 온다.
+      final stale = NoticeService(
+        client: MockClient(
+          (_) async => http.Response.bytes(utf8.encode(noPermission), 200),
+        ),
+        loginCookie: 'JSESSIONID=j1',
+      );
+      await expectLater(
+        stale.downloadAttachment(url),
+        throwsA(isA<NoticeLoginRequiredException>()),
+      );
     });
   });
 }

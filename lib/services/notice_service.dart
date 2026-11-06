@@ -101,6 +101,10 @@ abstract class NoticeServiceBase {
 
   /// [detailPath]는 목록의 [NoticeItem.detailPath].
   Future<NoticeDetail> fetchDetail(String detailPath);
+
+  /// 첨부파일을 받아 바이트 그대로 돌려준다. [url]은 [NoticeAttachment.url].
+  /// 로그인이 필요한 게시판 글의 첨부면 로그인 쿠키를 함께 보낸다.
+  Future<Uint8List> downloadAttachment(String url);
 }
 
 /// 학교 홈페이지(www.daejin.ac.kr)의 공지 목록과 상세를 가져온다.
@@ -141,6 +145,9 @@ class NoticeService implements NoticeServiceBase {
   /// 로그인 쿠키를 싣는다.
   static final Set<String> _loginDetailPaths = {};
 
+  /// 로그인이 필요한 게시판 글에 달린 첨부파일 주소.
+  static final Set<String> _loginAttachmentUrls = {};
+
   /// 로그인 없이 받으면 오는 안내 문구(상태 코드는 200).
   static const _noPermissionText = '접근 권한이 없습니다';
 
@@ -153,6 +160,7 @@ class NoticeService implements NoticeServiceBase {
   static void clearMemoryCache() {
     _detailCache.clear();
     _loginDetailPaths.clear();
+    _loginAttachmentUrls.clear();
   }
 
   @override
@@ -197,8 +205,26 @@ class NoticeService implements NoticeServiceBase {
       throw const NoticeLoginRequiredException();
     }
     final detail = parseDetail(body);
+    if (withLogin) {
+      _loginAttachmentUrls.addAll(detail.attachments.map((a) => a.url));
+    }
     _detailCache[detailPath] = detail;
     return detail;
+  }
+
+  @override
+  Future<Uint8List> downloadAttachment(String url) async {
+    final withLogin = _loginAttachmentUrls.contains(url);
+    final bytes = await _getBytes(url, withLogin: withLogin);
+    // 권한이 없으면 파일 대신 상태 200의 짧은 안내 HTML이 온다.
+    if (withLogin &&
+        bytes.length < 20000 &&
+        utf8
+            .decode(bytes, allowMalformed: true)
+            .contains(_noPermissionText)) {
+      throw const NoticeLoginRequiredException();
+    }
+    return bytes;
   }
 
   /// 명세의 목록 파싱 규칙. 마일리지 게시판은 제목에 "마일리지"가 없는 행
