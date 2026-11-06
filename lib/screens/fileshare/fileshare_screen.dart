@@ -9,11 +9,15 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../services/file_transfer.dart';
+import '../../services/service_factory.dart';
+import '../../services/session_cache.dart';
+import '../../services/student_info_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
 import 'fileshare_colors.dart';
+import 'masked_name.dart';
 import 'received_file.dart';
 import 'widgets/incoming_offer_dialog.dart';
 import 'widgets/peer_row.dart';
@@ -41,10 +45,11 @@ const Color _cardTint = Color(0xFFEEF2FD);
 /// iOS는 이 기능을 처음 쓸 때 "로컬 네트워크에서 기기를 찾으려고 합니다"
 /// 권한 팝업이 한 번 뜬다(iOS 정책, 앱에서 막을 수 없음).
 ///
-/// 참고 스크린샷은 발견된 사람마다 이름/학과/학번을 보여주지만, 실제
-/// mDNS 광고 이름은 로그인한 학생 이름이 아니라 [_deviceLabel](임의
-/// 번호가 붙은 앱 이름)이라 그 정보를 그대로 보여줄 수 없다 — 지어내지
-/// 않고 광고된 이름 그대로("우진이의 하루 - 1234" 식)만 보여준다.
+/// 광고 이름은 같은 와이파이의 누구에게나 보이므로 실명·학번 전체를
+/// 내보내지 않는다 — "내 정보"의 이름을 가리고 학번 끝 4자리만 붙인
+/// "조*돈 · 1234"([maskedPeerLabel])를 쓴다. 이름을 못 가져오면(로그인 정보
+/// 없음, 조회 실패) 임의 번호가 붙은 [_deviceLabel]("우진이의 하루 - 1234")로
+/// 대신한다. 상대 목록에는 광고된 이름을 그대로 보여준다.
 ///
 /// **찾은 사람과 직접 주고받기**: 켜면 받는 창구([FileTransferServer])를
 /// 열고 그 실제 번호를 광고한다. 사람별 "보내기"는 파일을 골라 그
@@ -70,7 +75,13 @@ const Color _cardTint = Color(0xFFEEF2FD);
 ///
 /// "파일명 검색"은 여전히 가짜 UI다.
 class FileShareScreen extends StatefulWidget {
-  const FileShareScreen({super.key});
+  const FileShareScreen({super.key, this.userId2, this.studentInfoService});
+
+  /// 포털 로그인으로 얻은 본인 SSO uid — "내 정보"에서 이름·학번을 읽는 데 쓴다.
+  final String? userId2;
+
+  /// 테스트에서 가짜 서비스를 넣기 위한 옵션.
+  final StudentInfoServiceBase? studentInfoService;
 
   @override
   State<FileShareScreen> createState() => _FileShareScreenState();
@@ -129,6 +140,27 @@ class _FileShareScreenState extends State<FileShareScreen> {
   /// 같은 와이파이에 내 기기를 알릴 이름. 여러 명이 동시에 테스트해도
   /// 구분되게 임의 번호를 붙인다. 세션 동안 고정.
   late final String _deviceLabel = '우진이의 하루 - ${Random().nextInt(9000) + 1000}';
+
+  /// 실제로 광고 중인 내 이름(받는 사람의 "받을까요?" 창에도 이 이름이 뜬다).
+  String get _myName => _registration?.service.name ?? _deviceLabel;
+
+  /// "조*돈 · 1234"를 만든다. "내 정보"는 홈에서 이미 불러와 캐시에 있는 게
+  /// 보통이라 대개 네트워크 요청 없이 끝난다. 못 만들면 [_deviceLabel].
+  Future<String> _resolveAdvertisedName() async {
+    final userId2 = widget.userId2;
+    if (userId2 == null) return _deviceLabel;
+    try {
+      final info = await SessionCache.getStudentInfo(
+        widget.studentInfoService ?? ServiceFactory.studentInfo(),
+        userId2: userId2,
+      ).timeout(const Duration(seconds: 8));
+      return maskedPeerLabel(name: info.name, studentId: info.studentId) ??
+          _deviceLabel;
+    } catch (e) {
+      debugPrint('[FileShare] 내 정보 조회 실패, 임시 이름 사용: $e');
+      return _deviceLabel;
+    }
+  }
 
   nsd.Registration? _registration;
   nsd.Discovery? _discovery;
@@ -233,9 +265,10 @@ class _FileShareScreenState extends State<FileShareScreen> {
     _transferServer = server;
     try {
       await server.start();
+      final advertisedName = await _resolveAdvertisedName();
       registration = await nsd.register(
         nsd.Service(
-          name: _deviceLabel,
+          name: advertisedName,
           type: _serviceType,
           port: server.port,
         ),
@@ -369,7 +402,7 @@ class _FileShareScreenState extends State<FileShareScreen> {
         port: port,
         file: File(path),
         fileName: picked.name,
-        senderName: _deviceLabel,
+        senderName: _myName,
         onProgress: (sent, total) {
           // 조각마다 다시 그리지 않고 1% 바뀔 때만 그린다.
           final percent = total == 0 ? 100 : sent * 100 ~/ total;
@@ -412,9 +445,8 @@ class _FileShareScreenState extends State<FileShareScreen> {
 
   /// 탐색된 서비스 중 내 기기 자신을 뺀 목록(같은 와이파이의 다른 사람들).
   List<nsd.Service> get _discoveredPeers {
-    final myName = _registration?.service.name ?? _deviceLabel;
     final real = (_discovery?.services ?? const [])
-        .where((s) => s.name != myName)
+        .where((s) => s.name != _myName)
         .toList();
     return _kShowNearbyPeersDemo ? [..._demoNearbyPeers, ...real] : real;
   }

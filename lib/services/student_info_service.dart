@@ -20,6 +20,7 @@ class StudentInfoResponse {
     this.name,
     this.department,
     this.grade,
+    this.studentId,
   });
 
   /// 지도교수 성함. 라벨("지도교수")이나 형제 요소가 없거나 비어있으면 null.
@@ -35,6 +36,10 @@ class StudentInfoResponse {
   /// 확인), "학적 변동 내역" 표의 마지막 기록으로 계산한다
   /// ([StudentInfoService.gradeFromHistory]).
   final String? grade;
+
+  /// 학번. "학적 정보" 표의 "학번" 칸(이전 작업에서 실제 응답에 있음을
+  /// 확인한 라벨). 없으면 null.
+  final String? studentId;
 }
 
 /// "네트워크 연결 실패"와 "서버는 응답했지만 비정상(status != 200)"과
@@ -100,6 +105,7 @@ class StudentInfoService implements StudentInfoServiceBase {
   static const _nameLabels = ['이름', '성명'];
   static const _departmentLabels = ['학과', '학과명', '소속학과'];
   static const _gradeLabels = ['학년', '학년도'];
+  static const _studentIdLabels = ['학번'];
 
   final http.Client _client;
   final DateTime Function() _now;
@@ -155,6 +161,7 @@ class StudentInfoService implements StudentInfoServiceBase {
       name: _findValue(cells, _nameLabels),
       department: _findValue(cells, _departmentLabels),
       grade: _findValue(cells, _gradeLabels) ?? _gradeFromHistory(document),
+      studentId: _findValue(cells, _studentIdLabels),
     );
   }
 

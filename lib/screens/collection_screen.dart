@@ -59,9 +59,10 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const WeatherPage()));
   }
 
-  static void _openFileShare(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const FileShareScreen()));
+  void _openFileShare(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => FileShareScreen(userId2: userId2)),
+    );
   }
 
   void _openDepartmentRank(BuildContext context) {
@@ -109,7 +110,7 @@ class CollectionScreen extends StatelessWidget {
       icon: Icons.school_rounded,
       onTap: _openAdvisorConsultation,
     ),
-    const _CollectionItem(
+    _CollectionItem(
       label: '파일공유',
       icon: Icons.folder_shared_rounded,
       onTap: _openFileShare,

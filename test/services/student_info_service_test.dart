@@ -78,5 +78,7 @@ void main() {
     expect(info.department, '컴퓨터공학전공');
     expect(info.advisorName, '이교수');
     expect(info.grade, '3학년');
+    expect(info.name, '김대진');
+    expect(info.studentId, '20200000');
   });
 }
