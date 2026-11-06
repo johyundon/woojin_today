@@ -93,4 +93,18 @@ void main() {
     expect(find.text('이번학기 몇학점\n들으실건가요?'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('1/5 학점 슬라이더는 1학점 단위로 멈추지만 트랙에 눈금 점은 없다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AiRecommendWizardScreen(onSubmit: (context, answers) async {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final slider = find.byType(Slider).first;
+    expect(tester.widget<Slider>(slider).divisions, 17); // 5~22학점, 1학점 단위
+    final theme = SliderTheme.of(tester.element(slider));
+    expect(theme.tickMarkShape, SliderTickMarkShape.noTickMark);
+  });
 }

@@ -80,6 +80,8 @@ SliderThemeData aiSliderTheme(BuildContext context) {
     overlayShape: SliderComponentShape.noOverlay,
     thumbShape: const _SquareThumbShape(),
     trackShape: const _FlatTrackShape(),
+    // 1학점 단위로 멈추는(divisions) 슬라이더도 트랙에 눈금 점은 그리지 않는다.
+    tickMarkShape: SliderTickMarkShape.noTickMark,
     padding: EdgeInsets.zero,
   );
 }
