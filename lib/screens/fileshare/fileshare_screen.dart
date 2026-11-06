@@ -8,6 +8,7 @@ import 'package:nsd/nsd.dart' as nsd;
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../services/file_transfer.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mascot_sticker.dart';
 import '../../widgets/pressable.dart';
@@ -46,9 +47,10 @@ const Color _cardTint = Color(0xFFEEF2FD);
 /// (특정 상대 타겟 전송은 아직 없음, 아래 "1단계" 설명 참고) 전체
 /// "내 파일 보내기"와 같은 동작(파일 선택 → OS 공유 시트)을 그대로 쓴다.
 ///
-/// 1단계(이 커밋)는 "서로 찾기"까지만 — 찾은 상대에게 실제로 파일을
-/// 전송하는 건 2단계(다음 작업)에서 추가한다. 그동안은 보내기/받기 둘 다
-/// 아래 설명대로 OS 공유 시트/공유 수신으로 별도 동작한다.
+/// 지금은 "서로 찾기" + 받는 창구([FileTransferServer]) 열기까지 — 켜면
+/// 창구가 연 실제 번호를 광고한다. 받기/거절을 묻는 화면과 사람별 실제
+/// 보내기는 다음 단계라, 그 전까지 창구는 모든 요청을 거절하고 보내기/
+/// 받기는 아래 설명대로 OS 공유 시트/공유 수신으로 별도 동작한다.
 ///
 /// **보내기/받기는 실제로 동작한다**(둘 다 사용자 요청으로 추가):
 /// - 보내기: [FilePicker]로 기기에서 파일을 고르면, OS가 원래 제공하는
@@ -75,9 +77,9 @@ class FileShareScreen extends StatefulWidget {
 
 class _FileShareScreenState extends State<FileShareScreen> {
   // mDNS 서비스 타입("_라벨._tcp") — 라벨은 영문/숫자/하이픈만, 1~15자여야
-  // 한다(nsd 패키지 규칙). 2단계(실제 전송)에서 실제 포트로 등록을 다시
-  // 걸기 전까지는 포트 값 자체는 의미 없어 임시 고정값을 쓴다.
+  // 한다(nsd 패키지 규칙).
   static const _serviceType = '_daejinshare._tcp';
+  // 데모 목록 전용 값 — 실제 광고는 받는 창구가 연 번호를 쓴다.
   static const _placeholderPort = 52525;
 
   bool _enabled = false;
@@ -129,6 +131,11 @@ class _FileShareScreenState extends State<FileShareScreen> {
 
   nsd.Registration? _registration;
   nsd.Discovery? _discovery;
+
+  /// 다른 기기가 파일을 보내 올 받는 창구. 켜져 있는 동안만 열려 있다.
+  /// 받기/거절을 묻는 화면은 아직 없어서(2단계) 지금은 모든 요청을
+  /// 거절한다 — 묻지 않고 남의 파일을 저장하지 않기 위해서다.
+  FileTransferServer? _transferServer;
 
   @override
   void initState() {
@@ -208,19 +215,33 @@ class _FileShareScreenState extends State<FileShareScreen> {
   /// 토글을 다시 꺼진 상태로 되돌리고 이유를 스낵바로 보여준다.
   Future<void> _startAdvertisingAndDiscovery() async {
     nsd.Registration? registration;
+    final server = FileTransferServer(
+      saveDirectory: Directory(
+        '${Directory.systemTemp.path}${Platform.pathSeparator}daejinshare_inbox',
+      ),
+      onOffer: (_) async => false,
+    );
+    // 바로 기록해 둔다 — 등록이 끝나기 전에 토글을 꺼도
+    // [_stopAdvertisingAndDiscovery]가 이 창구를 닫을 수 있게.
+    _transferServer = server;
     try {
+      await server.start();
       registration = await nsd.register(
         nsd.Service(
           name: _deviceLabel,
           type: _serviceType,
-          port: _placeholderPort,
+          port: server.port,
         ),
       );
       final discovery = await nsd.startDiscovery(_serviceType);
       discovery.addListener(_onDiscoveryChanged);
-      if (!mounted) {
+      // 화면이 닫혔거나 그사이 토글을 꺼서 창구가 이미 치워졌으면 방금
+      // 시작한 광고/탐색도 바로 거둔다.
+      if (!mounted || !identical(_transferServer, server)) {
+        discovery.removeListener(_onDiscoveryChanged);
         await nsd.unregister(registration);
         await nsd.stopDiscovery(discovery);
+        await server.stop();
         return;
       }
       setState(() {
@@ -228,6 +249,8 @@ class _FileShareScreenState extends State<FileShareScreen> {
         _discovery = discovery;
       });
     } catch (e) {
+      if (identical(_transferServer, server)) _transferServer = null;
+      await server.stop();
       // 광고(register)는 성공했는데 그다음 탐색 시작이 실패하면, 광고만
       // 켜진 채로 방치되지 않도록 반드시 등록을 해제한다 — 안 그러면
       // 꺼짐으로 보이는 화면 뒤에서 계속 다른 사람에게 광고되는 상태가
@@ -249,9 +272,18 @@ class _FileShareScreenState extends State<FileShareScreen> {
   Future<void> _stopAdvertisingAndDiscovery() async {
     final registration = _registration;
     final discovery = _discovery;
+    final server = _transferServer;
     _registration = null;
     _discovery = null;
+    _transferServer = null;
     discovery?.removeListener(_onDiscoveryChanged);
+    if (server != null) {
+      try {
+        await server.stop();
+      } catch (e) {
+        debugPrint('[FileShare] 받는 창구 닫기 실패: $e');
+      }
+    }
     if (registration != null) {
       try {
         await nsd.unregister(registration);
