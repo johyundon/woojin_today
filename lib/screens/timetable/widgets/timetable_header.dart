@@ -22,6 +22,7 @@ class TimetableHeader extends StatelessWidget {
     required this.onOpenSavedList,
     required this.onAutoFill,
     required this.onAddCourse,
+    this.showSave = true,
   });
 
   final String semesterLabel;
@@ -36,6 +37,10 @@ class TimetableHeader extends StatelessWidget {
   final VoidCallback onOpenSavedList;
   final VoidCallback onAutoFill;
   final VoidCallback onAddCourse;
+
+  /// "저장" 버튼을 보일지. 지금 학기는 학교에 등록된 내 시간표 그대로라
+  /// 저장할 이유가 없어 숨긴다.
+  final bool showSave;
 
   String get _creditsLabel {
     final trimmed = totalCredits == totalCredits.roundToDouble()
@@ -137,20 +142,22 @@ class TimetableHeader extends StatelessWidget {
             height: 1.4,
           ),
         ),
-        const SizedBox(width: 10),
-        Pressable(
-          pressedScale: 0.92,
-          onTap: onSave,
-          child: const Text(
-            '저장',
-            style: TextStyle(
-              color: AppColors.blue,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              height: 1.4,
+        if (showSave) ...[
+          const SizedBox(width: 10),
+          Pressable(
+            pressedScale: 0.92,
+            onTap: onSave,
+            child: const Text(
+              '저장',
+              style: TextStyle(
+                color: AppColors.blue,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                height: 1.4,
+              ),
             ),
           ),
-        ),
+        ],
         const SizedBox(width: 10),
         Pressable.icon(
           onTap: onOpenSavedList,

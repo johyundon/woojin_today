@@ -239,6 +239,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                 onBack: () => Navigator.of(context).pop(),
                 onSemesterTap: _openSemesterMenu,
                 onSave: _openSaveDialog,
+                showSave: !_isCurrentSemester,
                 onOpenSavedList: _openSavedList,
                 onAutoFill: _openAiRecommendWizard,
                 onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),

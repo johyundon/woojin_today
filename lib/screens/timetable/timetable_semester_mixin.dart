@@ -44,6 +44,12 @@ part of 'timetable_screen.dart';
 
 /// 학기 이동(헤더의 학기 드롭다운 메뉴) 책임.
 mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
+  /// 지금 보고 있는 학기가 이번 학기인지(저장 버튼을 숨길 때 쓴다).
+  bool get _isCurrentSemester {
+    final current = _estimateCurrentSemester(_now());
+    return current.year == _year && current.semester == _semester;
+  }
+
   // v7 디자인 24: 학기 버튼 바로 아래(왼쪽으로 6 비켜서)에 폭 206 흰 상자로
   // 뜬다. 지금 보고 있는 학기 줄만 연파랑 바탕 + 파란 굵은 글자.
   static const double _semesterMenuWidth = 206;

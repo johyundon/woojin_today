@@ -152,6 +152,27 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('이번 학기에는 저장 버튼이 없고, 다른 학기로 바꾸면 보인다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+        const MyTimetableResponse(courses: []),
+      ]),
+    );
+    // now는 2026년 10월이라 이번 학기는 2026년 2학기다.
+    expect(find.text('2026년 2학기'), findsOneWidget);
+    expect(find.text('저장'), findsNothing);
+
+    await tester.tap(find.text('2026년 2학기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2027년 1학기').last);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.text('저장'), findsOneWidget);
+  });
+
   testWidgets('시간표 과목 칸에는 빼기(×) 버튼이 없다', (tester) async {
     await _pump(
       tester,
