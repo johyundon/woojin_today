@@ -11,6 +11,10 @@ import '../timetable_colors.dart';
 /// 원본 디자인(상태 6)의 "학과" 행은 개설학과([CourseCatalogItem.department])가
 /// 있을 때만 보여준다. 내 시간표에서 불러온 과목에만 있고, 개설과목 검색 결과나
 /// 예전에 저장한 시간표에는 없다 — 없는 데이터를 지어내지 않기 위함.
+/// 담은 인원을 "14/15명"처럼(담은 사람/정원). 정원을 모르면 "-".
+String enrollmentLabel(CourseCatalogItem course) =>
+    course.capacity > 0 ? '${course.waitlistCount}/${course.capacity}명' : '-';
+
 class CourseDetailDialog extends StatelessWidget {
   const CourseDetailDialog({
     super.key,
@@ -65,7 +69,7 @@ class CourseDetailDialog extends StatelessWidget {
             _Row('학년', course.targetGrade),
             _Row('시간', course.rawSchedule),
             _Row('강의실', course.room),
-            _Row('담은인원', course.enrollmentRatio),
+            _Row('담은인원', enrollmentLabel(course)),
             _Row('비고', course.note ?? '-'),
             const SizedBox(height: 13),
             _DialogButton(

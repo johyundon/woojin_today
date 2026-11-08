@@ -327,6 +327,39 @@ void main() {
     expect(find.text('가상자료구조'), findsWidgets);
   });
 
+  testWidgets('과목 상세의 담은인원은 개설과목 목록 숫자로 "담은/정원명"을 보여준다', (tester) async {
+    // 내 시간표 응답에는 정원·담은 인원이 없다(0). 가짜 개설과목의 CS201-01은
+    // 정원 40, 담은 인원 2명이다.
+    const mine = CourseCatalogItem(
+      seq: 1,
+      courseCode: 'CS201',
+      section: '01',
+      courseName: '자료구조',
+      courseType: '전필',
+      credit: 3,
+      targetGrade: '',
+      professor: '김가상',
+      rawSchedule: '월10:00-11:15,수10:00-11:15',
+      room: '가상관 101',
+      isClosed: false,
+      capacity: 0,
+      waitlistCount: 0,
+      enrollmentRatio: '',
+    );
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [mine]),
+      ]),
+    );
+
+    await tester.tap(find.text('자료구조').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('담은인원'), findsOneWidget);
+    expect(find.text('2/40명'), findsOneWidget);
+  });
+
   group('시간표 과목 → 상세보기 → 강의계획서', () {
     Future<void> openSyllabus(WidgetTester tester) async {
       await tester.tap(find.text('가상자료구조').first);
