@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
@@ -7,6 +8,12 @@ import '../../../widgets/pressable.dart';
 /// 화면 아래에 떠 있는 흰색 바이며, 시간표 / 모아보기 / [가운데 홈 버튼] /
 /// 캘린더 / MY 순서다. 가운데 홈 버튼은 바 위로 살짝 솟아 있다. 탭을 눌렀을 때
 /// 어디로 이동할지는 [onTap]이 인덱스로 받아 처리한다.
+///
+/// 아이콘은 Figma "03 홈"에서 받은 SVG(Material Symbols Rounded, 굵기 600)를
+/// 쓴다. Flutter 기본 아이콘은 선 굵기와 모양이 달라서다. 선택된 탭은 안이
+/// 채워진 아이콘(FILL 1)을 파란색으로 칠한다. 달력은 Figma 아이콘 모음에서,
+/// 나머지 채운 아이콘(apps·event·person)은 같은 세트의 Google 공식 저장소
+/// (material-design-icons, wght600 fill1)에서 받았다.
 class HomeBottomNav extends StatelessWidget {
   const HomeBottomNav({super.key, required this.selectedIndex, this.onTap});
 
@@ -16,24 +23,24 @@ class HomeBottomNav extends StatelessWidget {
 
   static const _items = [
     (
-      icon: Icons.calendar_month_outlined,
-      selectedIcon: Icons.calendar_month_rounded,
+      asset: 'assets/icons/calendar_month_outline.svg',
+      selectedAsset: 'assets/icons/calendar_month.svg',
       label: '시간표',
     ),
     (
-      icon: Icons.apps_outlined,
-      selectedIcon: Icons.apps_rounded,
+      asset: 'assets/icons/apps_outline.svg',
+      selectedAsset: 'assets/icons/apps.svg',
       label: '모아보기',
     ),
     null, // 가운데 홈 버튼 자리
     (
-      icon: Icons.event_outlined,
-      selectedIcon: Icons.event_rounded,
+      asset: 'assets/icons/event_outline.svg',
+      selectedAsset: 'assets/icons/event.svg',
       label: '캘린더',
     ),
     (
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person_rounded,
+      asset: 'assets/icons/person_outline.svg',
+      selectedAsset: 'assets/icons/person.svg',
       label: 'MY',
     ),
   ];
@@ -72,11 +79,14 @@ class HomeBottomNav extends StatelessWidget {
               Expanded(
                 flex: _items[i] == null ? 80 : 66,
                 child: _items[i] == null
-                    ? _CenterButton(onTap: () => onTap?.call(i))
+                    ? _CenterButton(
+                        selected: i == selectedIndex,
+                        onTap: () => onTap?.call(i),
+                      )
                     : _NavItem(
-                        icon: i == selectedIndex
-                            ? _items[i]!.selectedIcon
-                            : _items[i]!.icon,
+                        asset: i == selectedIndex
+                            ? _items[i]!.selectedAsset
+                            : _items[i]!.asset,
                         label: _items[i]!.label,
                         selected: i == selectedIndex,
                         onTap: () => onTap?.call(i),
@@ -91,13 +101,13 @@ class HomeBottomNav extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.icon,
+    required this.asset,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
+  final String asset;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -110,7 +120,12 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 21, color: color),
+          SvgPicture.asset(
+            asset,
+            width: 21,
+            height: 21,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          ),
           const SizedBox(height: 3),
           Text(
             label,
@@ -127,9 +142,14 @@ class _NavItem extends StatelessWidget {
 }
 
 /// 가운데 홈 버튼. 연한 파랑 바탕에 흰 테두리를 두르고, 바 위로 11 솟아 있다.
+/// 디자인처럼 바깥 테두리 선은 없다(흰 테두리가 바와 이어져 보인다).
+///
+/// 홈 화면일 때만 파랗게 칠한다. 다른 탭에서도 파라면 어느 탭에 있는지
+/// 헷갈려서, 그때는 회색 바탕·회색 아이콘으로 둔다(시안에는 홈 상태만 있다).
 class _CenterButton extends StatelessWidget {
-  const _CenterButton({required this.onTap});
+  const _CenterButton({required this.selected, required this.onTap});
 
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -144,17 +164,19 @@ class _CenterButton extends StatelessWidget {
             height: 68,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.blueSoft,
+              color: selected ? AppColors.blueSoft : AppColors.fill,
               borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.white, width: 4),
-              boxShadow: const [
-                BoxShadow(color: AppColors.line, spreadRadius: 1),
-              ],
             ),
-            child: const Icon(
-              Icons.home_rounded,
-              size: 30,
-              color: AppColors.blueText,
+            child: SvgPicture.asset(
+              'assets/icons/home.svg',
+              width: 30,
+              height: 30,
+              colorFilter: ColorFilter.mode(
+                selected ? AppColors.blueText : AppColors.textSub,
+                BlendMode.srcIn,
+              ),
+              semanticsLabel: '홈',
             ),
           ),
         ),
