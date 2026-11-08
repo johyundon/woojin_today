@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cp949_codec/cp949_codec.dart';
+import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'course_catalog_service.dart';
 
@@ -21,8 +23,9 @@ class MyTimetableResponse {
   final List<CourseCatalogItem> courses;
 
   /// "과목코드-분반" 문자열 집합.
-  Set<String> get courseSectionCodes =>
-      {for (final c in courses) '${c.courseCode}-${c.section}'};
+  Set<String> get courseSectionCodes => {
+    for (final c in courses) '${c.courseCode}-${c.section}',
+  };
 }
 
 /// "네트워크 연결 실패"와 "서버는 응답했지만 비정상(status != 200)"과
@@ -100,9 +103,19 @@ class MyTimetableService implements MyTimetableServiceBase {
   // 강의시간/강의실/개설학과/비고. 이보다 적은 행은 과목 행이 아니므로 버린다.
   static const _minColumnCount = 10;
 
-  final http.Client _client;
+  /// 받은 시간표를 기기에 저장해 두는 기간. 앱을 다시 켤 때마다 학교에 묻지
+  /// 않도록 하루 동안 다시 쓴다. 수강정정으로 바뀐 시간표는 길어야 하루 늦게
+  /// 반영된다. 과목이 없는 결과는 저장하지 않는다(수강신청 중인 학기를 빈
+  /// 채로 하루 동안 붙잡아 두지 않으려고).
+  static const cacheDuration = Duration(days: 1);
+  static const _prefsKeyPrefix = 'my_timetable_';
 
-  MyTimetableService({http.Client? client}) : _client = client ?? http.Client();
+  final http.Client _client;
+  final DateTime Function() _now;
+
+  MyTimetableService({http.Client? client, DateTime Function()? now})
+    : _client = client ?? http.Client(),
+      _now = now ?? DateTime.now;
 
   /// [year]/[semester]: 요청 바디 selectYear(연도+학기를 구분자 없이 이어붙임.
   /// 예: year=2026, semester=2 -> "20262").
@@ -117,6 +130,10 @@ class MyTimetableService implements MyTimetableServiceBase {
     required String wmonid,
     required String userId2,
   }) async {
+    final prefsKey = '$_prefsKeyPrefix${userId2}_$year$semester';
+    final stored = await _readStored(prefsKey);
+    if (stored != null) return stored;
+
     final selectYear = '$year$semester';
 
     final cookie =
@@ -146,12 +163,52 @@ class MyTimetableService implements MyTimetableServiceBase {
 
     final decoded = _decodeBody(response);
 
+    final MyTimetableResponse result;
     try {
-      return _parse(decoded);
+      result = _parse(decoded);
     } on MyTimetableParseException {
       rethrow;
     } catch (e) {
       throw MyTimetableParseException('응답 구조가 예상과 다릅니다: $e');
+    }
+    if (result.courses.isNotEmpty) await _writeStored(prefsKey, result);
+    return result;
+  }
+
+  /// 하루 안에 저장한 시간표. 없거나 지났거나 못 읽으면 null.
+  Future<MyTimetableResponse?> _readStored(String key) async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(key);
+      if (raw == null) return null;
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final savedAt = DateTime.parse(json['savedAt'] as String);
+      if (_now().difference(savedAt) >= cacheDuration) return null;
+      return MyTimetableResponse(
+        courses: [
+          for (final row in json['items'] as List<dynamic>)
+            CourseCatalogService.itemFromRow(row as List<dynamic>),
+        ],
+      );
+    } catch (e) {
+      // 저장된 값을 못 읽어도 학교에서 새로 받으면 되므로 조회를 막지 않는다.
+      debugPrint('[MyTimetable] 저장된 시간표 읽기 실패: $e');
+      return null;
+    }
+  }
+
+  Future<void> _writeStored(String key, MyTimetableResponse result) async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(
+        key,
+        jsonEncode({
+          'savedAt': _now().toIso8601String(),
+          'items': [
+            for (final c in result.courses) CourseCatalogService.itemToRow(c),
+          ],
+        }),
+      );
+    } catch (e) {
+      debugPrint('[MyTimetable] 시간표 저장 실패: $e');
     }
   }
 

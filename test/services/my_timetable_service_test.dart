@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:daejin_app/services/class_schedule_parser.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// <td>들을 조립해 `table#tTbl`의 한 행을 만드는 헬퍼. 실제 응답처럼 10칸
 /// (교과번호/교과목명/분반/이수구분/학점/담당교수/강의시간/강의실/개설학과/
@@ -62,6 +63,75 @@ Future<MyTimetableResponse> _fetchWith(http.Response response) {
 }
 
 void main() {
+  // 시간표를 기기 저장소에 하루 동안 저장하므로, 테스트마다 비워야 앞
+  // 테스트의 결과가 뒤 테스트로 새지 않는다.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  group('기기 저장(하루)', () {
+    late int calls;
+    late DateTime now;
+    late MyTimetableService service;
+
+    MockClient clientWith(List<String> rowsHtml) => MockClient((_) async {
+      calls++;
+      return http.Response.bytes(
+        _fixtureBytesUtf8(rowsHtml),
+        200,
+        headers: {'content-type': 'text/html; charset=utf-8'},
+      );
+    });
+
+    Future<MyTimetableResponse> fetch() => service.fetchMyTimetable(
+      year: 2026,
+      semester: 2,
+      jsessionId: 'J',
+      wmonid: 'W',
+      userId2: 'U',
+    );
+
+    setUp(() {
+      calls = 0;
+      now = DateTime(2026, 11, 8, 9);
+    });
+
+    test('하루 안에는 학교에 다시 묻지 않고, 앱을 다시 켜도 저장분을 쓴다', () async {
+      final client = clientWith([
+        _row(['900101', '가상과목', '01', '전필', '3']),
+      ]);
+      service = MyTimetableService(client: client, now: () => now);
+      await fetch();
+      // 앱을 다시 켠 것처럼 새 서비스(새 로그인 값)로 불러도 저장분을 쓴다.
+      service = MyTimetableService(client: client, now: () => now);
+      now = now.add(const Duration(hours: 23));
+      final again = await fetch();
+
+      expect(calls, 1);
+      expect(again.courses.single.courseName, '가상과목');
+    });
+
+    test('하루가 지나면 학교에서 새로 받는다', () async {
+      service = MyTimetableService(
+        client: clientWith([
+          _row(['900101', '가상과목', '01', '전필', '3']),
+        ]),
+        now: () => now,
+      );
+      await fetch();
+      now = now.add(const Duration(days: 1));
+      await fetch();
+
+      expect(calls, 2);
+    });
+
+    test('과목이 없는 결과는 저장하지 않는다', () async {
+      service = MyTimetableService(client: clientWith([]), now: () => now);
+      await fetch();
+      await fetch();
+
+      expect(calls, 2);
+    });
+  });
+
   group('실제 응답 구조(익명 fixture)', () {
     // 2026-10-31 실제 응답의 table#tTbl 모양(태그·속성·<P> 감싸기·공백)을
     // 그대로 두고 값만 가짜로 바꾼 EUC-KR 파일. 서버가 실제로 보낸 헤더도

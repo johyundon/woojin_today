@@ -250,7 +250,7 @@ class CourseCatalogService implements CourseCatalogServiceBase {
       if (_now().difference(savedAt) >= cacheDuration) return null;
       return [
         for (final row in json['items'] as List<dynamic>)
-          _itemFromRow(row as List<dynamic>),
+          itemFromRow(row as List<dynamic>),
       ];
     } catch (e) {
       // 저장된 값을 못 읽어도 서버에서 새로 받으면 되므로 조회를 막지 않는다.
@@ -265,7 +265,7 @@ class CourseCatalogService implements CourseCatalogServiceBase {
         key,
         jsonEncode({
           'savedAt': _now().toIso8601String(),
-          'items': [for (final i in items) _itemToRow(i)],
+          'items': [for (final i in items) itemToRow(i)],
         }),
       );
     } catch (e) {
@@ -274,7 +274,8 @@ class CourseCatalogService implements CourseCatalogServiceBase {
   }
 
   // 1,500개 넘는 과목을 저장하므로 키 이름 없이 배열로 줄여 저장한다.
-  static List<Object?> _itemToRow(CourseCatalogItem i) => [
+  // 내 시간표 저장([MyTimetableService])도 같은 형식을 쓴다.
+  static List<Object?> itemToRow(CourseCatalogItem i) => [
     i.seq,
     i.courseCode,
     i.section,
@@ -293,7 +294,7 @@ class CourseCatalogService implements CourseCatalogServiceBase {
     i.department,
   ];
 
-  static CourseCatalogItem _itemFromRow(List<dynamic> r) => CourseCatalogItem(
+  static CourseCatalogItem itemFromRow(List<dynamic> r) => CourseCatalogItem(
     seq: r[0] as int,
     courseCode: r[1] as String,
     section: r[2] as String,

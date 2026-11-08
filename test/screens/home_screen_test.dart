@@ -57,8 +57,12 @@ const _fixtureJson = '''
 void main() {
   // 여러 테스트가 같은 jsessionId/wmonid/userId2 값을 재사용하면서 서로 다른
   // mock 응답을 기대한다 — SessionCache는 이 식별자로 캐싱하므로, 테스트마다
-  // 비워주지 않으면 앞 테스트의 캐시가 뒤 테스트로 새어 들어간다.
-  setUp(SessionCache.clear);
+  // 비워주지 않으면 앞 테스트의 캐시가 뒤 테스트로 새어 들어간다. 내 시간표는
+  // 기기 저장소에도 하루 동안 저장하므로 저장소도 테스트마다 비운다.
+  setUp(() {
+    SessionCache.clear();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   group('인사말(오늘은 수업 N개 남았어요!/오늘 하루도 화이팅해요!)', () {
     // 날씨 조회는 이 그룹의 관심사가 아니므로, 전부 같은 성공 응답으로 고정해
