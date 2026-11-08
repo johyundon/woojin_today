@@ -13,8 +13,8 @@ import 'timetable_colors.dart';
 
 /// "강의계획서" 화면(상태 7).
 ///
-/// [SyllabusService]로 학교 강의계획서를 불러와 위쪽 정보와 5칸(개요,
-/// 선수과목, 핵심역량·수업목표, 주별 수업계획, 평가방법)을 채운다. 불러오기
+/// [SyllabusService]로 학교 강의계획서를 불러와 위쪽 정보와 절(과목마다 개수가
+/// 다르고 최대 11개)을 펼침 칸으로 보여준다. 불러오기
 /// 전에는 [CourseCatalogItem]에 있는 값만 보여준다. 다른 학과 전공처럼 강의계획서를
 /// 찾을 방법이 없는 과목은 그 사실만 안내한다(다시 시도 없음).
 class SyllabusScreen extends StatefulWidget {
@@ -374,68 +374,81 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
   }
 }
 
-/// 디자인의 5칸에 맞춰 강의계획서 절을 고르고 글로 옮긴다. 제목은 실제
-/// 강의계획서의 절 제목(번호 제외)을 쓴다. 내용이 없으면 "내용 없음".
+/// 강의계획서에 있는 절을 순서대로 모두(최대 [_maxSections]개) 글로 옮긴다.
+/// 과목마다 절 개수가 다르다(예: 6·8·9번이 없는 과목). 같은 번호의 세부 절
+/// ("3-1) 핵심역량", "3-2) 전공역량")은 한 칸으로 합쳐 학교 번호(1~11번)와 칸
+/// 개수를 맞춘다. 제목은 실제 절 제목에서 번호를 뺀 것이고(가장 긴 것이 "교재
+/// 및 참고자료(독서물 포함)" 17자), 번호는 화면에서 1부터 다시 매긴다. 내용이
+/// 없으면 "내용 없음".
 List<(String, String)> _syllabusSections(SyllabusDetail detail) {
-  String titleOf(String prefix, String fallback) {
-    final title = detail.section(prefix)?.title;
-    if (title == null) return fallback;
-    return title.replaceFirst(RegExp(r'^\d+(-\d+\))?[.)]?\s*'), '');
-  }
+  String titleOf(SyllabusSection s) =>
+      s.title.replaceFirst(RegExp(r'^\d+(-\d+\))?[.)]?\s*'), '');
 
   String orEmpty(String text) => text.trim().isEmpty ? '내용 없음' : text;
 
-  final competencies = detail.section('3-1)')?.competencies ?? const [];
-  final weeks = detail.section('10.')?.weeks ?? const [];
-  // 반영비율 0%인 평가요소는 실제로 쓰지 않으므로 뺀다.
-  final evaluations = (detail.section('7.')?.evaluations ?? const []).where(
-    (e) => e.ratio != '0%',
-  );
+  String bodyOf(SyllabusSection s) {
+    final competencies = s.competencies;
+    if (competencies != null) {
+      return competencies
+          .map((c) => '${c.name} · ${c.ratio}\n${c.goal}')
+          .join('\n\n');
+    }
+    final weeks = s.weeks;
+    if (weeks != null) {
+      return weeks
+          .map(
+            (w) => [
+              '${w.week}주차 · ${w.topic}',
+              if (w.content.isNotEmpty) w.content,
+            ].join('\n'),
+          )
+          .join('\n\n');
+    }
+    final evaluations = s.evaluations;
+    if (evaluations != null) {
+      // 반영비율 0%인 평가요소는 실제로 쓰지 않으므로 뺀다.
+      return evaluations
+          .where((e) => e.ratio != '0%')
+          .map(
+            (e) => e.detail.isEmpty
+                ? '${e.name} ${e.ratio}'
+                : '${e.name} ${e.ratio} — ${e.detail}',
+          )
+          .join('\n');
+    }
+    return s.bodyText;
+  }
+
+  // 맨 앞 번호("3-1)"이면 3)가 같은 절끼리 묶는다.
+  final groups = <List<SyllabusSection>>[];
+  String? lastNumber;
+  for (final s in detail.sections) {
+    final number = RegExp(r'^\d+').firstMatch(s.title)?.group(0);
+    if (number != null && number == lastNumber) {
+      groups.last.add(s);
+    } else {
+      groups.add([s]);
+    }
+    lastNumber = number;
+  }
 
   return [
-    (
-      titleOf('1.', '수업의 개요와 유용성'),
-      orEmpty(detail.section('1.')?.bodyText ?? ''),
-    ),
-    (
-      titleOf('2.', '선행학습 및 선수과목 요건'),
-      orEmpty(detail.section('2.')?.bodyText ?? ''),
-    ),
-    (
-      titleOf('3-1)', '핵심역량 및 수업목표'),
-      orEmpty(
-        competencies
-            .map((c) => '${c.name} · ${c.ratio}\n${c.goal}')
-            .join('\n\n'),
-      ),
-    ),
-    (
-      titleOf('10.', '주별 수업계획'),
-      orEmpty(
-        weeks
-            .map(
-              (w) => [
-                '${w.week}주차 · ${w.topic}',
-                if (w.content.isNotEmpty) w.content,
-              ].join('\n'),
-            )
-            .join('\n\n'),
-      ),
-    ),
-    (
-      titleOf('7.', '학습 평가방법'),
-      orEmpty(
-        evaluations
-            .map(
-              (e) => e.detail.isEmpty
-                  ? '${e.name} ${e.ratio}'
-                  : '${e.name} ${e.ratio} — ${e.detail}',
-            )
-            .join('\n'),
-      ),
-    ),
+    for (final group in groups.take(_maxSections))
+      if (group.length == 1)
+        (titleOf(group.single), orEmpty(bodyOf(group.single)))
+      else
+        (
+          titleOf(group.first),
+          // 세부 절이 여럿이면 세부 제목을 붙여 이어 쓴다.
+          group
+              .map((s) => '[${titleOf(s)}]\n${orEmpty(bodyOf(s))}')
+              .join('\n\n'),
+        ),
   ];
 }
+
+/// 강의계획서 절은 최대 11개(1~11번)다.
+const _maxSections = 11;
 
 String _formatCredit(double credit) {
   return credit == credit.roundToDouble()

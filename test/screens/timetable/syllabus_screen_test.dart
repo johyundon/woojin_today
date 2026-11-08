@@ -171,21 +171,107 @@ void main() {
     // 첫 칸은 기본으로 펼쳐져 있다.
     expect(find.text('수업의 개요와 유용성'), findsOneWidget);
     expect(find.textContaining('본 교과목은'), findsOneWidget);
-    expect(find.text('주별 수업계획'), findsOneWidget);
-    expect(find.text('학습 평가방법'), findsOneWidget);
     // 강의계획서 값으로 채운 위쪽 정보. 정원(0)과 연구실은 보여주지 않는다.
     expect(find.text('가상관 310 강의실'), findsOneWidget);
     expect(find.text('2.0학점 · 1학년'), findsOneWidget);
     expect(find.text('정원'), findsNothing);
     expect(find.text('연구실'), findsNothing);
     expect(find.text('가상관 101 호'), findsNothing);
+    // 이 강의계획서에 있는 절 8개가 순서대로 모두 나온다(6·8·9번은 없는 과목).
+    for (final title in [
+      '선행학습 및 선수과목 요건',
+      '핵심역량 및 수업목표',
+      '수업형태',
+      '수업방법',
+      '학습 평가방법',
+      '주별 수업계획',
+      '연계 비교과 프로그램',
+    ]) {
+      await tester.scrollUntilVisible(find.text(title), 200);
+      expect(find.text(title), findsOneWidget, reason: title);
+    }
 
+    await tester.scrollUntilVisible(find.text('학습 평가방법'), -200);
     await tester.tap(find.text('학습 평가방법'));
     await tester.pumpAndSettle();
     final evaluation = find.textContaining('출석 20%');
     expect(evaluation, findsOneWidget);
     // 0% 항목은 빠진다.
     expect(find.textContaining('토의/토론'), findsNothing);
+  });
+
+  testWidgets('절이 11개를 넘게 와도 11개까지만 보여준다', (tester) async {
+    final many = SyllabusDetail(
+      topInfo: const [],
+      sections: [
+        for (var i = 1; i <= 12; i++)
+          SyllabusSection(title: '$i. 가상항목$i', bodyText: '내용$i'),
+      ],
+    );
+    await _pump(tester, _FakeService([many]));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('가상항목11'), 200);
+    expect(find.text('가상항목11'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -2000));
+    await tester.pumpAndSettle();
+    expect(find.text('가상항목12'), findsNothing);
+  });
+
+  testWidgets('3-1)·3-2)처럼 같은 번호 세부 절은 한 칸으로 합쳐 11번까지 다 보여준다', (tester) async {
+    // 실제 강의계획서처럼 1~11번 중 3번만 세부 절 두 개(모두 12절).
+    final detail = SyllabusDetail(
+      topInfo: const [],
+      sections: [
+        const SyllabusSection(title: '1. 수업의 개요와 유용성', bodyText: '개요'),
+        const SyllabusSection(title: '2. 선행학습 및 선수과목 요건', bodyText: '없음'),
+        const SyllabusSection(title: '3-1) 핵심역량 및 수업목표', bodyText: '핵심'),
+        const SyllabusSection(title: '3-2) 전공역량 및 수업목표', bodyText: '전공'),
+        for (var i = 4; i <= 10; i++)
+          SyllabusSection(title: '$i. 가상항목$i', bodyText: '내용$i'),
+        const SyllabusSection(title: '11. 연계 비교과 프로그램', bodyText: '없음'),
+      ],
+    );
+    await _pump(tester, _FakeService([detail]));
+    await tester.pumpAndSettle();
+
+    expect(find.text('전공역량 및 수업목표'), findsNothing); // 3번 칸 안으로 합침
+    await tester.tap(find.text('핵심역량 및 수업목표'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('[전공역량 및 수업목표]'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('연계 비교과 프로그램'), 200);
+    expect(find.text('연계 비교과 프로그램'), findsOneWidget);
+    expect(find.text('11'), findsOneWidget); // 마지막 칸 번호
+  });
+
+  testWidgets('가장 긴 절 제목(17자)도 작은 화면에서 넘치지 않는다', (tester) async {
+    const longTitle = '교재 및 참고자료(독서물 포함)';
+    expect(longTitle.length, 17);
+    final detail = SyllabusDetail(
+      topInfo: const [],
+      sections: [SyllabusSection(title: '8. $longTitle', bodyText: '가상 교재')],
+    );
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SyllabusScreen(
+          course: _course,
+          year: 2026,
+          semester: 2,
+          jsessionId: 'j',
+          wmonid: 'w',
+          userId2: 'u',
+          syllabusService: _FakeService([detail]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(longTitle), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('정원이 있는 과목(과목 추가 목록)은 정원을 보여주고 연구실은 보여주지 않는다', (tester) async {
