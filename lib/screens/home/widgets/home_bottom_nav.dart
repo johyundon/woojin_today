@@ -40,16 +40,19 @@ class HomeBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 디자인(390x844)에서 바 아랫변은 화면 맨 아래에서 26 위, 즉 홈 인디케이터
+    // 영역(34)에 8만큼 걸쳐 있다. 아래 안전 영역이 없는 기기는 12를 띄운다.
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
         0,
         16,
-        12 + MediaQuery.of(context).padding.bottom,
+        safeBottom - 8 > 12 ? safeBottom - 8 : 12,
       ),
       child: Container(
         height: 70,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 7),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -64,8 +67,10 @@ class HomeBottomNav extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // 디자인에서 가운데 홈 칸이 양옆 칸보다 넓다(약 80 : 66).
             for (var i = 0; i < _items.length; i++)
               Expanded(
+                flex: _items[i] == null ? 80 : 66,
                 child: _items[i] == null
                     ? _CenterButton(onTap: () => onTap?.call(i))
                     : _NavItem(
@@ -105,7 +110,7 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: color),
+          Icon(icon, size: 21, color: color),
           const SizedBox(height: 3),
           Text(
             label,
@@ -121,7 +126,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// 가운데 홈 버튼. 연한 파랑 바탕에 흰 테두리를 두르고, 바 위로 10 솟아 있다.
+/// 가운데 홈 버튼. 연한 파랑 바탕에 흰 테두리를 두르고, 바 위로 11 솟아 있다.
 class _CenterButton extends StatelessWidget {
   const _CenterButton({required this.onTap});
 
@@ -131,7 +136,7 @@ class _CenterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Transform.translate(
-        offset: const Offset(0, -10),
+        offset: const Offset(0, -12),
         child: Pressable.icon(
           onTap: onTap,
           child: Container(
