@@ -3,6 +3,11 @@ part of 'timetable_screen.dart';
 /// 시간표 저장 다이얼로그 열기, 저장된 시간표 목록 화면 열기(불러오기) 책임.
 mixin TimetableSaveLoadMixin on TimetableDataLoadingMixin {
   Future<void> _openSaveDialog() async {
+    // 빈 시간표는 저장하지 않고, 과목을 먼저 담으라고 알려준다.
+    if (_confirmedCourses.isEmpty) {
+      await showEmptySaveDialog(context);
+      return;
+    }
     final name = await showDialog<String>(
       context: context,
       barrierColor: TimetableColors.barrier,

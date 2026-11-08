@@ -42,6 +42,39 @@ class _FakeService implements MyTimetableServiceBase {
   }
 }
 
+/// [emptyYear]년 [emptySemester]학기만 개설과목이 아직 안 올라온 것처럼 빈 목록을 돌려준다.
+class _CatalogUntil implements CourseCatalogServiceBase {
+  _CatalogUntil({required this.emptyYear, required this.emptySemester});
+
+  final int emptyYear;
+  final int emptySemester;
+  final _real = FakeCourseCatalogService();
+
+  @override
+  Future<List<CourseCatalogItem>> fetchCourseCatalog({
+    required int year,
+    required int semester,
+    required String jsessionId,
+    required String wmonid,
+    String icKwa = '%',
+    String? icKwa1,
+    String? userId,
+    bool forceRefresh = false,
+  }) async {
+    if (year == emptyYear && semester == emptySemester) return [];
+    return _real.fetchCourseCatalog(
+      year: year,
+      semester: semester,
+      jsessionId: jsessionId,
+      wmonid: wmonid,
+      icKwa: icKwa,
+      icKwa1: icKwa1,
+      userId: userId,
+      forceRefresh: forceRefresh,
+    );
+  }
+}
+
 const _course = CourseCatalogItem(
   seq: 1,
   courseCode: '900101',
@@ -88,6 +121,7 @@ Future<void> _pump(
   WidgetTester tester,
   _FakeService service, {
   SyllabusServiceBase? syllabus,
+  CourseCatalogServiceBase? catalog,
 }) async {
   tester.view.physicalSize = const Size(780, 1688);
   tester.view.devicePixelRatio = 2;
@@ -99,7 +133,7 @@ Future<void> _pump(
         jsessionId: 'j',
         wmonid: 'w',
         userId2: 'u',
-        courseCatalogService: FakeCourseCatalogService(),
+        courseCatalogService: catalog ?? FakeCourseCatalogService(),
         myTimetableService: service,
         savedTimetableStorage: _FakeStorage(),
         syllabusService: syllabus,
@@ -187,6 +221,61 @@ void main() {
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
     expect(find.text('과목 추가'), findsOneWidget);
+  });
+
+  testWidgets('담은 과목이 없을 때 저장을 누르면 알림창을 띄우고 저장하지 않는다', (tester) async {
+    await _pump(tester, _FakeService([const MyTimetableResponse(courses: [])]));
+
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('담은 과목이 없어요'), findsOneWidget);
+    expect(find.text('시간표 저장'), findsNothing); // 이름 입력 창은 안 뜬다.
+
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    expect(find.text('담은 과목이 없어요'), findsNothing);
+  });
+
+  testWidgets('개설과목이 아직 안 올라온 학기로 바꾸면 알림창으로 알린다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+        const MyTimetableResponse(courses: []),
+      ]),
+      catalog: _CatalogUntil(emptyYear: 2027, emptySemester: 1),
+    );
+
+    await tester.tap(find.text('2026년 2학기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2027년 1학기').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('아직 시간표가 나오지 않았어요'), findsOneWidget);
+    expect(find.textContaining('2027년 1학기 시간표가 아직 나오지 않아서'), findsOneWidget);
+
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    expect(find.text('아직 시간표가 나오지 않았어요'), findsNothing);
+  });
+
+  testWidgets('개설과목이 있는 학기로 바꾸면 알림창이 뜨지 않는다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+        const MyTimetableResponse(courses: []),
+      ]),
+    );
+
+    await tester.tap(find.text('2026년 2학기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2026년 1학기').last);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.text('아직 시간표가 나오지 않았어요'), findsNothing);
   });
 
   testWidgets('시간표 과목 칸에는 빼기(×) 버튼이 없다', (tester) async {

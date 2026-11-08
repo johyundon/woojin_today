@@ -115,11 +115,22 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
       _pendingSlot = null;
       _filters.clear();
     });
-    if (_hasSession) {
-      _loadCatalog();
-    }
     if (_hasFullSession) {
       _loadMyTimetable();
+    }
+    if (_hasSession) {
+      await _loadCatalog();
+      // 학교가 그 학기 개설과목을 아직 올리지 않았으면(오류 없이 빈 목록) 알린다.
+      if (mounted &&
+          !_catalogLoading &&
+          _catalogError == null &&
+          _catalog.isEmpty) {
+        await showCatalogNotReadyDialog(
+          context,
+          year: _year,
+          semester: _semester,
+        );
+      }
     }
   }
 

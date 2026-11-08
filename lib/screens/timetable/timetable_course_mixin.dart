@@ -40,9 +40,31 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
     BuildContext stepContext,
     AiRecommendAnswers answers,
   ) async {
+    // 추천할 개설과목이 없으면 이유에 맞는 알림창을 띄우고 멈춘다.
+    if (_catalogLoading) {
+      await showTimetableNoticeDialog(
+        stepContext,
+        icon: Icons.hourglass_top_rounded,
+        title: '개설과목을 불러오는 중이에요',
+        message: '잠시 후 다시\n시간표 만들기를 눌러 주세요.',
+      );
+      return;
+    }
+    if (_catalogError != null) {
+      await showTimetableNoticeDialog(
+        stepContext,
+        icon: Icons.error_outline_rounded,
+        title: '개설과목을 불러오지 못했어요',
+        message: '인터넷 연결을 확인한 뒤\n다시 시도해 주세요.',
+      );
+      return;
+    }
     if (_catalog.isEmpty) {
-      ScaffoldMessenger.of(stepContext)
-          .showSnackBar(const SnackBar(content: Text('추천할 개설과목 데이터가 없어요.')));
+      await showCatalogNotReadyDialog(
+        stepContext,
+        year: _year,
+        semester: _semester,
+      );
       return;
     }
 

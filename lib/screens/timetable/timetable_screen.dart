@@ -36,6 +36,7 @@ import 'widgets/save_timetable_dialog.dart';
 import 'widgets/search_panel.dart';
 import 'widgets/timetable_grid.dart';
 import 'widgets/timetable_header.dart';
+import 'widgets/timetable_notice_dialog.dart';
 
 part 'timetable_session_mixin.dart';
 part 'timetable_data_loading_mixin.dart';

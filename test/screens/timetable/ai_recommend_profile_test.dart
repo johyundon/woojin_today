@@ -89,8 +89,60 @@ class _NoCoursesTimetable implements MyTimetableServiceBase {
   }) async => const MyTimetableResponse(courses: []);
 }
 
+/// 개설과목이 아직 하나도 올라오지 않은 학기.
+class _EmptyCatalog implements CourseCatalogServiceBase {
+  @override
+  Future<List<CourseCatalogItem>> fetchCourseCatalog({
+    required int year,
+    required int semester,
+    required String jsessionId,
+    required String wmonid,
+    String icKwa = '%',
+    String? icKwa1,
+    String? userId,
+    bool forceRefresh = false,
+  }) async => [];
+}
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('개설과목이 아직 없으면 시간표 만들기에서 알림창을 띄운다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimetableScreen(
+          jsessionId: 'empty-j',
+          wmonid: 'empty-w',
+          userId2: 'empty-u',
+          courseCatalogService: _EmptyCatalog(),
+          myTimetableService: _NoCoursesTimetable(),
+          studentInfoService: _FakeStudentInfo(),
+          savedTimetableStorage: _FakeStorage(),
+          now: () => DateTime(2026, 10, 26, 9),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    tester.takeException(); // 첫 프레임(실측 전) 일시 오버플로우는 기존 동작.
+
+    await tester.tap(find.text('자동 생성'));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.text('다음'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('시간표 만들기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('아직 시간표가 나오지 않았어요'), findsOneWidget);
+    expect(find.textContaining('2026년 2학기 시간표가 아직 나오지 않아서'), findsOneWidget);
+    // 결과 화면으로 넘어가지 않는다.
+    expect(find.text('이 시간표 할래요'), findsNothing);
+  });
 
   testWidgets('자동 생성은 내 학과 전공 목록을 불러와 다른 학과 전공을 뺀다', (tester) async {
     tester.view.physicalSize = const Size(780, 1688);
