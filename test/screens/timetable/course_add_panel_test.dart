@@ -5,7 +5,7 @@ import 'package:daejin_app/screens/timetable/models/saved_timetable.dart';
 import 'package:daejin_app/screens/timetable/services/saved_timetable_storage.dart';
 import 'package:daejin_app/screens/timetable/timetable_screen.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
-import 'package:daejin_app/services/fakes/fake_my_timetable_service.dart';
+import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,10 +23,24 @@ Widget _app() => MaterialApp(
     wmonid: 'w',
     userId2: 'u',
     courseCatalogService: FakeCourseCatalogService(),
-    myTimetableService: FakeMyTimetableService(),
+    myTimetableService: _NoCoursesTimetable(),
     savedTimetableStorage: _FakeStorage(),
   ),
 );
+
+/// 이번 학기에 수강 과목이 없는 학생(수강신청 전). 등록된 시간표가 있으면 과목
+/// 추가·자동 생성 버튼이 숨겨지므로, 편집 기능을 확인하는 이 테스트는 빈
+/// 시간표로 연다.
+class _NoCoursesTimetable implements MyTimetableServiceBase {
+  @override
+  Future<MyTimetableResponse> fetchMyTimetable({
+    required int year,
+    required int semester,
+    required String jsessionId,
+    required String wmonid,
+    required String userId2,
+  }) async => const MyTimetableResponse(courses: []);
+}
 
 void main() {
   testWidgets('"과목 추가"를 누르면 검색 패널이 열리고 담기가 된다', (tester) async {

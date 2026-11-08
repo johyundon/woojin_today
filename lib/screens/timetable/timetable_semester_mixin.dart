@@ -44,10 +44,14 @@ part of 'timetable_screen.dart';
 
 /// 학기 이동(헤더의 학기 드롭다운 메뉴) 책임.
 mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
-  /// 지금 보고 있는 학기가 이번 학기인지(저장 버튼을 숨길 때 쓴다).
-  bool get _isCurrentSemester {
+  /// 이번 학기이고 학교에 등록된 과목이 있으면, 화면은 학교 시간표를 보여 주기만
+  /// 한다. 이미 수강이 확정된 시간표라 과목 추가·자동 생성·저장이 필요 없어서
+  /// 그 버튼들을 숨기고 빈 칸 누르기도 막는다.
+  bool get _viewingRegisteredTimetable {
     final current = _estimateCurrentSemester(_now());
-    return current.year == _year && current.semester == _semester;
+    return current.year == _year &&
+        current.semester == _semester &&
+        _hasRegisteredCourses;
   }
 
   // v7 디자인 24: 학기 버튼 바로 아래(왼쪽으로 6 비켜서)에 폭 206 흰 상자로
@@ -106,6 +110,7 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
       // 학기를 바꾸면 이전 학기 데이터는 더 이상 유효하지 않다 — 그리드/검색
       // 결과를 비우고 새 학기 데이터를 다시 불러온다.
       _confirmedCourses = [];
+      _hasRegisteredCourses = false;
       _catalog = [];
       _pendingSlot = null;
       _filters.clear();

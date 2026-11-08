@@ -22,7 +22,7 @@ class TimetableHeader extends StatelessWidget {
     required this.onOpenSavedList,
     required this.onAutoFill,
     required this.onAddCourse,
-    this.showSave = true,
+    this.editable = true,
   });
 
   final String semesterLabel;
@@ -38,9 +38,9 @@ class TimetableHeader extends StatelessWidget {
   final VoidCallback onAutoFill;
   final VoidCallback onAddCourse;
 
-  /// "저장" 버튼을 보일지. 지금 학기는 학교에 등록된 내 시간표 그대로라
-  /// 저장할 이유가 없어 숨긴다.
-  final bool showSave;
+  /// 시간표를 고칠 수 있는지. false면(이번 학기 학교에 등록된 시간표를 보는
+  /// 중) "저장"·"자동 생성"·"과목 추가" 버튼을 숨긴다.
+  final bool editable;
 
   String get _creditsLabel {
     final trimmed = totalCredits == totalCredits.roundToDouble()
@@ -142,7 +142,7 @@ class TimetableHeader extends StatelessWidget {
             height: 1.4,
           ),
         ),
-        if (showSave) ...[
+        if (editable) ...[
           const SizedBox(width: 10),
           Pressable(
             pressedScale: 0.92,
@@ -218,46 +218,70 @@ class TimetableHeader extends StatelessWidget {
             height: 1.4,
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _AutoFillButton(onTap: onAutoFill),
-            const SizedBox(width: 8),
-            Pressable(
-              pressedScale: 0.93,
-              onTap: onAddCourse,
-              child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: AppColors.cardShadow,
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.add_rounded,
-                      color: TimetableColors.headerButtonText,
-                      size: 15,
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      '과목 추가',
-                      style: TextStyle(
+        if (editable) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _AutoFillButton(onTap: onAutoFill),
+              const SizedBox(width: 8),
+              Pressable(
+                pressedScale: 0.93,
+                onTap: onAddCourse,
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: AppColors.cardShadow,
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add_rounded,
                         color: TimetableColors.headerButtonText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        height: 1.4,
+                        size: 15,
                       ),
-                    ),
-                  ],
+                      SizedBox(width: 4),
+                      Text(
+                        '과목 추가',
+                        style: TextStyle(
+                          color: TimetableColors.headerButtonText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        ] else ...[
+          // 버튼 줄과 같은 높이를 둬서 오른쪽 마스코트가 아래 줄에 겹치지 않게
+          // 하고, 버튼이 왜 없는지 알려 준다.
+          const SizedBox(height: 12),
+          const SizedBox(
+            height: 38,
+            child: Row(
+              children: [
+                Icon(Icons.verified_rounded, color: AppColors.blue, size: 15),
+                SizedBox(width: 5),
+                Text(
+                  '학교에 등록된 이번 학기 시간표예요',
+                  style: TextStyle(
+                    color: AppColors.textSub,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }

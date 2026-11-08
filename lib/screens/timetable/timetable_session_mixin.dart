@@ -36,6 +36,10 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
   bool _myTimetableLoading = false;
   MyTimetableStatus _myTimetableStatus = MyTimetableStatus.idle;
 
+  /// 지금 학기([_year]/[_semester])의 내 시간표를 학교에서 불러왔고 과목이
+  /// 있는지. 학기를 바꾸거나 저장한 시간표를 불러오면 false로 돌린다.
+  bool _hasRegisteredCourses = false;
+
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   String _query = '';

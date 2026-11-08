@@ -72,6 +72,7 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
             .map(PlannedCourse.fromCatalogItem)
             .toList();
         _myTimetableLoading = false;
+        _hasRegisteredCourses = myTimetable.courses.isNotEmpty;
         _myTimetableStatus = myTimetable.courses.isEmpty
             ? MyTimetableStatus.empty
             : MyTimetableStatus.idle;
