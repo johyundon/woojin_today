@@ -237,13 +237,13 @@ void main() {
     expect(find.text('담은 과목이 없어요'), findsNothing);
   });
 
-  testWidgets('개설과목이 아직 안 올라온 학기로 바꾸면 알림창으로 알린다', (tester) async {
+  testWidgets('개설과목이 아직 안 올라온 학기로 바꾸면 알림창으로 알리고 내 시간표는 묻지 않는다', (tester) async {
+    final service = _FakeService([
+      const MyTimetableResponse(courses: [_course]),
+    ]);
     await _pump(
       tester,
-      _FakeService([
-        const MyTimetableResponse(courses: [_course]),
-        const MyTimetableResponse(courses: []),
-      ]),
+      service,
       catalog: _CatalogUntil(emptyYear: 2027, emptySemester: 1),
     );
 
@@ -258,6 +258,9 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     expect(find.text('아직 시간표가 나오지 않았어요'), findsNothing);
+    // 시간표가 안 나온 학기라 내 시간표 불러오기 버튼이 없고, 학교에도 묻지 않았다.
+    expect(find.text('내 시간표 불러오기'), findsNothing);
+    expect(service.calls, 1); // 처음 화면을 열 때(2026년 2학기) 한 번뿐
   });
 
   testWidgets('개설과목이 있는 학기로 바꾸면 알림창이 뜨지 않는다', (tester) async {

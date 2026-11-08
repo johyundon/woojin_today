@@ -12,6 +12,7 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
     if (!_hasSession) return;
     setState(() {
       _catalogLoading = true;
+      _catalogLoaded = false;
       _catalogError = null;
     });
     try {
@@ -29,6 +30,7 @@ mixin TimetableDataLoadingMixin on TimetableSessionMixin {
       setState(() {
         _catalog = catalog;
         _catalogLoading = false;
+        _catalogLoaded = true;
       });
     } on CourseCatalogException catch (e) {
       if (!mounted) return;

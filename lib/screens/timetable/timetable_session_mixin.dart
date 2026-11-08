@@ -33,6 +33,13 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
   List<CourseCatalogItem> _catalog = [];
   bool _catalogLoading = false;
   String? _catalogError;
+
+  /// 지금 학기 개설과목을 불러오기까지 끝냈는지(성공한 경우만 true).
+  bool _catalogLoaded = false;
+
+  /// 개설과목을 불러왔는데 비어 있다 = 학교가 그 학기 시간표를 아직 올리지
+  /// 않았다(예: 다음 학기). 이때는 내 시간표도 있을 수 없어 불러오지 않는다.
+  bool get _catalogNotReady => _catalogLoaded && _catalog.isEmpty;
   bool _myTimetableLoading = false;
   MyTimetableStatus _myTimetableStatus = MyTimetableStatus.idle;
 

@@ -111,26 +111,27 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
       // 결과를 비우고 새 학기 데이터를 다시 불러온다.
       _confirmedCourses = [];
       _hasRegisteredCourses = false;
+      _myTimetableStatus = MyTimetableStatus.idle;
       _catalog = [];
       _pendingSlot = null;
       _filters.clear();
     });
-    if (_hasFullSession) {
-      _loadMyTimetable();
-    }
+    // 개설과목을 먼저 확인한다. 학교가 그 학기 시간표를 아직 올리지 않았으면
+    // 내 시간표도 있을 수 없으니 학교에 묻지 않고 알림창으로 알린다.
     if (_hasSession) {
       await _loadCatalog();
-      // 학교가 그 학기 개설과목을 아직 올리지 않았으면(오류 없이 빈 목록) 알린다.
-      if (mounted &&
-          !_catalogLoading &&
-          _catalogError == null &&
-          _catalog.isEmpty) {
+      if (!mounted) return;
+      if (_catalogNotReady) {
         await showCatalogNotReadyDialog(
           context,
           year: _year,
           semester: _semester,
         );
+        return;
       }
+    }
+    if (_hasFullSession) {
+      _loadMyTimetable();
     }
   }
 

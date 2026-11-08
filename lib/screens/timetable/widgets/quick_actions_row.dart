@@ -12,6 +12,7 @@ class QuickActionsRow extends StatelessWidget {
     required this.onLoadMyTimetable,
     required this.notificationsEnabled,
     required this.onNotificationsChanged,
+    this.showLoadButton = true,
   });
 
   final bool loading;
@@ -19,42 +20,49 @@ class QuickActionsRow extends StatelessWidget {
   final bool notificationsEnabled;
   final ValueChanged<bool> onNotificationsChanged;
 
+  /// "내 시간표 불러오기"를 보일지. 시간표가 아직 안 나온 학기에서는 숨긴다.
+  final bool showLoadButton;
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Pressable(
-          enabled: !loading,
-          pressedScale: 0.93,
-          onTap: loading ? null : onLoadMyTimetable,
-          child: Container(
-            height: 33,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.blueSoft,
-              borderRadius: BorderRadius.circular(8),
+        if (showLoadButton)
+          Pressable(
+            enabled: !loading,
+            pressedScale: 0.93,
+            onTap: loading ? null : onLoadMyTimetable,
+            child: Container(
+              height: 33,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.blue,
+                      ),
+                    )
+                  : const Text(
+                      '내 시간표 불러오기',
+                      style: TextStyle(
+                        color: AppColors.blue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        height: 1.4,
+                      ),
+                    ),
             ),
-            child: loading
-                ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.blue,
-                    ),
-                  )
-                : const Text(
-                    '내 시간표 불러오기',
-                    style: TextStyle(
-                      color: AppColors.blue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      height: 1.4,
-                    ),
-                  ),
-          ),
-        ),
+          )
+        else
+          // 버튼이 없어도 줄 높이(33)는 그대로 둬서 아래 시간표가 들썩이지 않게 한다.
+          const SizedBox(height: 33),
         const Spacer(),
         const Text(
           '강의시간 알림',
