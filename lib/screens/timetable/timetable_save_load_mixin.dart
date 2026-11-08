@@ -8,10 +8,14 @@ mixin TimetableSaveLoadMixin on TimetableDataLoadingMixin {
       await showEmptySaveDialog(context);
       return;
     }
+    // 이름을 비워 두면 기존 저장분과 겹치지 않는 "시간표N"으로 저장한다.
+    final existing = await _savedTimetableStorage.loadAll();
+    if (!mounted) return;
+    final defaultName = nextDefaultTimetableName(existing.map((t) => t.name));
     final name = await showDialog<String>(
       context: context,
       barrierColor: TimetableColors.barrier,
-      builder: (_) => const SaveTimetableDialog(),
+      builder: (_) => SaveTimetableDialog(defaultName: defaultName),
     );
     if (name == null) return;
 
