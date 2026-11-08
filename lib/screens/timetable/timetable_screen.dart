@@ -253,7 +253,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                 onBack: () => Navigator.of(context).pop(),
                 onSemesterTap: _openSemesterMenu,
                 onSave: _openSaveDialog,
-                editable: !_viewingRegisteredTimetable,
+                readOnlyNote: _readOnlyNote,
                 onOpenSavedList: _openSavedList,
                 onAutoFill: _openAiRecommendWizard,
                 onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),
@@ -316,7 +316,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                             child: TimetableGrid(
                               courses: _confirmedCourses,
                               pendingSlot: _pendingSlot,
-                              onEmptyCellTap: _viewingRegisteredTimetable
+                              onEmptyCellTap: _readOnlyNote != null
                                   ? (_, _) {}
                                   : _onEmptyCellTap,
                               onCourseTap: (course) =>

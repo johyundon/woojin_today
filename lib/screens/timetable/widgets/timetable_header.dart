@@ -22,7 +22,7 @@ class TimetableHeader extends StatelessWidget {
     required this.onOpenSavedList,
     required this.onAutoFill,
     required this.onAddCourse,
-    this.editable = true,
+    this.readOnlyNote,
   });
 
   final String semesterLabel;
@@ -38,9 +38,11 @@ class TimetableHeader extends StatelessWidget {
   final VoidCallback onAutoFill;
   final VoidCallback onAddCourse;
 
-  /// 시간표를 고칠 수 있는지. false면(이번 학기 학교에 등록된 시간표를 보는
-  /// 중) "저장"·"자동 생성"·"과목 추가" 버튼을 숨긴다.
-  final bool editable;
+  /// 시간표를 보기만 하는 학기의 안내(예: "지난 학기 시간표예요"). 있으면
+  /// "저장"·"자동 생성"·"과목 추가" 버튼 대신 이 안내를 보여준다.
+  final String? readOnlyNote;
+
+  bool get editable => readOnlyNote == null;
 
   String get _creditsLabel {
     final trimmed = totalCredits == totalCredits.roundToDouble()
@@ -263,15 +265,19 @@ class TimetableHeader extends StatelessWidget {
           // 버튼 줄과 같은 높이를 둬서 오른쪽 마스코트가 아래 줄에 겹치지 않게
           // 하고, 버튼이 왜 없는지 알려 준다.
           const SizedBox(height: 12),
-          const SizedBox(
+          SizedBox(
             height: 38,
             child: Row(
               children: [
-                Icon(Icons.verified_rounded, color: AppColors.blue, size: 15),
-                SizedBox(width: 5),
+                const Icon(
+                  Icons.verified_rounded,
+                  color: AppColors.blue,
+                  size: 15,
+                ),
+                const SizedBox(width: 5),
                 Text(
-                  '학교에 등록된 이번 학기 시간표예요',
-                  style: TextStyle(
+                  readOnlyNote ?? '',
+                  style: const TextStyle(
                     color: AppColors.textSub,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

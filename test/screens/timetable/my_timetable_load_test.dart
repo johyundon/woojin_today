@@ -263,6 +263,27 @@ void main() {
     expect(service.calls, 1); // 처음 화면을 열 때(2026년 2학기) 한 번뿐
   });
 
+  testWidgets('지난 학기는 수강 과목이 없어도 저장·자동 생성·과목 추가가 없다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+        const MyTimetableResponse(courses: []),
+      ]),
+    );
+
+    await tester.tap(find.text('2026년 2학기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2025년 2학기').last);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지난 학기 시간표예요'), findsOneWidget);
+    expect(find.text('저장'), findsNothing);
+    expect(find.text('자동 생성'), findsNothing);
+    expect(find.text('과목 추가'), findsNothing);
+  });
+
   testWidgets('개설과목이 있는 학기로 바꾸면 알림창이 뜨지 않는다', (tester) async {
     await _pump(
       tester,

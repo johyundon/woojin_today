@@ -44,14 +44,20 @@ part of 'timetable_screen.dart';
 
 /// 학기 이동(헤더의 학기 드롭다운 메뉴) 책임.
 mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
-  /// 이번 학기이고 학교에 등록된 과목이 있으면, 화면은 학교 시간표를 보여 주기만
-  /// 한다. 이미 수강이 확정된 시간표라 과목 추가·자동 생성·저장이 필요 없어서
-  /// 그 버튼들을 숨기고 빈 칸 누르기도 막는다.
-  bool get _viewingRegisteredTimetable {
+  /// 시간표를 보기만 하는 학기면 그 이유 안내, 고칠 수 있으면 null.
+  /// - 지난 학기: 수강이 끝나 과목을 더할 수 없다(등록된 과목이 없어도).
+  /// - 이번 학기이고 학교에 등록된 과목이 있음: 이미 수강이 확정됐다.
+  /// 보기만 하는 학기는 과목 추가·자동 생성·저장 버튼을 숨기고 빈 칸 누르기도
+  /// 막는다.
+  String? get _readOnlyNote {
     final current = _estimateCurrentSemester(_now());
-    return current.year == _year &&
-        current.semester == _semester &&
-        _hasRegisteredCourses;
+    final isPast =
+        _year < current.year ||
+        (_year == current.year && _semester < current.semester);
+    if (isPast) return '지난 학기 시간표예요';
+    final isCurrent = _year == current.year && _semester == current.semester;
+    if (isCurrent && _hasRegisteredCourses) return '학교에 등록된 이번 학기 시간표예요';
+    return null;
   }
 
   // v7 디자인 24: 학기 버튼 바로 아래(왼쪽으로 6 비켜서)에 폭 206 흰 상자로
