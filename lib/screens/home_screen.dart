@@ -19,7 +19,7 @@ import 'home/home_colors.dart';
 import 'home/home_enums.dart';
 import 'home/widgets/cafeteria_menu_card.dart';
 import 'home/widgets/home_bottom_nav.dart';
-import 'home/widgets/home_mini_card.dart';
+import 'home/widgets/upcoming_event_card.dart';
 import 'home/widgets/home_top_icon_button.dart';
 import 'home/services/home_banner_items.dart';
 import 'home/widgets/home_notice_banner.dart';
@@ -34,7 +34,6 @@ import 'login_screen.dart';
 import 'notice/notice_screen.dart';
 import 'search/app_features.dart';
 import 'search/search_screen.dart';
-import 'shuttle/shuttle_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
 
@@ -358,11 +357,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _openShuttle() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ShuttleScreen()));
-  }
-
   void _openCollection() {
     Navigator.of(context).push(_collectionRoute());
   }
@@ -388,6 +382,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+
+  /// "다가오는 일정" 카드를 다시 읽게 할 때 올린다(카드의 key로 쓴다).
+  int _eventCardVersion = 0;
+
+  /// 일정 카드에서 캘린더를 열고, 돌아오면 추가·수정한 일정이 보이게 카드를
+  /// 다시 읽는다.
+  Future<void> _openCalendarFromEventCard() async {
+    await Navigator.of(context).push(_calendarRoute());
+    if (mounted) setState(() => _eventCardVersion++);
   }
 
   void _openCalendar() {
@@ -673,26 +677,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       child: Row(
                         children: [
                           Expanded(
-                            // 셔틀은 운행 정보 API가 없어 시각을 지어내지 않고
-                            // "서비스 준비 중"만 보여준다.
-                            child: HomeMiniCard(
-                              icon: Icons.directions_bus_rounded,
-                              iconColor: AppColors.blue,
-                              label: '셔틀버스',
-                              labelColor: HomeV7Colors.onNavySub,
-                              title: '서비스\n준비 중',
-                              titleColor: Colors.white,
-                              footer: const Text(
-                                '곧 운행 정보를 알려드릴게요',
-                                style: TextStyle(
-                                  color: HomeV7Colors.onNavySub,
-                                  fontSize: 12,
-                                  height: 1.4,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              backgroundColor: AppColors.inkNavy,
-                              onTap: _openShuttle,
+                            // 셔틀은 운행 정보 API가 없어 이 자리에 다가오는
+                            // 일정을 보여준다. 캘린더에서 돌아오면 다시 읽는다.
+                            child: UpcomingEventCard(
+                              key: ValueKey(_eventCardVersion),
+                              now: now,
+                              onTap: _openCalendarFromEventCard,
                             ),
                           ),
                           const SizedBox(width: 12),

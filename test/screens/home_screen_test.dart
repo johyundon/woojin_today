@@ -204,14 +204,14 @@ void main() {
       expect(find.text('이교수 교수님'), findsNothing);
     });
 
-    testWidgets('왼쪽 작은 카드는 셔틀버스 "서비스 준비 중"이다', (tester) async {
+    testWidgets('왼쪽 작은 카드는 셔틀버스 대신 "다가오는 일정"이다', (tester) async {
       await tester.pumpWidget(
         MaterialApp(home: HomeScreen(weatherService: fakeWeatherService())),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('셔틀버스'), findsOneWidget);
-      expect(find.text('서비스\n준비 중'), findsOneWidget);
+      expect(find.text('다가오는 일정'), findsOneWidget);
+      expect(find.text('셔틀버스'), findsNothing);
       expect(find.text('학과 등수'), findsNothing);
     });
 
