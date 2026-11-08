@@ -548,18 +548,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onDetails: () =>
                                       showPrivacyDetailsSheet(context),
                                 ),
-                                const SizedBox(height: 10),
-                                const Center(
-                                  child: Text(
-                                    '로그인이 안 되면 학생지원처로 문의해 주세요',
-                                    style: TextStyle(
-                                      color: AppColors.textSub,
-                                      fontSize: 12,
-                                      height: 1.4,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
