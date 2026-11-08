@@ -179,6 +179,30 @@ void main() {
     expect(honey, greaterThan(plain + 20), reason: '보통 $plain% → 꿀강의 $honey%');
   });
 
+  test('전공 100%에서도 꿀강의를 고르면 내 학과에서 경쟁률 높은 과목을 담는다', () {
+    double avgFill(ExtraOption option) {
+      final all = _generate(
+        AiRecommendAnswers(majorRatio: 100, extraOption: option),
+        profile: _profile,
+      ).expand((c) => c).toList();
+      return all.fold(0.0, (s, p) => s + _fill(p)) / all.length;
+    }
+
+    final plain = avgFill(ExtraOption.any);
+    final honey = avgFill(ExtraOption.honeyLecturesPreferred);
+    expect(honey, greaterThan(plain + 10), reason: '보통 $plain% → 꿀강의 $honey%');
+    // 내 학과에서 경쟁률이 가장 높은 과목(128.1%)은 후보마다 들어간다.
+    for (final c in _generate(
+      AiRecommendAnswers(
+        majorRatio: 100,
+        extraOption: ExtraOption.honeyLecturesPreferred,
+      ),
+      profile: _profile,
+    )) {
+      expect(c.map(_fill), contains(128.1));
+    }
+  });
+
   test('타전공 학과를 고르면 주전공/타전공 비율을 맞춰 담는다', () {
     final profile = AiRecommendProfile(
       myMajorCourseCodes: _myMajors,

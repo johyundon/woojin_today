@@ -179,7 +179,9 @@ List<_PoolItem> _buildPool(
 /// 전공이 앞쪽에 거의 오지 않아 전공 비율을 못 채우기 때문이다. 전공 안에서는
 /// 내 학년 과목이 앞에 더 자주 오게 한다(무게 2배). 타전공 학과를 골랐으면
 /// 전공 안에서 주전공과 타전공을 주전공 비율만큼의 확률로 번갈아 놓는다.
-/// 꿀강의를 골랐으면 담은 인원 비율이 높을수록 앞에 온다(100%면 무게 2배).
+/// 꿀강의를 골랐으면 경쟁률(담은 인원 비율)이 높을수록 훨씬 앞에 온다
+/// (무게 = (1 + 비율/100)의 세제곱: 0%면 1배, 100%면 8배, 200%면 27배). 학년
+/// 우선(2배)보다 강하게 둬서, 전공 과목이 적을 때도 경쟁률이 먼저 반영된다.
 List<_PoolItem> _weightedShuffle(
   List<_PoolItem> pool,
   AiRecommendAnswers answers,
@@ -192,7 +194,7 @@ List<_PoolItem> _weightedShuffle(
       (grade != null && p.isMajor && _gradeDigit(p.item.targetGrade) == grade
           ? 2.0
           : 1.0) *
-      (honey ? 1 + p.fill / 100 : 1.0);
+      (honey ? pow(1 + p.fill / 100, 3).toDouble() : 1.0);
   List<_PoolItem> shuffle(Iterable<_PoolItem> items) {
     final keyed = [for (final p in items) (p, rng.nextDouble() * weight(p))]
       ..sort((a, b) => b.$2.compareTo(a.$2));
@@ -292,7 +294,7 @@ List<_PoolItem> _pickOneCandidate(
 /// - 내 학년 전공 과목마다 +1, 다른 학년 전공 과목마다 -1
 /// - "적당히 섞어주세요"면 오전·오후 수업 수 차이마다 -2
 /// - 타전공 학과를 골랐으면 주전공 비율이 목표와 1%p 벌어질 때마다 -0.1
-/// - 꿀강의를 골랐으면 과목마다 담은 인원 비율 100%당 +1(최대 +2)
+/// - 꿀강의를 골랐으면 과목마다 경쟁률(담은 인원 비율) 100%당 +3(최대 +6)
 double _score(
   List<_PoolItem> picked,
   AiRecommendAnswers answers,
@@ -329,7 +331,7 @@ double _score(
 
   if (answers.extraOption == ExtraOption.honeyLecturesPreferred) {
     for (final p in picked) {
-      score += min(p.fill, 200) / 100;
+      score += 3 * min(p.fill, 200) / 100;
     }
   }
 
