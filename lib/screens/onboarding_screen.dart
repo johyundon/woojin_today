@@ -384,7 +384,8 @@ class _FeaturesPage extends StatelessWidget {
         ),
         _Placed(
           cx: 310.5,
-          cy: 228,
+          // 디자인 값(228)은 마스코트 귀·손과 겹쳐 보여서 위로 올렸다.
+          cy: 140,
           angle: 0.0873, // +5˚
           child: _FeatureCard(
             icon: Icons.leaderboard_rounded,
