@@ -179,7 +179,7 @@ void main() {
     expect(honey, greaterThan(plain + 20), reason: '보통 $plain% → 꿀강의 $honey%');
   });
 
-  test('전공 100%에서도 꿀강의를 고르면 내 학과에서 경쟁률 높은 과목을 담는다', () {
+  test('전공 100%에서도 꿀강의를 고르면 학년과 상관없이 내 학과에서 경쟁률 높은 과목을 담는다', () {
     double avgFill(ExtraOption option) {
       final all = _generate(
         AiRecommendAnswers(majorRatio: 100, extraOption: option),
@@ -191,7 +191,8 @@ void main() {
     final plain = avgFill(ExtraOption.any);
     final honey = avgFill(ExtraOption.honeyLecturesPreferred);
     expect(honey, greaterThan(plain + 10), reason: '보통 $plain% → 꿀강의 $honey%');
-    // 내 학과에서 경쟁률이 가장 높은 과목(128.1%)은 후보마다 들어간다.
+    // 내 학과에서 경쟁률 1·2위(128.1%, 118.8%)는 후보마다 들어간다. 118.8%는
+    // 1학년 과목이라, 학년(3학년)보다 경쟁률을 우선해야 들어온다.
     for (final c in _generate(
       AiRecommendAnswers(
         majorRatio: 100,
@@ -199,7 +200,7 @@ void main() {
       ),
       profile: _profile,
     )) {
-      expect(c.map(_fill), contains(128.1));
+      expect(c.map(_fill), containsAll([128.1, 118.8]));
     }
   });
 
