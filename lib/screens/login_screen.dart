@@ -725,6 +725,7 @@ class _LoginFieldState extends State<_LoginField> {
               decoration: BoxDecoration(
                 color: _focused ? AppColors.blue : Colors.white,
                 borderRadius: BorderRadius.circular(10),
+                boxShadow: AppColors.cardShadow,
               ),
               child: Icon(
                 widget.icon,
