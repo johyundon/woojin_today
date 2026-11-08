@@ -32,6 +32,8 @@ import 'campus_map/campus_map_screen.dart';
 import 'campus_map/models/room_building.dart';
 import 'login_screen.dart';
 import 'notice/notice_screen.dart';
+import 'search/app_features.dart';
+import 'search/search_screen.dart';
 import 'shuttle/shuttle_screen.dart';
 import 'terms_detail_screen.dart';
 import 'timetable/timetable_screen.dart';
@@ -346,6 +348,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Navigator.of(context).push(_timetableRoute());
   }
 
+  void _openSearch() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SearchScreen(
+          links: FeatureLinks(userId2: widget.userId2, onTabTap: _goToTab),
+        ),
+      ),
+    );
+  }
+
   void _openShuttle() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ShuttleScreen()));
@@ -560,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           HomeV7IconButton(
                             asset: HomeV7IconButton.searchAsset,
                             semanticLabel: '검색',
-                            onTap: _openTimetable,
+                            onTap: _openSearch,
                           ),
                           const SizedBox(width: 8),
                           HomeV7IconButton(

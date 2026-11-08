@@ -2,19 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
-import 'advisor/advisor_consultation_screen.dart';
-import 'cafeteria/cafeteria_screen.dart';
-import 'calendar/calendar_screen.dart';
-import 'campus_map/campus_map_screen.dart';
-import 'fileshare/fileshare_screen.dart';
-import 'graduation/graduation_credit_screen.dart';
-import 'home/rank/department_rank_screen.dart';
 import 'home/widgets/home_bottom_nav.dart';
 import 'home/widgets/home_notice_banner.dart';
 import 'home_placeholder_screen.dart';
-import 'mileage/mileage_screen.dart';
-import 'notice/notice_screen.dart';
-import 'weather/weather_page.dart';
+import 'search/app_features.dart';
 import '../widgets/pressable.dart';
 
 /// "모아보기" 화면 (v7 디자인 14·15).
@@ -35,167 +26,88 @@ class CollectionScreen extends StatelessWidget {
   /// 조회에 써야 해서 홈 화면에서 그대로 전달받는다.
   final String? userId2;
 
-  static void _openCafeteria(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CafeteriaScreen()));
-  }
+  /// 기능 화면을 여는 데 필요한 값. 여는 동작은 검색 화면과 같은 [AppFeatures]를 쓴다.
+  FeatureLinks get _links => FeatureLinks(userId2: userId2, onTabTap: onTabTap);
 
-  /// 시간표는 세션 쿠키가 필요해서, 하단 탭 바의 시간표 탭과 같은 경로(홈이 넘겨준
-  /// [onTabTap])로 연다.
-  void _openTimetable(BuildContext context) => _onTabTap(context, 0);
-
-  void _openCalendar(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => CalendarScreen(onTabTap: onTabTap)),
-    );
-  }
-
-  static void _openCampusMap(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CampusMapScreen()));
-  }
-
-  static void _openMileage(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const MileageScreen()));
-  }
-
-  static void _openNotice(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const NoticeScreen()));
-  }
-
-  static void _openWeather(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const WeatherPage()));
-  }
-
-  void _openFileShare(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => FileShareScreen(userId2: userId2)),
-    );
-  }
-
-  void _openDepartmentRank(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DepartmentRankScreen(isDark: true, userId2: userId2),
-      ),
-    );
-  }
-
-  void _openGraduationCredit(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => GraduationCreditScreen(userId2: userId2),
-      ),
-    );
-  }
-
-  void _openAdvisorConsultation(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AdvisorConsultationScreen(userId2: userId2),
-      ),
-    );
-  }
+  void Function(BuildContext context) _opener(AppFeature feature) =>
+      (context) => feature.open(context, _links);
 
   /// "매일 쓰는 기능" 가로 카드.
   List<_DailyItem> get _dailyItems => [
     _DailyItem(
-      label: '시간표',
-      description: '다음 수업 확인',
+      feature: AppFeatures.timetable,
       button: '열어보기',
-      icon: Icons.calendar_month_rounded,
       headerColor: _CollectionColors.blueHeader,
       iconColor: _CollectionColors.blueIcon,
-      onTap: _openTimetable,
-    ),
-    const _DailyItem(
-      label: '학식',
-      description: '오늘의 메뉴',
-      button: '메뉴 보기',
-      icon: Icons.restaurant_rounded,
-      headerColor: _CollectionColors.greenHeader,
-      iconColor: _CollectionColors.greenIcon,
-      onTap: _openCafeteria,
+      onTap: _opener(AppFeatures.timetable),
     ),
     _DailyItem(
-      label: '캘린더',
-      description: '학사일정·내 일정',
+      feature: AppFeatures.cafeteria,
+      button: '메뉴 보기',
+      headerColor: _CollectionColors.greenHeader,
+      iconColor: _CollectionColors.greenIcon,
+      onTap: _opener(AppFeatures.cafeteria),
+    ),
+    _DailyItem(
+      feature: AppFeatures.calendar,
       button: '일정 보기',
-      icon: Icons.event_rounded,
       headerColor: _CollectionColors.orangeHeader,
       iconColor: _CollectionColors.orangeIcon,
-      onTap: _openCalendar,
+      onTap: _opener(AppFeatures.calendar),
     ),
   ];
 
   /// "학교생활" 목록.
   List<_ListItem> get _schoolItems => [
-    const _ListItem(
-      label: '공지사항',
-      description: '학교 소식을 확인해요',
-      icon: Icons.campaign_rounded,
+    _ListItem(
+      feature: AppFeatures.notice,
       boxColor: _CollectionColors.blueBox,
       iconColor: _CollectionColors.blueIcon,
-      onTap: _openNotice,
+      onTap: _opener(AppFeatures.notice),
     ),
     _ListItem(
-      label: '학과 등수',
-      description: '우리 학과에서 내 위치',
-      icon: Icons.leaderboard_rounded,
+      feature: AppFeatures.departmentRank,
       boxColor: _CollectionColors.greenBox,
       iconColor: _CollectionColors.greenIcon,
-      onTap: _openDepartmentRank,
+      onTap: _opener(AppFeatures.departmentRank),
     ),
     _ListItem(
-      label: '졸업학점',
-      description: '남은 학점 확인',
-      icon: Icons.school_rounded,
+      feature: AppFeatures.graduationCredit,
       boxColor: _CollectionColors.purpleBox,
       iconColor: _CollectionColors.purpleIcon,
-      onTap: _openGraduationCredit,
+      onTap: _opener(AppFeatures.graduationCredit),
     ),
-    const _ListItem(
-      label: '마일리지',
-      description: '쌓은 점수와 내역',
-      icon: Icons.stars_rounded,
+    _ListItem(
+      feature: AppFeatures.mileage,
       boxColor: _CollectionColors.orangeBox,
       iconColor: _CollectionColors.orangeIcon,
-      onTap: _openMileage,
+      onTap: _opener(AppFeatures.mileage),
     ),
-    const _ListItem(
-      label: '연강',
-      description: '붙어 있는 수업 이동 시간',
-      icon: Icons.timelapse_rounded,
+    _ListItem(
+      feature: AppFeatures.consecutiveClasses,
       boxColor: _CollectionColors.greenBox,
       iconColor: _CollectionColors.greenIcon,
-      onTap: _openCampusMap,
+      onTap: _opener(AppFeatures.consecutiveClasses),
     ),
   ];
 
   /// "캠퍼스 · 도구" 아이콘 칸.
   List<_ToolItem> get _toolItems => [
-    const _ToolItem(
-      label: '날씨',
-      icon: Icons.wb_sunny_rounded,
-      onTap: _openWeather,
-    ),
-    const _ToolItem(
-      label: '캠퍼스 지도',
-      icon: Icons.map_rounded,
-      onTap: _openCampusMap,
+    _ToolItem(
+      feature: AppFeatures.weather,
+      onTap: _opener(AppFeatures.weather),
     ),
     _ToolItem(
-      label: '파일공유',
-      icon: Icons.folder_shared_rounded,
-      onTap: _openFileShare,
+      feature: AppFeatures.campusMap,
+      onTap: _opener(AppFeatures.campusMap),
     ),
     _ToolItem(
-      label: '상담 예약',
-      icon: Icons.forum_rounded,
-      onTap: _openAdvisorConsultation,
+      feature: AppFeatures.fileShare,
+      onTap: _opener(AppFeatures.fileShare),
+    ),
+    _ToolItem(
+      feature: AppFeatures.advisor,
+      onTap: _opener(AppFeatures.advisor),
     ),
   ];
 
@@ -427,19 +339,18 @@ class _SectionHeading extends StatelessWidget {
 
 class _DailyItem {
   const _DailyItem({
-    required this.label,
-    required this.description,
+    required this.feature,
     required this.button,
-    required this.icon,
     required this.headerColor,
     required this.iconColor,
     this.onTap,
   });
 
-  final String label;
-  final String description;
+  final AppFeature feature;
+  String get label => feature.label;
+  String get description => feature.description;
+  IconData get icon => feature.icon;
   final String button;
-  final IconData icon;
   final Color headerColor;
   final Color iconColor;
   final void Function(BuildContext context)? onTap;
@@ -554,17 +465,16 @@ class _DailyCard extends StatelessWidget {
 
 class _ListItem {
   const _ListItem({
-    required this.label,
-    required this.description,
-    required this.icon,
+    required this.feature,
     required this.boxColor,
     required this.iconColor,
     this.onTap,
   });
 
-  final String label;
-  final String description;
-  final IconData icon;
+  final AppFeature feature;
+  String get label => feature.label;
+  String get description => feature.description;
+  IconData get icon => feature.icon;
   final Color boxColor;
   final Color iconColor;
   final void Function(BuildContext context)? onTap;
@@ -653,10 +563,11 @@ class _ListRow extends StatelessWidget {
 }
 
 class _ToolItem {
-  const _ToolItem({required this.label, required this.icon, this.onTap});
+  const _ToolItem({required this.feature, this.onTap});
 
-  final String label;
-  final IconData icon;
+  final AppFeature feature;
+  String get label => feature.label;
+  IconData get icon => feature.icon;
   final void Function(BuildContext context)? onTap;
 }
 

@@ -64,3 +64,21 @@ CampusBuilding? buildingForRoom(String room) {
   }
   return null;
 }
+
+/// 검색어로 캠퍼스 건물·장소를 찾는다. 건물 이름에 검색어가 들어 있거나,
+/// 줄임말("도서관", "사과관" 등)에 검색어가 들어 있으면 그 건물을 돌려준다.
+/// 띄어쓰기는 무시한다.
+List<CampusBuilding> buildingsMatching(String query) {
+  final q = query.replaceAll(RegExp(r'\s+'), '');
+  if (q.isEmpty) return const [];
+  final aliased = {
+    for (final MapEntry(:key, :value) in _roomPrefixAliases.entries)
+      if (key.contains(q)) value.replaceAll(' ', ''),
+  };
+  return [
+    for (final building in campusBuildings)
+      if (building.name.replaceAll(' ', '').contains(q) ||
+          aliased.contains(building.name.replaceAll(' ', '')))
+        building,
+  ];
+}

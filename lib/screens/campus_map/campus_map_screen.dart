@@ -17,16 +17,19 @@ import 'widgets/route_info_banner.dart';
 ///
 /// 시간표 화면에서 연강 사이 "이동하기"를 눌러 들어올 때는
 /// [initialOriginBuilding]/[initialDestinationBuilding]으로 출발지·목적지를
-/// 미리 채운다.
+/// 미리 채운다. 검색에서 건물을 골라 들어올 때는 [initialSelectedBuilding]으로
+/// 그 건물을 가운데 두고 선택한 상태로 연다.
 class CampusMapScreen extends StatefulWidget {
   const CampusMapScreen({
     super.key,
     this.initialOriginBuilding,
     this.initialDestinationBuilding,
+    this.initialSelectedBuilding,
   });
 
   final String? initialOriginBuilding;
   final String? initialDestinationBuilding;
+  final String? initialSelectedBuilding;
 
   @override
   State<CampusMapScreen> createState() => _CampusMapScreenState();
@@ -67,6 +70,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     super.initState();
     _origin = _findBuilding(widget.initialOriginBuilding);
     _destination = _findBuilding(widget.initialDestinationBuilding);
+    _selectedBuilding = _findBuilding(widget.initialSelectedBuilding);
     if (_origin != null && _destination != null) {
       _fetchRoute();
     }
@@ -174,6 +178,12 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     return LatLng(avgLat, avgLng);
   }
 
+  /// 처음 지도 중심. 고른 건물이 있으면 그 건물, 없으면 [_defaultCenter].
+  late final LatLng _initialCenter = switch (_selectedBuilding) {
+    final b? => LatLng(b.lat, b.lng),
+    null => _defaultCenter,
+  };
+
   List<Marker> get _markers => campusBuildings
       .map((b) => Marker(markerId: b.name, latLng: LatLng(b.lat, b.lng)))
       .toList();
@@ -205,7 +215,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         body: Stack(
           children: [
             KakaoMap(
-              center: _defaultCenter,
+              center: _initialCenter,
               currentLevel: 4,
               markers: _markers,
               polylines: _polylines,
