@@ -4,6 +4,7 @@ import 'package:daejin_app/screens/timetable/models/saved_timetable.dart';
 import 'package:daejin_app/screens/timetable/services/saved_timetable_storage.dart';
 import 'package:daejin_app/screens/timetable/timetable_screen.dart';
 import 'package:daejin_app/screens/timetable/widgets/course_block.dart';
+import 'package:daejin_app/screens/timetable/widgets/course_detail_dialog.dart';
 import 'package:daejin_app/services/course_catalog_service.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
@@ -348,9 +349,9 @@ void main() {
     expect(find.text('가상자료구조'), findsWidgets);
   });
 
-  testWidgets('과목 상세의 담은인원은 개설과목 목록 숫자로 "담은/정원명"을 보여준다', (tester) async {
-    // 내 시간표 응답에는 정원·담은 인원이 없다(0). 가짜 개설과목의 CS201-01은
-    // 정원 40, 담은 인원 2명이다.
+  testWidgets('과목 상세의 담은인원·학년은 개설과목 목록 값으로 채운다', (tester) async {
+    // 내 시간표 응답에는 정원·담은 인원·학년이 없다. 가짜 개설과목의 CS201-01은
+    // 정원 40, 담은 인원 2명, 2학년이다.
     const mine = CourseCatalogItem(
       seq: 1,
       courseCode: 'CS201',
@@ -379,6 +380,13 @@ void main() {
 
     expect(find.text('담은인원'), findsOneWidget);
     expect(find.text('2/40명'), findsOneWidget);
+    expect(find.text('2학년'), findsOneWidget);
+  });
+
+  test('학년은 "3학년"처럼, 모르면 "-"', () {
+    expect(gradeLabel('3'), '3학년');
+    expect(gradeLabel('2학년'), '2학년');
+    expect(gradeLabel(''), '-');
   });
 
   group('시간표 과목 → 상세보기 → 강의계획서', () {

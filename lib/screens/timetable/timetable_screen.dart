@@ -162,14 +162,18 @@ class _TimetableScreenState extends State<TimetableScreen>
   }
 
   Future<void> _showCourseDetail(CourseCatalogItem item) async {
-    // 시간표에 담긴 과목은 정원·담은 인원 숫자가 없어서, 지금 학기 개설과목
-    // 목록에 같은 과목·분반이 있으면 그 숫자를 쓴다.
-    if (item.capacity == 0) {
+    // 시간표에 담긴 과목은 정원·담은 인원·학년이 없을 수 있어서(학교의 내
+    // 시간표 응답에는 없다), 지금 학기 개설과목 목록에 같은 과목·분반이 있으면
+    // 그 값으로 채운다.
+    if (item.capacity == 0 || item.targetGrade.trim().isEmpty) {
       for (final c in _catalog) {
         if (c.courseCode == item.courseCode && c.section == item.section) {
           item = item.withEnrollment(
-            capacity: c.capacity,
-            enrolled: c.waitlistCount,
+            capacity: item.capacity == 0 ? c.capacity : item.capacity,
+            enrolled: item.capacity == 0 ? c.waitlistCount : item.waitlistCount,
+            targetGrade: item.targetGrade.trim().isEmpty
+                ? c.targetGrade
+                : item.targetGrade,
           );
           break;
         }

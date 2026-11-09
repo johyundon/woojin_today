@@ -50,11 +50,13 @@ class CourseCatalogItem {
   /// 없다. 강의계획서 목록을 학과별로 부를 때 학과 코드로 바꿔 쓴다.
   final String? department;
 
-  /// 정원·담은 인원만 바꾼 복사본. 시간표에 담긴 과목은 이 숫자를 저장하지
-  /// 않아서, 상세 창을 열 때 개설과목 목록의 값으로 채운다.
+  /// 정원·담은 인원·대상학년을 바꾼 복사본. 시간표에 담긴 과목(특히 학교의
+  /// 내 시간표 응답)에는 이 값들이 없어서, 상세 창을 열 때 개설과목 목록의
+  /// 값으로 채운다.
   CourseCatalogItem withEnrollment({
     required int capacity,
     required int enrolled,
+    required String targetGrade,
   }) => CourseCatalogItem(
     seq: seq,
     courseCode: courseCode,

@@ -15,6 +15,14 @@ import '../timetable_colors.dart';
 String enrollmentLabel(CourseCatalogItem course) =>
     course.capacity > 0 ? '${course.waitlistCount}/${course.capacity}명' : '-';
 
+/// 학년을 "3학년"처럼(학교 데이터는 숫자 하나). 이미 "3학년"이면 그대로,
+/// 모르면 "-".
+String gradeLabel(String targetGrade) {
+  final g = targetGrade.trim();
+  if (g.isEmpty) return '-';
+  return RegExp(r'^\d$').hasMatch(g) ? '$g학년' : g;
+}
+
 class CourseDetailDialog extends StatelessWidget {
   const CourseDetailDialog({
     super.key,
@@ -66,7 +74,7 @@ class CourseDetailDialog extends StatelessWidget {
                 when department.isNotEmpty)
               _Row('학과', department),
             _Row('학점', formatCredit(course.credit)),
-            _Row('학년', course.targetGrade),
+            _Row('학년', gradeLabel(course.targetGrade)),
             _Row('시간', course.rawSchedule),
             _Row('강의실', course.room),
             _Row('담은인원', enrollmentLabel(course)),
