@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_colors.dart';
@@ -127,8 +129,40 @@ const _axisLabel = TextStyle(
   fontWeight: FontWeight.w700,
 );
 
-/// 학과 평점 분포를 [_binCount]칸으로 묶은 막대그래프. 왼쪽이 낮은 점수,
-/// 오른쪽이 높은 점수다. 내 칸은 파랑, 나보다 높은 칸은 중간 톤으로 칠하고
+/// 종 모양 그래프의 가로축 범위(표준점수 -[_zRange] ~ +[_zRange]).
+const _zRange = 2.5;
+
+/// 대칭인 종 모양 막대 높이(0~1)를 [bins]칸만큼 낸다. 가운데 칸이 가장 높고
+/// 양쪽으로 똑같이 낮아진다(표준정규분포 모양).
+List<double> bellHeights(int bins) => [
+  for (var i = 0; i < bins; i++)
+    () {
+      final z = -_zRange + 2 * _zRange * (i + 0.5) / bins;
+      return math.exp(-0.5 * z * z);
+    }(),
+];
+
+/// 내가 종 모양 그래프의 몇 번째 칸인지. 내 등수로 "나보다 아래인 사람 비율"을
+/// 구하고, 왼쪽부터 막대 면적을 더해 그 비율에 처음 닿는 칸으로 정한다.
+/// 그래서 1등이면 맨 오른쪽, 꼴등이면 맨 왼쪽, 중간 등수면 가운데에 온다.
+int myBellBin(int myRank, int totalCount, int bins) {
+  // 1등은 1(전원이 아래), 꼴등은 0.
+  final below = totalCount <= 1
+      ? 1.0
+      : (totalCount - myRank) / (totalCount - 1);
+  final heights = bellHeights(bins);
+  final total = heights.reduce((a, b) => a + b);
+  var sum = 0.0;
+  for (var i = 0; i < bins; i++) {
+    sum += heights[i];
+    if (sum / total >= below) return i;
+  }
+  return bins - 1;
+}
+
+/// 학과 점수 분포를 [_binCount]칸 막대로 보여준다. 왼쪽이 낮은 점수,
+/// 오른쪽이 높은 점수다. 시안처럼 양옆이 대칭인 종 모양([bellHeights])으로
+/// 그리고, 내 칸은 내 등수([myBellBin])로 정한다. 내 칸은 파랑, 나보다 높은 칸은 중간 톤으로 칠하고
 /// 내 칸 위에 "나" 표시를 띄운다.
 class _ScoreHistogram extends StatelessWidget {
   const _ScoreHistogram({required this.data});
@@ -137,20 +171,8 @@ class _ScoreHistogram extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gpas = data.distribution.map((e) => e.gpa);
-    final minGpa = gpas.reduce((a, b) => a < b ? a : b);
-    final maxGpa = gpas.reduce((a, b) => a > b ? a : b);
-    final span = (maxGpa - minGpa).clamp(0.01, double.infinity);
-
-    int binOf(double gpa) =>
-        ((gpa - minGpa) / span * _binCount).floor().clamp(0, _binCount - 1);
-
-    final counts = List<int>.filled(_binCount, 0);
-    for (final gpa in gpas) {
-      counts[binOf(gpa)]++;
-    }
-    final maxCount = counts.reduce((a, b) => a > b ? a : b);
-    final myBin = binOf(data.myGpa);
+    final heights = bellHeights(_binCount);
+    final myBin = myBellBin(data.myRank, data.totalCount, _binCount);
 
     // 가장 높은 막대(60) 위에도 "나" 표시(20 + 간격 14)가 들어가도록 높이를 둔다.
     return SizedBox(
@@ -197,7 +219,7 @@ class _ScoreHistogram extends StatelessWidget {
                       ),
                     ),
                   Container(
-                    height: 10 + 50 * counts[i] / maxCount,
+                    height: 10 + 50 * heights[i],
                     decoration: BoxDecoration(
                       color: i == myBin
                           ? AppColors.blue
