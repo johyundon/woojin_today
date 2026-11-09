@@ -79,8 +79,10 @@ void main() {
     expect(find.text('학과 6명 중'), findsOneWidget);
     // 4.5 한 명만 나보다 높아서 2등.
     expect(find.text('2'), findsOneWidget);
-    expect(find.text('나'), findsOneWidget);
-    expect(find.textContaining('4.34'), findsOneWidget);
+    // "나"는 점수 분포 그래프와 성적 분포 목록 양쪽에 있다.
+    expect(find.text('나'), findsNWidgets(2));
+    expect(find.text('컴퓨터공학전공(3학년) 성적 분포'), findsOneWidget);
+    expect(find.textContaining('4.34'), findsWidgets);
     expect(find.text('학과 평균보다 1.11'), findsOneWidget);
 
     // 실제 데이터가 없는 장학·과목별 석차 카드는 보이지 않는다.

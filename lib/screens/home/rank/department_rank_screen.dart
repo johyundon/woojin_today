@@ -12,6 +12,7 @@ import 'department_codes.dart';
 import 'department_picker_screen.dart';
 import 'models/department_rank.dart';
 import 'models/rank_calculator.dart';
+import 'widgets/gpa_ranking_list_card.dart';
 import 'widgets/rank_hero_card.dart';
 import 'widgets/rank_summary_cards.dart';
 
@@ -382,6 +383,8 @@ class _DepartmentRankScreenState extends State<DepartmentRankScreen> {
       // 장학 카드(RankSummaryCards.showScholarship)와 과목별 석차 카드
       // (SubjectRankCard)는 실제 데이터가 없어 숨겨 둔다. 코드는 남겨 두었다.
       RankSummaryCards(data: data),
+      const SizedBox(height: 10),
+      GpaRankingListCard(data: data),
     ];
   }
 }
