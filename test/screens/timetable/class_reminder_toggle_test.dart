@@ -134,6 +134,8 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
+  _otherSemesterTests();
+
   testWidgets('처음에는 꺼져 있고, 아무 알림도 건드리지 않는다', (tester) async {
     final notifications = _FakeNotifications();
     await _pump(tester, notifications);
@@ -199,5 +201,25 @@ void main() {
     // 앱을 다시 연 것과 같다: 권한을 다시 묻지 않고, 불러온 시간표로 맞춘다.
     expect(_switchValue(tester), isTrue);
     expect(notifications.calls, ['cancelAll', 'schedule', 'schedule']);
+  });
+}
+
+void _otherSemesterTests() {
+  testWidgets('다른 학기로 바꾸면 알림 스위치가 없고, 이번 학기 알림은 건드리지 않는다', (tester) async {
+    final notifications = _FakeNotifications();
+    await _pump(tester, notifications);
+    await _tapToggle(tester); // 이번 학기(2026년 2학기) 과목으로 예약
+    final before = List.of(notifications.calls);
+
+    await tester.tap(find.text('2026년 2학기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2026년 1학기').last);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Switch), findsNothing);
+    expect(find.text('강의시간 알림'), findsNothing);
+    // 지난 학기를 보는 동안 예약을 지우거나 다시 하지 않았다.
+    expect(notifications.calls, before);
   });
 }

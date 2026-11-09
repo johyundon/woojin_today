@@ -5,6 +5,9 @@ part of 'timetable_screen.dart';
 /// 켜져 있는 동안은 그리드의 과목([_confirmedCourses])이 바뀔 때마다 강의시간
 /// 알림을 전부 취소하고 지금 과목으로 다시 예약한다(수업 10분 전, 매주 반복).
 /// 예약은 OS가 들고 있어서 앱을 꺼도 계속 울린다.
+///
+/// 이번 학기를 볼 때만 예약을 바꾼다. 지난·다음 학기를 보는 동안에는 이번
+/// 학기 알림을 그대로 두고, 화면에서도 알림 스위치를 숨긴다.
 mixin TimetableReminderMixin on TimetableSessionMixin {
   late final NotificationService _notificationService =
       widget.notificationService ?? NotificationService.instance;
@@ -22,12 +25,16 @@ mixin TimetableReminderMixin on TimetableSessionMixin {
     if (!mounted || !enabled) return;
     setState(() => _notificationsEnabled = true);
     // 설정을 읽는 사이에 시간표가 먼저 채워졌으면 그 과목으로 맞춘다.
-    if (_confirmedCourses.isNotEmpty) _syncClassReminders();
+    if (_confirmedCourses.isNotEmpty && _isViewingCurrentSemester) {
+      _syncClassReminders();
+    }
   }
 
   @override
   void _onConfirmedCoursesChanged() {
-    if (_notificationsEnabled) _syncClassReminders();
+    if (_notificationsEnabled && _isViewingCurrentSemester) {
+      _syncClassReminders();
+    }
   }
 
   Future<void> _onNotificationsToggled(bool turnOn) async {

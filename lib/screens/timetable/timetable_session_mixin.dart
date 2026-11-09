@@ -57,6 +57,13 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
 
   int _savedCount = 0;
 
+  /// 지금 보고 있는 학기가 이번 학기인지. 강의시간 알림은 이번 학기 과목으로만
+  /// 예약한다.
+  bool get _isViewingCurrentSemester {
+    final current = _estimateCurrentSemester(_now());
+    return current.year == _year && current.semester == _semester;
+  }
+
   bool get _hasSession => widget.jsessionId != null && widget.wmonid != null;
   bool get _hasFullSession => _hasSession && widget.userId2 != null;
 }

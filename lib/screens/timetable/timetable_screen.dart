@@ -290,6 +290,8 @@ class _TimetableScreenState extends State<TimetableScreen>
                                 onLoadMyTimetable: () =>
                                     _loadMyTimetable(announce: true),
                                 showLoadButton: !_catalogNotReady,
+                                showNotificationToggle:
+                                    _isViewingCurrentSemester,
                                 notificationsEnabled: _notificationsEnabled,
                                 onNotificationsChanged: _onNotificationsToggled,
                               ),
