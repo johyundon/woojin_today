@@ -152,9 +152,9 @@ class _ScoreHistogram extends StatelessWidget {
     final maxCount = counts.reduce((a, b) => a > b ? a : b);
     final myBin = binOf(data.myGpa);
 
-    // 가장 높은 막대(60) 위에도 "나" 표시(25 + 간격 4)가 들어가도록 높이를 둔다.
+    // 가장 높은 막대(60) 위에도 "나" 표시(20 + 간격 14)가 들어가도록 높이를 둔다.
     return SizedBox(
-      height: 89,
+      height: 94,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -167,26 +167,30 @@ class _ScoreHistogram extends StatelessWidget {
                   if (i == myBin)
                     // 막대 한 칸은 폭이 12px 안팎이라, 표시가 잘리지 않도록
                     // 칸 폭 제한을 풀어(OverflowBox) 가운데 정렬로 띄운다.
+                    // 시안처럼 작은 표시를 막대에서 14만큼 띄운다.
                     SizedBox(
-                      height: 29,
+                      height: 34,
                       child: OverflowBox(
+                        minWidth: 0,
                         maxWidth: 40,
+                        minHeight: 0,
                         alignment: Alignment.topCenter,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 6,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.blue,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
                             '나',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
+                              height: 1.2,
                             ),
                           ),
                         ),
