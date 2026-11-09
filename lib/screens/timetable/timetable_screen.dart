@@ -301,6 +301,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                               child: MyTimetableStatusBar(
                                 status: _myTimetableStatus,
                                 onRetry: _loadMyTimetable,
+                                semesterWord: _semesterWord,
                               ),
                             ),
                             const SizedBox(height: 12),

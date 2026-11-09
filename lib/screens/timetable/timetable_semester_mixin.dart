@@ -50,14 +50,23 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
   /// 보기만 하는 학기는 과목 추가·자동 생성·저장 버튼을 숨기고 빈 칸 누르기도
   /// 막는다.
   String? get _readOnlyNote {
-    final current = _estimateCurrentSemester(_now());
-    final isPast =
-        _year < current.year ||
-        (_year == current.year && _semester < current.semester);
-    if (isPast) return '지난 학기 시간표예요';
-    final isCurrent = _year == current.year && _semester == current.semester;
-    if (isCurrent && _hasRegisteredCourses) return '학교에 등록된 이번 학기 시간표예요';
+    final word = _semesterWord;
+    if (word == '지난 학기') return '지난 학기 시간표예요';
+    if (word == '이번 학기' && _hasRegisteredCourses) {
+      return '학교에 등록된 이번 학기 시간표예요';
+    }
     return null;
+  }
+
+  /// 보고 있는 학기가 지금 기준으로 "지난 학기"/"이번 학기"/"다음 학기" 중
+  /// 무엇인지(안내 문구에 쓴다).
+  String get _semesterWord {
+    final current = _estimateCurrentSemester(_now());
+    final viewing = _year * 10 + _semester;
+    final now = current.year * 10 + current.semester;
+    if (viewing < now) return '지난 학기';
+    if (viewing > now) return '다음 학기';
+    return '이번 학기';
   }
 
   // v7 디자인 24: 학기 버튼 바로 아래(왼쪽으로 6 비켜서)에 폭 206 흰 상자로

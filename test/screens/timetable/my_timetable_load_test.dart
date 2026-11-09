@@ -280,6 +280,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('지난 학기 시간표예요'), findsOneWidget);
+    expect(find.text('지난 학기에 수강신청한 과목이 없어요.'), findsOneWidget);
+    expect(find.text('이번 학기에 수강신청한 과목이 없어요.'), findsNothing);
     expect(find.text('저장'), findsNothing);
     expect(find.text('자동 생성'), findsNothing);
     expect(find.text('과목 추가'), findsNothing);

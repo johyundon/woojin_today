@@ -14,10 +14,14 @@ class MyTimetableStatusBar extends StatelessWidget {
     super.key,
     required this.status,
     required this.onRetry,
+    this.semesterWord = '이번 학기',
   });
 
   final MyTimetableStatus status;
   final VoidCallback onRetry;
+
+  /// 빈 상태 안내에 쓸 학기 이름("이번 학기"/"지난 학기"/"다음 학기").
+  final String semesterWord;
 
   @override
   Widget build(BuildContext context) {
@@ -25,20 +29,20 @@ class MyTimetableStatusBar extends StatelessWidget {
       case MyTimetableStatus.idle:
         return const SizedBox.shrink();
       case MyTimetableStatus.empty:
-        return const Padding(
-          padding: EdgeInsets.only(top: 8),
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
           child: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.event_busy_outlined,
                 size: 16,
                 color: TimetableColors.textSecondary,
               ),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '이번 학기에 수강신청한 과목이 없어요.',
-                  style: TextStyle(
+                  '$semesterWord에 수강신청한 과목이 없어요.',
+                  style: const TextStyle(
                     color: TimetableColors.textSecondary,
                     fontSize: 13,
                   ),
