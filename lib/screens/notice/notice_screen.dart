@@ -12,6 +12,7 @@ import '../../widgets/top_banner.dart';
 import '../calendar/widgets/ringing_bell.dart';
 import '../../widgets/mascot_sticker.dart';
 import 'models/notice_item.dart';
+import 'services/notice_body_cache.dart';
 import 'services/notice_read_storage.dart';
 import 'widgets/notice_list_card.dart';
 
@@ -80,11 +81,61 @@ class _NoticeScreenState extends State<NoticeScreen> {
   /// 불러오지 못한 게시판 이름들(예: "학사공지"). 비어 있으면 모두 성공.
   List<String> _failedBoards = const [];
 
+  /// 검색어(앞뒤 공백 제거). 비어 있으면 검색하지 않는다.
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  /// 검색용 본문 저장소. 처음 검색할 때 목록 공지의 본문을 받아 둔다.
+  late final NoticeBodyCache _bodyCache = NoticeBodyCache(_service);
+  bool _bodiesLoading = false;
+  bool _bodiesRequested = false;
+
   /// null이면 "전체".
   NoticeTag? _filter;
   bool _notifyEnabled = false;
   final Set<String> _bookmarked = {};
   final Set<String> _read = {};
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    setState(() => _query = value.trim());
+    if (_query.isNotEmpty) _loadBodies();
+  }
+
+  /// 처음 검색할 때 한 번, 목록 공지의 본문을 받아 둔다(저장된 건 다시 받지
+  /// 않는다). 새로고침으로 목록이 바뀌면 다음 검색 때 새 공지만 더 받는다.
+  Future<void> _loadBodies() async {
+    if (_bodiesLoading) return;
+    final paths = [
+      for (final n in _notices)
+        if (n.detailPath case final path?)
+          if (!_bodyCache.bodies.containsKey(path)) path,
+    ];
+    if (paths.isEmpty && _bodiesRequested) return;
+    _bodiesRequested = true;
+    setState(() => _bodiesLoading = true);
+    await _bodyCache.load(
+      paths,
+      onProgress: () {
+        if (mounted) setState(() {});
+      },
+    );
+    if (mounted) setState(() => _bodiesLoading = false);
+  }
+
+  /// 검색어가 제목에 있으면 빈 문자열(본문 한 줄 없이 보여줌), 본문에만 있으면
+  /// 본문 한 줄, 둘 다 없으면 null.
+  String? _match(NoticeItem n) {
+    final q = _query.toLowerCase();
+    if (n.title.toLowerCase().contains(q)) return '';
+    final body = n.detailPath == null ? null : _bodyCache.bodies[n.detailPath];
+    return body == null ? null : noticeSnippet(body, _query);
+  }
 
   @override
   void initState() {
@@ -149,9 +200,23 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filter == null
+    final byTag = _filter == null
         ? _notices
         : _notices.where((n) => n.tag == _filter).toList();
+    // 검색 중이면 제목·본문에 검색어가 있는 공지만 남기고, 본문에서만 찾은
+    // 공지는 그 문장을 카드에 함께 보여준다.
+    final matches = <String, String>{};
+    final filtered = <NoticeItem>[];
+    for (final n in byTag) {
+      if (_query.isEmpty) {
+        filtered.add(n);
+        continue;
+      }
+      final m = _match(n);
+      if (m == null) continue;
+      filtered.add(n);
+      if (m.isNotEmpty) matches[n.key] = m;
+    }
     // 북마크한 공지를 맨 위로(각 묶음 안의 순서는 최신순 그대로).
     final notices = [
       ...filtered.where((n) => _bookmarked.contains(n.key)),
@@ -174,7 +239,16 @@ class _NoticeScreenState extends State<NoticeScreen> {
                 notifyEnabled: _notifyEnabled,
                 onNotifyTap: () => _onNotifyToggled(!_notifyEnabled),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              _SearchField(
+                controller: _searchController,
+                onChanged: _onQueryChanged,
+                onClear: () {
+                  _searchController.clear();
+                  _onQueryChanged('');
+                },
+              ),
+              const SizedBox(height: 14),
               // 칩 그림자가 위아래로 잘리지 않게 자르지 않는다.
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -224,8 +298,15 @@ class _NoticeScreenState extends State<NoticeScreen> {
                                   _loadNotices(forceRefresh: true);
                                 },
                               ),
+                            if (_query.isNotEmpty)
+                              _SearchStatus(
+                                query: _query,
+                                count: notices.length,
+                                searchingBodies: _bodiesLoading,
+                              ),
                             for (final notice in notices) ...[
                               NoticeListCard(
+                                matchSnippet: matches[notice.key],
                                 notice: notice,
                                 bookmarked: _bookmarked.contains(notice.key),
                                 unread: _isUnread(notice),
@@ -495,6 +576,136 @@ class _FilterChip extends StatelessWidget {
             fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 목록 위 검색창(학과 변경 화면의 검색창과 같은 모양). 제목과 본문을 함께 찾는다.
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) => TextField(
+            controller: controller,
+            onChanged: onChanged,
+            textInputAction: TextInputAction.search,
+            cursorColor: AppColors.blue,
+            style: const TextStyle(
+              color: AppColors.textStrong,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: const Padding(
+                padding: EdgeInsets.only(left: 16, right: 8),
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 19,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(),
+              suffixIcon: value.text.isEmpty
+                  ? null
+                  : Pressable.icon(
+                      onTap: onClear,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        child: Icon(
+                          Icons.cancel_rounded,
+                          size: 18,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+              suffixIconConstraints: const BoxConstraints(),
+              hintText: '제목·본문으로 공지 검색',
+              hintStyle: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 검색 중 목록 맨 위 한 줄: 결과 수, 본문을 받는 중이면 그 표시, 결과가
+/// 없으면 안내.
+class _SearchStatus extends StatelessWidget {
+  const _SearchStatus({
+    required this.query,
+    required this.count,
+    required this.searchingBodies,
+  });
+
+  final String query;
+  final int count;
+  final bool searchingBodies;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = count == 0 && !searchingBodies
+        ? "'$query'와 맞는 공지가 없어요"
+        : "'$query' 검색 결과 $count건";
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppColors.textBody,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (searchingBodies) ...[
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.blue,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              '본문 확인 중',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+          ],
+        ],
       ),
     );
   }

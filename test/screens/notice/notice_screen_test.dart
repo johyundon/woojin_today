@@ -24,6 +24,9 @@ class _FakeNotices implements NoticeServiceBase {
   final downloadCalls = <String>[];
   Object? downloadError;
 
+  /// 공지별 본문(검색 테스트용). 없으면 공통 본문을 돌려준다.
+  final bodies = <String, String>{};
+
   @override
   Future<List<NoticeItem>> fetchNotices(
     NoticeBoard board, {
@@ -99,13 +102,13 @@ class _FakeNotices implements NoticeServiceBase {
   @override
   Future<NoticeDetail> fetchDetail(String detailPath) async {
     detailCalls.add(detailPath);
-    return const NoticeDetail(
+    return NoticeDetail(
       title: '부·복수전공 이수신청 안내',
       author: '학사팀',
       date: '2026.10.29',
       viewCount: 95,
-      body: '1. 관련 : 학칙 시행세칙\n\n가. 이수신청 대상 : 재학생',
-      attachments: [
+      body: bodies[detailPath] ?? '1. 관련 : 학칙 시행세칙\n\n가. 이수신청 대상 : 재학생',
+      attachments: const [
         NoticeAttachment(name: '붙임 1 안내문.xlsx', url: 'https://x/1'),
         NoticeAttachment(name: '붙임 2 서식.hwp', url: 'https://x/2'),
       ],
@@ -133,6 +136,55 @@ void main() {
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  group('검색', () {
+    testWidgets('제목에 검색어가 있는 공지만 남기고 결과 수를 보여준다', (tester) async {
+      await _pump(tester, _FakeNotices());
+
+      await tester.enterText(find.byType(TextField), '수업평가');
+      await tester.pumpAndSettle();
+
+      expect(find.text('중간시험 수업평가 시행 안내'), findsOneWidget);
+      expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+      expect(find.text("'수업평가' 검색 결과 1건"), findsOneWidget);
+    });
+
+    testWidgets('본문에만 있는 검색어도 찾고, 찾은 문장을 카드에 보여준다', (tester) async {
+      final service = _FakeNotices()
+        ..bodies['/a2'] = '10월 30일 업무 중단 동안 셔틀버스 운행 시간도 바뀝니다.';
+      await _pump(tester, service);
+
+      await tester.enterText(find.byType(TextField), '셔틀');
+      await tester.pumpAndSettle();
+
+      expect(find.text('학사팀 업무 일시 중단 안내'), findsOneWidget);
+      expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+      expect(
+        find.textContaining('셔틀버스 운행', findRichText: true),
+        findsOneWidget,
+      );
+      // 본문은 처음 검색할 때 한 번만 받는다.
+      final calls = service.detailCalls.length;
+      await tester.enterText(find.byType(TextField), '셔틀버스');
+      await tester.pumpAndSettle();
+      expect(service.detailCalls.length, calls);
+    });
+
+    testWidgets('맞는 공지가 없으면 안내하고, 지우기 버튼으로 전체 목록이 돌아온다', (tester) async {
+      await _pump(tester, _FakeNotices());
+
+      await tester.enterText(find.byType(TextField), '없는검색어');
+      await tester.pumpAndSettle();
+      expect(find.text("'없는검색어'와 맞는 공지가 없어요"), findsOneWidget);
+      expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.cancel_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('부·복수전공 이수신청 안내'), findsOneWidget);
+      expect(find.textContaining('검색 결과'), findsNothing);
+    });
   });
 
   testWidgets('두 게시판을 최신순으로 합쳐 보여주고, 학과·행사 칩은 숨긴다', (tester) async {

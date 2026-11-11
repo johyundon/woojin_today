@@ -22,6 +22,7 @@ class NoticeListCard extends StatelessWidget {
     required this.onBookmarkTap,
     required this.onOpened,
     this.detailService,
+    this.matchSnippet,
     super.key,
   });
 
@@ -37,6 +38,9 @@ class NoticeListCard extends StatelessWidget {
 
   /// 상세 화면이 본문을 받을 때 쓸 서비스(테스트에서 가짜를 넘긴다).
   final NoticeServiceBase? detailService;
+
+  /// 검색어가 제목이 아니라 본문에 있을 때 보여줄 본문 한 줄. null이면 안 보인다.
+  final String? matchSnippet;
 
   /// v7 시안의 새 글 점(빨강)과 꺼진 북마크 아이콘(따뜻한 회색).
   static const _unreadDot = Color(0xFFE64343);
@@ -143,6 +147,41 @@ class NoticeListCard extends StatelessWidget {
                 height: 1.4,
               ),
             ),
+            if (matchSnippet != null) ...[
+              const SizedBox(height: 9),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.blueSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: '본문  ',
+                        style: TextStyle(
+                          color: AppColors.blue,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      TextSpan(text: matchSnippet),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textBody,
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
