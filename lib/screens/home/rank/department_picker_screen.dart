@@ -18,6 +18,10 @@ const _barrier = Color(0x8C14161E);
 /// "학과 변경" 화면(v7 디자인). 학과를 고르고 "변경하기"를 누르면 한 번 더
 /// 확인 시트를 띄우고, 확인하면 고른 학과 이름을 반환하며 닫힌다
 /// ([Navigator.pop]). 취소하거나 뒤로 가면 null.
+
+/// 학과 목록 줄 왼쪽의 학사모 아이콘을 보일지(지금은 숨김).
+const bool _showRowIcon = false;
+
 class DepartmentPickerScreen extends StatefulWidget {
   const DepartmentPickerScreen({
     required this.currentDepartment,
@@ -336,20 +340,24 @@ class _DepartmentRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.blue : Colors.white,
-                borderRadius: BorderRadius.circular(10),
+            // 학사모 아이콘은 팀 피드백으로 숨겼다(2026-11-11). 코드는 남겨 두고
+            // [_showRowIcon]을 켜면 다시 보인다.
+            if (_showRowIcon) ...[
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.blue : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.school_rounded,
+                  size: 17,
+                  color: selected ? Colors.white : AppColors.blue,
+                ),
               ),
-              child: Icon(
-                Icons.school_rounded,
-                size: 17,
-                color: selected ? Colors.white : AppColors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
