@@ -15,6 +15,13 @@ enum NoticeBoard {
   /// 학사공지(게시판 188). 로그인 불필요.
   academic('/daejin/1003/subview.do', NoticeTag.academic),
 
+  /// 일반공지(게시판 189). 로그인 불필요. 마일리지장학 공지도 이 게시판에
+  /// 올라오지만 [mileage]에서 따로 보여주므로 여기서는 뺀다([parseList]).
+  general('/daejin/1002/subview.do', NoticeTag.general),
+
+  /// 장학공지(게시판 193). 로그인 불필요.
+  scholarship('/daejin/1004/subview.do', NoticeTag.scholarship),
+
   /// 종합강의시간표 공지. **로그인한 사람만** 볼 수 있다 — 로그인 정보 없이
   /// 요청하면 상태 200에 "접근 권한이 없습니다."만 담겨 온다(2026-11-06 직접
   /// 확인). 그래서 로그인 때 홈페이지가 준 쿠키를 실어 보낸다([NoticeService.new]).
@@ -29,7 +36,7 @@ enum NoticeBoard {
   /// 달라질 수 있어 고정값을 그대로 쓴다.
   mileage(
     '/daejin/1002/subview.do?enc=Zm5jdDF8QEB8JTJGYmJzJTJGZGFlamluJTJGMTg5JTJGYXJ0Y2xMaXN0LmRvJTNGYmJzQ2xTZXElM0QlMjZiYnNPcGVuV3JkU2VxJTNEJTI2aXNWaWV3TWluZSUzRGZhbHNlJTI2c3JjaENvbHVtbiUzRHNqJTI2c3JjaFdyZCUzRCVFQiVBNyU4OCVFQyU5RCVCQyVFQiVBNiVBQyVFQyVBNyU4MCVFQyU5RSVBNSVFRCU5NSU5OSUyNg==',
-    NoticeTag.scholarship,
+    NoticeTag.mileage,
   );
 
   const NoticeBoard(this.path, this.tag, {this.requiresLogin = false});
@@ -55,8 +62,7 @@ class NoticeException implements Exception {
 
 /// 로그인이 필요한 게시판인데 로그인 정보가 없거나 만료된 경우.
 class NoticeLoginRequiredException extends NoticeException {
-  const NoticeLoginRequiredException()
-    : super('로그인이 필요해요. 다시 로그인해 주세요.');
+  const NoticeLoginRequiredException() : super('로그인이 필요해요. 다시 로그인해 주세요.');
 }
 
 /// 첨부파일 하나(`a.file-download`).
@@ -219,16 +225,15 @@ class NoticeService implements NoticeServiceBase {
     // 권한이 없으면 파일 대신 상태 200의 짧은 안내 HTML이 온다.
     if (withLogin &&
         bytes.length < 20000 &&
-        utf8
-            .decode(bytes, allowMalformed: true)
-            .contains(_noPermissionText)) {
+        utf8.decode(bytes, allowMalformed: true).contains(_noPermissionText)) {
       throw const NoticeLoginRequiredException();
     }
     return bytes;
   }
 
   /// 명세의 목록 파싱 규칙. 마일리지 게시판은 제목에 "마일리지"가 없는 행
-  /// (상단 고정 공지 등)을 버린다. 상단 고정(`tr.notice`)은 [NoticeItem.isRequired].
+  /// (상단 고정 공지 등)을 버리고, 일반 게시판은 마일리지 게시판이 보여주는
+  /// "마일리지장학" 공지를 버린다. 상단 고정(`tr.notice`)은 [NoticeItem.isRequired].
   @visibleForTesting
   static List<NoticeItem> parseList(String body, NoticeBoard board) {
     final rows = html_parser
@@ -246,6 +251,9 @@ class NoticeService implements NoticeServiceBase {
       );
       if (title.isEmpty) continue;
       if (board == NoticeBoard.mileage && !title.contains('마일리지')) continue;
+      if (board == NoticeBoard.general && title.contains('마일리지장학')) {
+        continue;
+      }
 
       String cell(String selector) =>
           _collapse(row.querySelector(selector)?.text ?? '');

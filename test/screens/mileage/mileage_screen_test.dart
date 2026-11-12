@@ -63,7 +63,7 @@ class _FakeMileage implements MileageServiceBase {
       author: '학생지원팀',
       date: '2026.03.30',
       viewCount: 120,
-      tag: NoticeTag.scholarship,
+      tag: NoticeTag.mileage,
       detailPath: '/bbs/daejin/189/10/artclView.do',
     ),
     NoticeItem(
@@ -71,7 +71,7 @@ class _FakeMileage implements MileageServiceBase {
       author: '학생지원팀',
       date: '2025.09.30',
       viewCount: 98,
-      tag: NoticeTag.scholarship,
+      tag: NoticeTag.mileage,
       detailPath: '/bbs/daejin/189/8/artclView.do',
     ),
   ];

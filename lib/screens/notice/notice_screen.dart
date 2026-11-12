@@ -50,11 +50,14 @@ class NoticeScreen extends StatefulWidget {
 }
 
 class _NoticeScreenState extends State<NoticeScreen> {
-  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다. 시간표는
-  /// 로그인해야 읽을 수 있어서, 로그인하지 않았으면 빈 칩이 되지 않게 숨긴다.
+  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다.
+  /// 종합강의시간표는 로그인해야 읽을 수 있어서, 로그인하지 않았으면 빈 칩이
+  /// 되지 않게 숨긴다.
   late final List<NoticeTag> _visibleTags = [
     NoticeTag.academic,
+    NoticeTag.general,
     NoticeTag.scholarship,
+    NoticeTag.mileage,
     if (_loginCookie != null) NoticeTag.timetable,
   ];
 
@@ -167,6 +170,8 @@ class _NoticeScreenState extends State<NoticeScreen> {
           if (results[i] == null)
             switch (_boards[i]) {
               NoticeBoard.academic => '학사공지',
+              NoticeBoard.general => '일반공지',
+              NoticeBoard.scholarship => '장학공지',
               NoticeBoard.mileage => '마일리지장학 공지',
               NoticeBoard.timetable =>
                 loginExpired ? '종합강의시간표 공지(다시 로그인 필요)' : '종합강의시간표 공지',
@@ -198,10 +203,20 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
   bool _isUnread(NoticeItem n) => n.isNew && !_read.contains(n.key);
 
+  /// "전체"에서는 같은 글을 한 번만 보여준다. 상단 고정 공지는 일반·장학·마일리지
+  /// 게시판에 함께 걸리는 일이 있다.
+  static List<NoticeItem> _withoutDuplicates(List<NoticeItem> notices) {
+    final keys = <String>{};
+    return [
+      for (final n in notices)
+        if (keys.add(n.key)) n,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final byTag = _filter == null
-        ? _notices
+        ? _withoutDuplicates(_notices)
         : _notices.where((n) => n.tag == _filter).toList();
     // 검색 중이면 제목·본문에 검색어가 있는 공지만 남기고, 본문에서만 찾은
     // 공지는 그 문장을 카드에 함께 보여준다.

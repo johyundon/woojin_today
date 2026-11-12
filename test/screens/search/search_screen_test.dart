@@ -46,10 +46,12 @@ class _FakeNotices implements NoticeServiceBase {
           author: '학생지원팀',
           date: '2026.10.20',
           viewCount: 5,
-          tag: NoticeTag.scholarship,
+          tag: NoticeTag.mileage,
           detailPath: '/mileage/1',
         ),
       ],
+      NoticeBoard.general ||
+      NoticeBoard.scholarship ||
       NoticeBoard.timetable => const [],
     };
   }

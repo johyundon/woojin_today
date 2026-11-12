@@ -18,6 +18,10 @@ import 'package:daejin_app/services/notice_service.dart';
 class _FakeNotices implements NoticeServiceBase {
   bool failMileage = false;
   bool timetableExpired = false;
+
+  /// 일반·장학 게시판 목록. 기본은 비어 있다.
+  List<NoticeItem> general = const [];
+  List<NoticeItem> scholarship = const [];
   final boards = <NoticeBoard>[];
   final forceFlags = <bool>[];
   final detailCalls = <String>[];
@@ -47,6 +51,8 @@ class _FakeNotices implements NoticeServiceBase {
         ),
       ];
     }
+    if (board == NoticeBoard.general) return general;
+    if (board == NoticeBoard.scholarship) return scholarship;
     if (board == NoticeBoard.mileage) {
       if (failMileage) throw const NoticeException('fail');
       return const [
@@ -55,7 +61,7 @@ class _FakeNotices implements NoticeServiceBase {
           author: '학생복지팀',
           date: '2026.08.05',
           viewCount: 2233,
-          tag: NoticeTag.scholarship,
+          tag: NoticeTag.mileage,
           detailPath: '/m1',
           hasAttachment: true,
         ),
@@ -187,13 +193,13 @@ void main() {
     });
   });
 
-  testWidgets('두 게시판을 최신순으로 합쳐 보여주고, 학과·행사 칩은 숨긴다', (tester) async {
+  testWidgets('게시판들을 최신순으로 합쳐 보여주고, 학과·행사 칩은 숨긴다', (tester) async {
     await _pump(tester, _FakeNotices());
 
     expect(tester.takeException(), isNull);
     expect(find.text('놓치면 안 되는 공지'), findsOneWidget);
     expect(find.text('새 글 2개'), findsOneWidget);
-    for (final label in ['전체', '학사', '장학']) {
+    for (final label in ['전체', '학사', '일반', '장학', '마일리지']) {
       expect(find.text(label), findsWidgets);
     }
     expect(find.text('학과'), findsNothing);
@@ -204,13 +210,63 @@ void main() {
     expect(find.text('학사팀 · 10.29'), findsOneWidget);
   });
 
-  testWidgets('장학 칩을 누르면 마일리지장학 공지만 보인다', (tester) async {
+  testWidgets('마일리지 칩을 누르면 마일리지장학 공지만 보인다', (tester) async {
     await _pump(tester, _FakeNotices());
 
-    await tester.tap(find.text('장학').first);
+    await tester.ensureVisible(find.text('마일리지').first);
+    await tester.tap(find.text('마일리지').first);
     await tester.pumpAndSettle();
     expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsOneWidget);
     expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+  });
+
+  testWidgets('일반·장학 칩은 각 게시판 공지만 보이고, 전체에서는 겹치는 글을 한 번만 보인다', (tester) async {
+    const shared = NoticeItem(
+      title: '장학 계좌번호 입력 안내',
+      author: '학생복지팀',
+      date: '2026.10.25',
+      viewCount: 10,
+      tag: NoticeTag.general,
+      detailPath: '/g1',
+    );
+    final service = _FakeNotices()
+      ..general = const [shared]
+      ..scholarship = const [
+        NoticeItem(
+          title: '장학 계좌번호 입력 안내',
+          author: '학생복지팀',
+          date: '2026.10.25',
+          viewCount: 10,
+          tag: NoticeTag.scholarship,
+          detailPath: '/s1',
+        ),
+        NoticeItem(
+          title: '국가근로장학생 모집 안내',
+          author: '학생복지팀',
+          date: '2026.10.24',
+          viewCount: 20,
+          tag: NoticeTag.scholarship,
+          detailPath: '/s2',
+        ),
+      ];
+    await _pump(tester, service);
+    expect(
+      service.boards,
+      containsAll([NoticeBoard.general, NoticeBoard.scholarship]),
+    );
+    expect(find.text('장학 계좌번호 입력 안내'), findsOneWidget);
+
+    await tester.tap(find.text('일반').first);
+    await tester.pumpAndSettle();
+    expect(find.text('장학 계좌번호 입력 안내'), findsOneWidget);
+    expect(find.text('국가근로장학생 모집 안내'), findsNothing);
+    expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+
+    await tester.tap(find.text('장학').first);
+    await tester.pumpAndSettle();
+    expect(find.text('장학 계좌번호 입력 안내'), findsOneWidget);
+    expect(find.text('국가근로장학생 모집 안내'), findsOneWidget);
+    expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsNothing);
   });
 
   testWidgets('공지를 열면 실제 본문과 첨부파일이 보이고, 새 글 개수가 줄어 유지된다', (tester) async {
@@ -270,11 +326,11 @@ void main() {
   testWidgets('당겨서 새로고침하면 캐시를 무시하고 새로 받는다', (tester) async {
     final service = _FakeNotices();
     await _pump(tester, service);
-    expect(service.forceFlags, [false, false]);
+    expect(service.forceFlags, [false, false, false, false]);
 
     await tester.fling(find.text('부·복수전공 이수신청 안내'), const Offset(0, 400), 1000);
     await tester.pumpAndSettle();
-    expect(service.forceFlags.skip(2), [true, true]);
+    expect(service.forceFlags.skip(4), [true, true, true, true]);
   });
 
   testWidgets('"새 글 알림"은 기본 꺼짐이고, 저장된 값을 보여주며 끄면 저장된다', (tester) async {
@@ -325,15 +381,17 @@ void main() {
       expect(top.dy, lessThan(next.dy));
     });
 
-    testWidgets('로그인하지 않았으면 "시간표" 칩이 없다', (tester) async {
+    testWidgets('로그인하지 않았으면 "종합강의시간표" 칩이 없다', (tester) async {
       await _pump(tester, _FakeNotices());
-      expect(find.text('시간표'), findsNothing);
+      expect(find.text('종합강의시간표'), findsNothing);
     });
 
-    testWidgets('"시간표" 칩을 누르면 시간표 공지만 보인다', (tester) async {
+    testWidgets('"종합강의시간표" 칩을 누르면 시간표 공지만 보인다', (tester) async {
       await _pump(tester, _FakeNotices(), loginCookie: 'JSESSIONID=j1');
-      // 칩 줄의 "시간표"(목록 카드의 분류 표시와 구분하려고 첫 번째를 누른다).
-      await tester.tap(find.text('시간표').first);
+      // 칩 줄의 칩(목록 카드의 분류 표시와 구분하려고 첫 번째를 누른다). 칩이
+      // 많아 화면 밖에 있을 수 있어 먼저 보이게 민다.
+      await tester.ensureVisible(find.text('종합강의시간표').first);
+      await tester.tap(find.text('종합강의시간표').first);
       await tester.pumpAndSettle();
       expect(find.text('2026학년도 2학기 종합강의시간표 안내'), findsOneWidget);
       expect(find.text('부·복수전공 이수신청 안내'), findsNothing);

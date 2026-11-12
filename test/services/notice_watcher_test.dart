@@ -25,7 +25,9 @@ NoticeItem _n(
 
 class _FakeNotices implements NoticeServiceBase {
   List<NoticeItem> academic = [_n('학사 1'), _n('학사 2')];
-  List<NoticeItem> mileage = [_n('마일리지 1', tag: NoticeTag.scholarship)];
+  List<NoticeItem> mileage = [_n('마일리지 1', tag: NoticeTag.mileage)];
+  List<NoticeItem> general = [_n('일반 1', tag: NoticeTag.general)];
+  List<NoticeItem> scholarship = [_n('장학 1', tag: NoticeTag.scholarship)];
   bool failMileage = false;
 
   @override
@@ -34,6 +36,8 @@ class _FakeNotices implements NoticeServiceBase {
     bool forceRefresh = false,
   }) async {
     if (board == NoticeBoard.academic) return academic;
+    if (board == NoticeBoard.general) return general;
+    if (board == NoticeBoard.scholarship) return scholarship;
     if (failMileage) throw const NoticeException('fail');
     return mileage;
   }
@@ -175,5 +179,37 @@ void main() {
       service.academic = [_n('새 학사공지', isNew: true)];
       expect(await watcher.hasUnread(), isTrue);
     });
+  });
+
+  test('업데이트로 늘어난 게시판의 기존 공지는 새 공지로 알리지 않는다', () async {
+    // 게시판 기록이 생기기 전(학사·마일리지만 확인하던 때)의 저장 상태.
+    final prefs = SharedPreferencesAsync();
+    await prefs.setStringList('notice_watch_seen', [
+      for (final n in [...service.academic, ...service.mileage]) n.key,
+    ]);
+    await watcher.setEnabled(true);
+
+    expect(await watcher.check(), isEmpty);
+    expect(alerts, isEmpty);
+    expect(await watcher.hasPending(), isFalse);
+
+    // 그다음부터는 새 게시판의 새 글도 알린다.
+    service.general = [_n('일반 2', tag: NoticeTag.general), ...service.general];
+    await watcher.check();
+    expect(alerts, ['새 공지가 올라왔어요|일반 2']);
+  });
+
+  test('여러 게시판에 같은 글이 올라와도 알림은 한 번만 보낸다', () async {
+    await watcher.setEnabled(true);
+    await watcher.check();
+
+    final shared = _n('장학 계좌 입력 안내', tag: NoticeTag.general);
+    service.general = [shared, ...service.general];
+    service.scholarship = [
+      _n('장학 계좌 입력 안내', tag: NoticeTag.scholarship),
+      ...service.scholarship,
+    ];
+    await watcher.check();
+    expect(alerts, ['새 공지가 올라왔어요|장학 계좌 입력 안내']);
   });
 }

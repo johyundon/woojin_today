@@ -42,6 +42,9 @@ class NoticeWatcher {
   /// 지금까지 확인한 공지([NoticeItem.key]).
   static const _seenKey = 'notice_watch_seen';
 
+  /// 한 번이라도 공지를 기록한 게시판([NoticeBoard.name]).
+  static const _boardsKey = 'notice_watch_boards';
+
   /// 새로 들어왔지만 아직 공지사항 화면에서 보지 않은 공지. 홈 종 아이콘의 점.
   static const _pendingKey = 'notice_watch_pending';
 
@@ -142,41 +145,52 @@ class NoticeWatcher {
 
   Future<List<NoticeItem>> check() async {
     try {
-      final current = <NoticeItem>[];
-      var anyFailed = false;
+      final byBoard = <NoticeBoard, List<NoticeItem>>{};
       for (final board in NoticeBoard.values) {
         // 로그인이 필요한 게시판은 로그인 정보 없이 읽을 수 없어 건너뛴다.
         if (board.requiresLogin) continue;
         try {
-          current.addAll(await _service.fetchNotices(board));
+          byBoard[board] = await _service.fetchNotices(board);
         } catch (e) {
-          anyFailed = true;
           // 한 게시판이 실패하면 그 게시판은 이번에 건너뛴다(본 목록은 그대로).
           debugPrint('[NoticeWatcher] ${board.name} 공지 확인 실패: $e');
         }
       }
-      if (current.isEmpty) return const [];
+      if (byBoard.isEmpty) return const [];
 
       final stored = await _prefs.getStringList(_seenKey);
-      // 처음 기록은 모든 게시판을 받았을 때만 남긴다. 한쪽만 남기면 다음에 나머지
-      // 게시판의 공지가 전부 새 공지로 잡혀 알림이 몰린다.
-      if (stored == null && anyFailed) return const [];
+      // 게시판마다 처음 읽을 때는 지금 공지를 모두 본 것으로 기록만 하고 알리지
+      // 않는다. 처음 실행할 때, 그리고 앱 업데이트로 게시판이 늘었을 때 그
+      // 게시판의 공지가 한꺼번에 새 공지로 잡혀 알림이 몰리지 않게 하기 위해서다.
+      // 게시판 기록이 생기기 전에 쓰던 사용자는 학사·마일리지를 이미 기록했다.
+      final knownBoards =
+          (await _prefs.getStringList(_boardsKey))?.toSet() ??
+          (stored == null ? <String>{} : {'academic', 'mileage'});
       final seen = [...?stored];
       final seenSet = seen.toSet();
-      final fresh = stored == null
-          ? const <NoticeItem>[]
-          : [
-              for (final n in current)
-                if (!seenSet.contains(n.key)) n,
-            ];
+      final freshKeys = <String>{};
+      final fresh = <NoticeItem>[];
+      for (final MapEntry(key: board, value: items) in byBoard.entries) {
+        if (!knownBoards.contains(board.name)) continue;
+        for (final n in items) {
+          if (!seenSet.contains(n.key) && freshKeys.add(n.key)) fresh.add(n);
+        }
+      }
 
-      for (final n in current) {
-        if (seenSet.add(n.key)) seen.add(n.key);
+      for (final items in byBoard.values) {
+        for (final n in items) {
+          if (seenSet.add(n.key)) seen.add(n.key);
+        }
       }
       await _prefs.setStringList(
         _seenKey,
         seen.length > _maxSeen ? seen.sublist(seen.length - _maxSeen) : seen,
       );
+      await _prefs.setStringList(_boardsKey, [
+        ...knownBoards,
+        for (final board in byBoard.keys)
+          if (!knownBoards.contains(board.name)) board.name,
+      ]);
       if (fresh.isEmpty) return const [];
 
       final pending = {

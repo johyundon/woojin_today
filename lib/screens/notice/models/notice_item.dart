@@ -3,8 +3,10 @@ import '../../mileage/models/mileage_models.dart';
 /// "공지사항" 화면의 분류 칩(전체 제외 4개).
 enum NoticeTag {
   academic('학사'),
+  general('일반'),
   scholarship('장학'),
-  timetable('시간표'),
+  mileage('마일리지'),
+  timetable('종합강의시간표'),
   department('학과'),
   event('행사');
 

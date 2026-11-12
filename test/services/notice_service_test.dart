@@ -150,7 +150,23 @@ void main() {
       ]);
       expect(items.first.isRequired, isTrue);
       expect(items.last.isRequired, isFalse);
-      expect(items.every((n) => n.tag == NoticeTag.scholarship), isTrue);
+      expect(items.every((n) => n.tag == NoticeTag.mileage), isTrue);
+    });
+    test('일반 게시판은 마일리지장학 공지를 버리고 나머지는 남긴다', () {
+      final items = NoticeService.parseList(
+        _list([
+          _row(title: '[마일리지 5점] 비교과 프로그램 수요조사 안내', cls: 'notice '),
+          _row(title: '2026학년도 1학기 마일리지장학 대상자 공지'),
+          _row(title: '대진 콘텐츠 공모전 개최 안내'),
+        ]),
+        NoticeBoard.general,
+      );
+
+      expect(items.map((n) => n.title), [
+        '[마일리지 5점] 비교과 프로그램 수요조사 안내',
+        '대진 콘텐츠 공모전 개최 안내',
+      ]);
+      expect(items.every((n) => n.tag == NoticeTag.general), isTrue);
     });
   });
 
@@ -320,7 +336,10 @@ void main() {
               ? http.Response.bytes([0x25, 0x50, 0x44, 0x46], 200)
               : http.Response.bytes(utf8.encode(noPermission), 200);
         case '/daejin/1003/subview.do':
-          return http.Response.bytes(utf8.encode(_list([_row(title: 'A')])), 200);
+          return http.Response.bytes(
+            utf8.encode(_list([_row(title: 'A')])),
+            200,
+          );
       }
       return http.Response('not found', 404);
     });
