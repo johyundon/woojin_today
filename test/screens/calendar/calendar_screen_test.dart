@@ -27,7 +27,7 @@ class _FakeNotificationsPlatform extends FlutterLocalNotificationsPlatform {
 Future<void> _saveDefaultReminder(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.notifications_none));
   await tester.pumpAndSettle();
-  expect(find.text('알림 설정'), findsOneWidget);
+  expect(find.text('언제 알려 드릴까요?'), findsOneWidget);
   await tester.tap(find.text('저장'));
   await tester.pumpAndSettle();
 }
@@ -760,9 +760,12 @@ void main() {
     testWidgets('켜져 있는 알림을 종 버튼으로 끄면 알림이 사라진다', (tester) async {
       await pumpWithMyEvent(tester, daysAhead: 1);
 
+      // 체크를 모두 풀고 저장하면 꺼진다.
       await tester.tap(find.byIcon(Icons.notifications_active));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('알림 끄기'));
+      await tester.tap(find.text('정각'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.notifications_none), findsOneWidget);
@@ -840,10 +843,10 @@ void main() {
       final platform = _RecordingIosPlatform();
       FlutterLocalNotificationsPlatform.instance = platform;
       await _withIosPlatform(() async {
-        await pumpWithMyEvent(tester, days: const [], daysAhead: 1);
+        await pumpWithMyEvent(tester, days: const [], daysAhead: 2);
         final today = DateTime.now();
         DateTime at(int daysBefore) =>
-            DateTime(today.year, today.month, today.day + 1 - daysBefore, 15);
+            DateTime(today.year, today.month, today.day + 2 - daysBefore, 15);
 
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
@@ -866,11 +869,10 @@ void main() {
         expect(selected('정각'), isTrue);
         expect(selected('1일 전'), isFalse);
 
-        // 내일 일정이면 1주 전은 이미 지나 눌리지 않는다.
-        expect(find.text('지난 날짜'), findsWidgets);
-        await tester.tap(find.text('1주 전'));
-        await tester.pumpAndSettle();
-        expect(selected('1주 전'), isFalse);
+        // 모레 일정이면 3일 전부터는 이미 지나 목록에 없다.
+        for (final past in ['3일 전', '1주 전', '2주 전', '30일 전']) {
+          expect(find.text(past), findsNothing);
+        }
 
         // 1일 전을 켜고, 정각은 끈다.
         await tester.tap(find.text('1일 전'));
@@ -882,44 +884,38 @@ void main() {
         await tester.tap(find.text('저장'));
         await tester.pump(const Duration(milliseconds: 500));
 
-        // 1일 전(오늘 15:00)이 걸렸다 — 오늘 15시가 지났으면 지난 경우가 된다.
+        // 1일 전(내일 15:00)만 걸렸다.
         final saved = await CalendarEventStorage().loadAll();
-        if (at(1).isAfter(today)) {
-          expect(platform.active, [at(1)]);
-          expect(saved.single.reminderDaysBefore, [1]);
-        } else {
-          expect(platform.active, isEmpty);
-          expect(find.text('이미 지난 시간이에요'), findsOneWidget);
-          await tester.tap(find.text('확인'));
-        }
-        await tester.pumpAndSettle();
-        await tester.pump(const Duration(seconds: 3));
+        expect(platform.active, [at(1)]);
+        expect(saved.single.reminderDaysBefore, [1]);
         await tester.pumpAndSettle();
       });
     });
 
-    testWidgets('알림 설정 창에서 알림 끄기를 누르면 걸려 있던 알림이 모두 취소된다', (tester) async {
+    testWidgets('날짜 추가로 고른 날도 걸리고, 체크를 모두 풀면 알림이 모두 취소된다', (tester) async {
       final platform = _RecordingIosPlatform();
       FlutterLocalNotificationsPlatform.instance = platform;
       await _withIosPlatform(() async {
-        await pumpWithMyEvent(tester, days: const [], daysAhead: 20);
+        // 오늘(= 20일 전) 알림이 지나지 않게 23:59 일정으로 한다.
+        await pumpWithMyEvent(
+          tester,
+          days: const [],
+          daysAhead: 20,
+          start: const TimeOfDay(hour: 23, minute: 59),
+        );
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
         await tester.tap(find.text('2주 전'));
         await tester.pumpAndSettle();
-        // "날짜 직접 고르기"로 오늘(= 20일 전)을 고른다.
-        await tester.tap(find.text('날짜 직접 고르기'));
+        // "날짜 추가"로 오늘(= 20일 전)을 고른다.
+        await tester.tap(find.text('날짜 추가'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('저장').last);
         await tester.pumpAndSettle();
         expect(find.text('20일 전'), findsOneWidget);
         await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();
-        // 20일 전(오늘 15:00)은 지났을 수도 있다.
-        final todayAt = DateTime.now().copyWith(hour: 15, minute: 0);
-        expect(platform.active.length, todayAt.isAfter(DateTime.now()) ? 3 : 2);
-        await tester.pump(const Duration(seconds: 3));
-        await tester.pumpAndSettle();
+        expect(platform.active.length, 3); // 20일 전, 2주 전, 정각
 
         // 상세 팝업에는 짧게 보이고, "설정"으로 같은 창이 열린다.
         await tester.tap(find.text('팀플 회의'));
@@ -927,7 +923,11 @@ void main() {
         expect(find.text('20일 전 외 2개'), findsOneWidget);
         await tester.tap(find.text('설정'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('알림 끄기'));
+        for (final label in ['20일 전', '2주 전', '정각']) {
+          await tester.tap(find.text(label));
+        }
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();
 
         expect(platform.active, isEmpty);
