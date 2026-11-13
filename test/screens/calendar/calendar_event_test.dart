@@ -50,7 +50,7 @@ void main() {
       ]);
       expect(event.reminderAt, DateTime(2026, 10, 14, 15, 0));
       expect(event.reminders.map((r) => r.body), [
-        '내 일정 · 14일 전',
+        '내 일정 · 2주 전',
         '내 일정 · 1일 전',
         '내 일정 · 정각',
       ]);

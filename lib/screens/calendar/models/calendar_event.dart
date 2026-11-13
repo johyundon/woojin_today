@@ -44,8 +44,9 @@ typedef ScheduledReminder = ({
 /// "며칠 전" 알림으로 넣을 수 있는 가장 큰 값. 큰 숫자를 잘못 넣는 실수를 막는다.
 const int maxReminderDaysBefore = 60;
 
-/// "며칠 전" 이름. 0은 당일(시간이 있는 일정은 정각).
+/// "며칠 전" 이름. 0은 당일(시간이 있는 일정은 정각), 7의 배수는 "N주 전".
 String reminderDaysLabel(int days, {required bool allDay}) {
+  if (days > 0 && days % 7 == 0) return '${days ~/ 7}주 전';
   if (days > 0) return '$days일 전';
   return allDay ? '당일' : '정각';
 }

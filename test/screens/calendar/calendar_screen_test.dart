@@ -491,10 +491,10 @@ void main() {
         await tester.tap(find.text('확인'));
         await tester.pumpAndSettle();
 
-        // 상세 팝업에는 "시작일·마감일 오전 9시"로 보인다.
+        // 상세 팝업에는 고른 날만 짧게 "시작일"로 보인다.
         await tester.tap(find.text('수강신청 변경 기간'));
         await tester.pumpAndSettle();
-        expect(find.text('시작일·마감일 오전 9시'), findsOneWidget);
+        expect(find.text('시작일'), findsOneWidget);
         expect(find.text('삭제하기'), findsNothing); // 학사일정은 알림만 된다
         expect(tester.takeException(), isNull);
       });
@@ -523,7 +523,7 @@ void main() {
 
         await tester.tap(find.text('수강신청 변경 기간'));
         await tester.pumpAndSettle();
-        expect(find.text('시작일·마감 전날·마감일 오전 9시'), findsOneWidget);
+        expect(find.text('시작일'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     });
@@ -810,7 +810,8 @@ void main() {
 
     testWidgets('수정 화면에는 알림 칩이 없고, 저장해도 알림 날짜는 그대로다', (tester) async {
       await _withIosPlatform(() async {
-        await pumpWithMyEvent(tester, days: const [7, 1], daysAhead: 1);
+        // 날짜가 지나 알림이 꺼지지 않게 넉넉히 뒤 일정으로 한다.
+        await pumpWithMyEvent(tester, days: const [7, 1], daysAhead: 20);
 
         await tester.tap(find.text('팀플 회의'));
         await tester.pumpAndSettle();
@@ -833,7 +834,7 @@ void main() {
       });
     });
 
-    testWidgets('알림 설정 창: 며칠 전을 여러 개 넣으면 날짜마다 알림이 걸리고, 끄면 모두 취소된다', (
+    testWidgets('알림 설정 창: 버튼으로 며칠 전을 고르면 그날 알림이 걸리고, 지난 날은 막힌다', (
       tester,
     ) async {
       final platform = _RecordingIosPlatform();
@@ -846,38 +847,46 @@ void main() {
 
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
-        expect(find.text('정각'), findsOneWidget); // 처음엔 당일(정각) 하나
+        // 처음엔 당일(정각)만 골라져 있다.
+        bool selected(String label) =>
+            tester
+                .widget<Semantics>(
+                  find
+                      .ancestor(
+                        of: find.text(label),
+                        matching: find.byWidgetPredicate(
+                          (w) => w is Semantics && w.properties.button == true,
+                        ),
+                      )
+                      .first,
+                )
+                .properties
+                .selected ==
+            true;
+        expect(selected('정각'), isTrue);
+        expect(selected('1일 전'), isFalse);
 
-        // 범위 밖 숫자는 안내만 하고 넣지 않는다.
-        await tester.enterText(find.byType(TextField), '99');
-        await tester.tap(find.text('추가'));
+        // 내일 일정이면 1주 전은 이미 지나 눌리지 않는다.
+        expect(find.text('지난 날짜'), findsWidgets);
+        await tester.tap(find.text('1주 전'));
         await tester.pumpAndSettle();
-        expect(find.text('0부터 60까지 숫자로 넣어 주세요'), findsOneWidget);
-        expect(find.text('99일 전'), findsNothing);
+        expect(selected('1주 전'), isFalse);
 
-        // 1일 전을 더하고, 정각은 뺀다.
-        await tester.enterText(find.byType(TextField), '1');
-        await tester.tap(find.text('추가'));
+        // 1일 전을 켜고, 정각은 끈다.
+        await tester.tap(find.text('1일 전'));
+        await tester.tap(find.text('정각'));
         await tester.pumpAndSettle();
-        expect(find.text('1일 전'), findsOneWidget);
-        await tester.tap(find.bySemanticsLabel('정각 빼기'));
-        await tester.pumpAndSettle();
-        expect(find.text('정각'), findsNothing);
-        // 7일 전(내일 일정이면 이미 지남)도 넣어 본다.
-        await tester.enterText(find.byType(TextField), '7');
-        await tester.tap(find.text('추가'));
-        await tester.pumpAndSettle();
+        expect(selected('1일 전'), isTrue);
+        expect(selected('정각'), isFalse);
 
         await tester.tap(find.text('저장'));
         await tester.pump(const Duration(milliseconds: 500));
 
-        // 7일 전은 지났으니 빼고, 1일 전(오늘 15:00)만 걸렸다 — 오늘 15시가 지났으면
-        // 그것도 지나서 전부 지난 경우가 된다.
+        // 1일 전(오늘 15:00)이 걸렸다 — 오늘 15시가 지났으면 지난 경우가 된다.
         final saved = await CalendarEventStorage().loadAll();
         if (at(1).isAfter(today)) {
           expect(platform.active, [at(1)]);
-          expect(find.text('지난 알림은 빼고 걸었어요'), findsOneWidget);
-          expect(saved.single.reminderDaysBefore, [7, 1]);
+          expect(saved.single.reminderDaysBefore, [1]);
         } else {
           expect(platform.active, isEmpty);
           expect(find.text('이미 지난 시간이에요'), findsOneWidget);
@@ -896,19 +905,26 @@ void main() {
         await pumpWithMyEvent(tester, days: const [], daysAhead: 20);
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
-        for (final d in ['14', '7']) {
-          await tester.enterText(find.byType(TextField), d);
-          await tester.tap(find.text('추가'));
-          await tester.pumpAndSettle();
-        }
+        await tester.tap(find.text('2주 전'));
+        await tester.pumpAndSettle();
+        // "날짜 직접 고르기"로 오늘(= 20일 전)을 고른다.
+        await tester.tap(find.text('날짜 직접 고르기'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('저장').last);
+        await tester.pumpAndSettle();
+        expect(find.text('20일 전'), findsOneWidget);
         await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();
-        expect(platform.active.length, 3); // 14일 전, 7일 전, 정각
+        // 20일 전(오늘 15:00)은 지났을 수도 있다.
+        final todayAt = DateTime.now().copyWith(hour: 15, minute: 0);
+        expect(platform.active.length, todayAt.isAfter(DateTime.now()) ? 3 : 2);
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
 
-        // 상세 팝업에도 같은 내용이 보이고, "설정"으로 같은 창이 열린다.
+        // 상세 팝업에는 짧게 보이고, "설정"으로 같은 창이 열린다.
         await tester.tap(find.text('팀플 회의'));
         await tester.pumpAndSettle();
-        expect(find.text('14일 전·7일 전·정각'), findsOneWidget);
+        expect(find.text('20일 전 외 2개'), findsOneWidget);
         await tester.tap(find.text('설정'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('알림 끄기'));
@@ -928,8 +944,7 @@ void main() {
         await pumpWithMyEvent(tester, days: const [], daysAhead: 20);
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField), '14');
-        await tester.tap(find.text('추가'));
+        await tester.tap(find.text('2주 전'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();

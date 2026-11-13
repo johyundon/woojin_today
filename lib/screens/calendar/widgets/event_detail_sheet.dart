@@ -66,27 +66,17 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
     return end == null ? _time(start) : '${_time(start)} – ${_time(end)}';
   }
 
-  /// 알림 줄 문구. 넣은 "며칠 전"을 "7일 전·당일"처럼 잇는다. 시간 정보가 없는
-  /// 종일 일정(학사일정 등)은 오전 9시에 울리므로 그 시각을 붙이고, 여러 날 일정의
-  /// "당일"은 "시작일"로 쓴다. 여러 날 학사일정은 마감일(3일 이상이면 마감 전날도)도
-  /// 울린다.
+  /// 알림 줄 문구. 길어지지 않게 고른 날이 두 개까지면 "2주 전·당일"처럼 잇고,
+  /// 더 많으면 가장 이른 것만 "2주 전 외 2개"로 줄인다(사용자 요청, 2026-11-13).
+  /// 여러 날 일정의 "당일"은 "시작일"로 쓴다.
   String get _reminderText {
     final days = event.reminderDaysBefore;
     if (days.isEmpty) return '알림 없음';
-    final parts = [
-      for (final d in days)
-        event.isMultiDay && d == 0
-            ? '시작일'
-            : reminderDaysLabel(d, allDay: event.isAllDay),
-    ];
-    if (event.isMultiDay && !event.isUserEvent) {
-      if (event.reminders.any((r) => r.kind == ReminderKind.dayBeforeEnd)) {
-        parts.add('마감 전날');
-      }
-      parts.add('마감일');
-    }
-    final text = parts.join('·');
-    return event.isAllDay ? '$text 오전 9시' : text;
+    String label(int d) => event.isMultiDay && d == 0
+        ? '시작일'
+        : reminderDaysLabel(d, allDay: event.isAllDay);
+    if (days.length <= 2) return days.map(label).join('·');
+    return '${label(days.first)} 외 ${days.length - 1}개';
   }
 
   Future<void> _openSettings() async {
