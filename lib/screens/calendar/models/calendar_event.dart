@@ -41,11 +41,17 @@ typedef ScheduledReminder = ({
   String idSuffix,
 });
 
-/// "며칠 전" 알림으로 넣을 수 있는 가장 큰 값. 큰 숫자를 잘못 넣는 실수를 막는다.
-const int maxReminderDaysBefore = 60;
+/// "며칠 전" 알림으로 넣을 수 있는 가장 큰 값(시작일 4주 전까지, 사용자 결정 2026-11-13).
+const int maxReminderDaysBefore = 28;
 
-/// "며칠 전" 이름. 0은 당일(시간이 있는 일정은 정각), 7의 배수는 "N주 전".
+/// 가장 작은 값. 음수는 시작일 "뒤"(여러 날 일정이 진행 중인 날)다. 실제로는 끝나는
+/// 날까지만 고를 수 있고, 이 값은 저장·취소 범위의 안전한 한계다.
+const int minReminderDaysBefore = -60;
+
+/// "며칠 전" 이름. 0은 당일(시간이 있는 일정은 정각), 7의 배수는 "N주 전",
+/// 음수(시작 뒤)는 "시작 N일 뒤".
 String reminderDaysLabel(int days, {required bool allDay}) {
+  if (days < 0) return '시작 ${-days}일 뒤';
   if (days > 0 && days % 7 == 0) return '${days ~/ 7}주 전';
   if (days > 0) return '$days일 전';
   return allDay ? '당일' : '정각';
@@ -101,9 +107,15 @@ class CalendarEvent {
 
   bool get hasReminder => reminderDaysBefore.isNotEmpty;
 
-  /// 범위(0~[maxReminderDaysBefore]) 밖은 버리고, 중복 없이 큰 수부터 정렬한다.
+  /// 범위([minReminderDaysBefore]~[maxReminderDaysBefore]) 밖은 버리고, 중복 없이
+  /// 큰 수부터 정렬한다.
   static List<int> _normalized(Iterable<int> days) =>
-      days.where((d) => d >= 0 && d <= maxReminderDaysBefore).toSet().toList()
+      days
+          .where(
+            (d) => d >= minReminderDaysBefore && d <= maxReminderDaysBefore,
+          )
+          .toSet()
+          .toList()
         ..sort((a, b) => b.compareTo(a));
 
   /// 알림 날짜들을 바꾼다(범위 확인·정렬 포함).
@@ -117,7 +129,8 @@ class CalendarEvent {
   /// 이 일정에 걸릴 수 있는 알림 예약 번호 꼬리 전부. 끄거나 지울 때 이걸 다
   /// 취소해야 남는 알림이 없다(예전 "하루 전" 알림도 꼬리 없는 번호에 걸려 있다).
   static final List<String> allReminderIdSuffixes = [
-    for (var d = 0; d <= maxReminderDaysBefore; d++) _daysIdSuffix(d),
+    for (var d = minReminderDaysBefore; d <= maxReminderDaysBefore; d++)
+      _daysIdSuffix(d),
     for (final k in ReminderKind.values)
       if (k != ReminderKind.start) k.idSuffix,
   ];
@@ -178,16 +191,21 @@ class CalendarEvent {
     final days = DateTime(endDate.year, endDate.month, endDate.day)
         .difference(DateTime(startDate.year, startDate.month, startDate.day))
         .inDays;
+    // 마감 전날·마감일과 같은 날을 고르면 알림이 두 번 울리지 않게 뺀다.
+    bool coveredByEnd(int d) => d == -days || (days >= 2 && d == 1 - days);
     return [
       for (final d in reminderDaysBefore)
-        (
-          at: _reminderOn(startDate, d),
-          kind: ReminderKind.start,
-          body: d == 0
-              ? '오늘부터 시작 · $endDay까지'
-              : '$d일 뒤 시작 · $startDay ~ $endDay',
-          idSuffix: _daysIdSuffix(d),
-        ),
+        if (!coveredByEnd(d))
+          (
+            at: _reminderOn(startDate, d),
+            kind: ReminderKind.start,
+            body: d == 0
+                ? '오늘부터 시작 · $endDay까지'
+                : d < 0
+                ? '진행 중 · $endDay까지'
+                : '$d일 뒤 시작 · $startDay ~ $endDay',
+            idSuffix: _daysIdSuffix(d),
+          ),
       if (days >= 2)
         (
           at: _reminderOn(endDate, 1),

@@ -75,15 +75,15 @@ void main() {
       expect(event.reminderAt, DateTime(2026, 10, 31, 8, 0));
     });
 
-    test('범위(0~60) 밖과 중복은 버린다', () {
-      final event = _event(days: const [61, -1, 3, 3]);
-      expect(event.reminderDaysBefore, [3]);
+    test('범위(4주 전~시작 60일 뒤) 밖과 중복은 버린다', () {
+      final event = _event(days: const [29, -61, 28, 3, 3, -2]);
+      expect(event.reminderDaysBefore, [28, 3, -2]);
     });
 
     test('날짜마다 예약 번호가 다르고, 취소 목록에 모두 들어 있다', () {
-      final event = _event(days: const [60, 7, 0]);
+      final event = _event(days: const [28, 7, 0]);
       final suffixes = event.reminders.map((r) => r.idSuffix).toList();
-      expect(suffixes, ['#d60', '#d7', '']);
+      expect(suffixes, ['#d28', '#d7', '']);
       expect(CalendarEvent.allReminderIdSuffixes, containsAll(suffixes));
       expect(
         CalendarEvent.allReminderIdSuffixes,
@@ -188,6 +188,26 @@ void main() {
       expect(reminders.first.body, '14일 뒤 시작 · 11월 1일 ~ 11월 30일');
       final suffixes = reminders.map((r) => r.idSuffix).toList();
       expect(suffixes.toSet().length, suffixes.length);
+    });
+
+    test('진행 중인 날도 고를 수 있고, 마감 전날·마감일과 겹치면 한 번만 울린다', () {
+      final reminders = event(
+        start: DateTime(2026, 11, 20),
+        end: DateTime(2026, 11, 26),
+        title: '2027학년도 학생회 총선거',
+        // 11/23(진행 중), 11/25(마감 전날과 겹침), 11/26(마감일과 겹침)
+        days: const [-3, -5, -6],
+      ).reminders;
+
+      expect(reminders.map((r) => r.at), [
+        DateTime(2026, 11, 23, 9, 0),
+        DateTime(2026, 11, 25, 9, 0),
+        DateTime(2026, 11, 26, 9, 0),
+      ]);
+      expect(reminders.first.body, '진행 중 · 11월 26일까지');
+      expect(reminders.first.idSuffix, '#d-3');
+      expect(CalendarEvent.allReminderIdSuffixes, contains('#d-3'));
+      expect(reminderDaysLabel(-3, allDay: true), '시작 3일 뒤');
     });
 
     test('내가 만든 일정은 여러 날이어도 시작일 한 번이고 문구도 그대로다', () {

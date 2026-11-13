@@ -36,7 +36,7 @@ Future<List<int>?> showReminderSettingsSheet(
 }
 
 /// 목록에 늘 나오는 "며칠 전" 줄들(지난 날은 빠진다).
-const List<int> _presetDays = [0, 1, 3, 7, 14, 30];
+const List<int> _presetDays = [0, 1, 3, 7, 14, 28];
 
 class _ReminderSettingsBody extends StatefulWidget {
   const _ReminderSettingsBody({required this.event, required this.now});
@@ -112,24 +112,40 @@ class _ReminderSettingsBodyState extends State<_ReminderSettingsBody> {
     if (!_days.remove(d)) _days.add(d);
   });
 
+  /// 달력에서 고를 수 있는 마지막 날 = 일정이 끝나는 날(여러 날 일정은 진행
+  /// 중인 날도 고를 수 있다).
+  DateTime get _end {
+    final e = widget.event.endDate;
+    return DateTime(e.year, e.month, e.day);
+  }
+
+  /// 달력에서 고를 수 있는 첫날 = 시작일 4주 전과 오늘 중 늦은 날.
+  DateTime get _firstPickable {
+    final earliest = _dateOf(maxReminderDaysBefore);
+    return earliest.isAfter(_today) ? earliest : _today;
+  }
+
   Future<void> _pickDate() async {
+    final first = _firstPickable;
     final picked = await showDatePickSheet(
       context,
       title: '알림 받을 날짜',
-      initialDate: _today.isAfter(_start) ? _start : _today,
+      initialDate: _today.isBefore(first)
+          ? first
+          : _today.isAfter(_end)
+          ? _end
+          : _today,
       today: widget.now,
+      firstDate: first,
+      lastDate: _end,
     );
     if (picked == null || !mounted) return;
     final d = _start
         .difference(DateTime(picked.year, picked.month, picked.day))
         .inDays;
     setState(() {
-      if (d < 0) {
-        _error = '일정 시작일보다 뒤 날짜는 고를 수 없어요';
-      } else if (_isPast(d)) {
-        _error = '이미 지난 날짜예요';
-      } else if (d > maxReminderDaysBefore) {
-        _error = '시작일 $maxReminderDaysBefore일 전까지만 고를 수 있어요';
+      if (_isPast(d)) {
+        _error = '오늘 알림 시각이 이미 지났어요';
       } else {
         _error = null;
         _days.add(d);
@@ -271,7 +287,7 @@ class _DayRow extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 64,
+                width: 88,
                 child: Text(
                   label,
                   style: TextStyle(

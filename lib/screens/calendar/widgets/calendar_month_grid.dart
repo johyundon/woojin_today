@@ -18,6 +18,7 @@ class CalendarMonthGrid extends StatelessWidget {
     required this.onDaySelected,
     this.rangeStart,
     this.rangeEnd,
+    this.isEnabled,
     super.key,
   });
 
@@ -38,6 +39,10 @@ class CalendarMonthGrid extends StatelessWidget {
   /// 그 사이를 연한 파란 띠로 잇는다. 메인 캘린더는 넘기지 않아 모양이 그대로다.
   final DateTime? rangeStart;
   final DateTime? rangeEnd;
+
+  /// 고를 수 있는 날인지(날짜 고르기 시트에서만 씀). false인 날은 흐리게 보이고
+  /// 눌리지 않는다. null이면 모든 날을 고를 수 있다.
+  final bool Function(DateTime date)? isEnabled;
 
   /// [day]일에 걸친 일정들의 색(최대 3개, 중복 색은 한 번만).
   List<Color> _dotColors(int day) {
@@ -133,9 +138,10 @@ class CalendarMonthGrid extends StatelessWidget {
     final selected = day == selectedDay || isRangeStart || isRangeEnd;
     final isToday = isTodayMonth && day == today.day;
     final dots = _dotColors(day);
+    final enabled = isEnabled?.call(date) ?? true;
 
     return Pressable(
-      onTap: () => onDaySelected(day),
+      onTap: enabled ? () => onDaySelected(day) : null,
       pressedScale: 0.9,
       child: SizedBox(
         height: 44,
@@ -182,7 +188,11 @@ class CalendarMonthGrid extends StatelessWidget {
                   child: Text(
                     '$day',
                     style: TextStyle(
-                      color: selected ? Colors.white : AppColors.textStrong,
+                      color: selected
+                          ? Colors.white
+                          : enabled
+                          ? AppColors.textStrong
+                          : AppColors.textMuted.withValues(alpha: 0.5),
                       fontSize: 14,
                       fontWeight: selected || isToday
                           ? FontWeight.w800

@@ -11,6 +11,9 @@ import 'sheet_header.dart';
 /// 파란 선택 칸)를 쓰고, 위쪽 화살표로 달을 넘긴다. 저장하면 고른 날짜를, 취소하면
 /// null을 반환한다. 일정 수정 화면의 시작/끝 날짜 칸에서 쓴다.
 ///
+/// [firstDate]·[lastDate]를 주면 그 밖의 날은 흐리게 막고, 그 밖의 달로는 넘어가지
+/// 않는다(알림 날짜 고르기에서 씀).
+///
 /// 예전에는 플러터 기본 날짜 창(showDatePicker)을 썼는데, 앱에 한국어 설정이 없고
 /// 테마가 어두운 모드라 영어·검은 창으로 떠서 바꿨다(사용자 요청, 2026-10-31).
 Future<DateTime?> showDatePickSheet(
@@ -18,6 +21,8 @@ Future<DateTime?> showDatePickSheet(
   required String title,
   required DateTime initialDate,
   DateTime? today,
+  DateTime? firstDate,
+  DateTime? lastDate,
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
@@ -31,6 +36,8 @@ Future<DateTime?> showDatePickSheet(
       title: title,
       initialDate: initialDate,
       today: today ?? DateTime.now(),
+      firstDate: firstDate,
+      lastDate: lastDate,
     ),
   );
 }
@@ -40,11 +47,15 @@ class _DatePickSheet extends StatefulWidget {
     required this.title,
     required this.initialDate,
     required this.today,
+    this.firstDate,
+    this.lastDate,
   });
 
   final String title;
   final DateTime initialDate;
   final DateTime today;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
 
   @override
   State<_DatePickSheet> createState() => _DatePickSheetState();
@@ -60,6 +71,31 @@ class _DatePickSheetState extends State<_DatePickSheet> {
 
   void _moveMonth(int delta) =>
       setState(() => _month = DateTime(_month.year, _month.month + delta));
+
+  bool _isEnabled(DateTime date) {
+    final first = widget.firstDate;
+    final last = widget.lastDate;
+    if (first != null &&
+        date.isBefore(DateTime(first.year, first.month, first.day))) {
+      return false;
+    }
+    if (last != null &&
+        date.isAfter(DateTime(last.year, last.month, last.day))) {
+      return false;
+    }
+    return true;
+  }
+
+  /// [first]가 있는 달보다 앞으로/[last]가 있는 달보다 뒤로는 못 넘긴다.
+  bool get _canGoBack {
+    final first = widget.firstDate;
+    return first == null || DateTime(first.year, first.month).isBefore(_month);
+  }
+
+  bool get _canGoForward {
+    final last = widget.lastDate;
+    return last == null || DateTime(last.year, last.month).isAfter(_month);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +126,7 @@ class _DatePickSheetState extends State<_DatePickSheet> {
             children: [
               _MonthArrow(
                 icon: Icons.chevron_left_rounded,
-                onTap: () => _moveMonth(-1),
+                onTap: _canGoBack ? () => _moveMonth(-1) : null,
               ),
               Expanded(
                 child: Text(
@@ -105,7 +141,7 @@ class _DatePickSheetState extends State<_DatePickSheet> {
               ),
               _MonthArrow(
                 icon: Icons.chevron_right_rounded,
-                onTap: () => _moveMonth(1),
+                onTap: _canGoForward ? () => _moveMonth(1) : null,
               ),
             ],
           ),
@@ -115,6 +151,7 @@ class _DatePickSheetState extends State<_DatePickSheet> {
             events: const [],
             selectedDay: selectedInMonth ? _selected.day : null,
             today: widget.today,
+            isEnabled: _isEnabled,
             onDaySelected: (day) => setState(
               () => _selected = DateTime(_month.year, _month.month, day),
             ),
@@ -286,20 +323,25 @@ class _MonthArrow extends StatelessWidget {
   const _MonthArrow({required this.icon, required this.onTap});
 
   final IconData icon;
-  final VoidCallback onTap;
+
+  /// null이면 더 넘길 수 없는 쪽이라 흐리게 보이고 눌리지 않는다.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Pressable.icon(
       onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.fill,
-          borderRadius: BorderRadius.circular(12),
+      child: Opacity(
+        opacity: onTap == null ? 0.3 : 1,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.fill,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: AppColors.textStrong, size: 22),
         ),
-        child: Icon(icon, color: AppColors.textStrong, size: 22),
       ),
     );
   }
