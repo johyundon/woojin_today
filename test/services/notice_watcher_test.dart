@@ -28,7 +28,7 @@ class _FakeNotices implements NoticeServiceBase {
   List<NoticeItem> mileage = [_n('마일리지 1', tag: NoticeTag.mileage)];
   List<NoticeItem> general = [_n('일반 1', tag: NoticeTag.general)];
   List<NoticeItem> scholarship = [_n('장학 1', tag: NoticeTag.scholarship)];
-  bool failMileage = false;
+  bool failGeneral = false;
 
   @override
   Future<List<NoticeItem>> fetchNotices(
@@ -36,9 +36,11 @@ class _FakeNotices implements NoticeServiceBase {
     bool forceRefresh = false,
   }) async {
     if (board == NoticeBoard.academic) return academic;
-    if (board == NoticeBoard.general) return general;
+    if (board == NoticeBoard.general) {
+      if (failGeneral) throw const NoticeException('fail');
+      return general;
+    }
     if (board == NoticeBoard.scholarship) return scholarship;
-    if (failMileage) throw const NoticeException('fail');
     return mileage;
   }
 
@@ -121,10 +123,10 @@ void main() {
 
   test('처음 확인 때 게시판 하나가 실패하면 기록을 남기지 않는다', () async {
     await watcher.setEnabled(true);
-    service.failMileage = true;
+    service.failGeneral = true;
     await watcher.check();
 
-    service.failMileage = false;
+    service.failGeneral = false;
     expect(await watcher.check(), isEmpty, reason: '이때가 처음 기록');
     expect(alerts, isEmpty);
   });
@@ -175,7 +177,7 @@ void main() {
     });
 
     test('한 게시판이 실패해도 다른 게시판의 새 글은 찾는다', () async {
-      service.failMileage = true;
+      service.failGeneral = true;
       service.academic = [_n('새 학사공지', isNew: true)];
       expect(await watcher.hasUnread(), isTrue);
     });

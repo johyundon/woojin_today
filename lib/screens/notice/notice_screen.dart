@@ -50,14 +50,14 @@ class NoticeScreen extends StatefulWidget {
 }
 
 class _NoticeScreenState extends State<NoticeScreen> {
-  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다.
+  /// 화면에 보이는 분류 칩. 학과·행사는 실제 게시판이 없어 숨겨 둔다. 마일리지는
+  /// 같은 글이 일반에 있어 칩을 숨겼다(마일리지 게시판은 목록에 넣지 않는다).
   /// 종합강의시간표는 로그인해야 읽을 수 있어서, 로그인하지 않았으면 빈 칩이
   /// 되지 않게 숨긴다.
   late final List<NoticeTag> _visibleTags = [
     NoticeTag.academic,
     NoticeTag.general,
     NoticeTag.scholarship,
-    NoticeTag.mileage,
     if (_loginCookie != null) NoticeTag.timetable,
   ];
 
@@ -73,7 +73,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
   /// 오류 없이 건너뛴다.
   late final List<NoticeBoard> _boards = [
     for (final board in NoticeBoard.values)
-      if (!board.requiresLogin || _loginCookie != null) board,
+      if (board.listed && (!board.requiresLogin || _loginCookie != null)) board,
   ];
   late final NoticeWatcher _watcher =
       widget.watcher ?? NoticeWatcher(service: _service);

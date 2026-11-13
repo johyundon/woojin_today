@@ -36,7 +36,7 @@ Future<List<HomeBannerItem>> loadHomeBannerItems({
   final noticeItems = <NoticeItem>[];
   // 새 공지 확인([NoticeWatcher.check])과 같은 게시판을 읽어야 저장분을 같이 쓴다.
   for (final board in NoticeBoard.values) {
-    if (board.requiresLogin) continue;
+    if (board.requiresLogin || !board.listed) continue;
     try {
       noticeItems.addAll(await notices.fetchNotices(board));
     } catch (e) {

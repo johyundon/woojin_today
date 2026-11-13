@@ -75,7 +75,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _loadNotices() async {
     final boards = [
       for (final board in NoticeBoard.values)
-        if (!board.requiresLogin || _loginCookie != null) board,
+        if (board.listed && (!board.requiresLogin || _loginCookie != null))
+          board,
     ];
     final results = await Future.wait([
       for (final board in boards)

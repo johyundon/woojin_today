@@ -129,7 +129,7 @@ class NoticeWatcher {
     try {
       final read = await (_readStorageArg ?? NoticeReadStorage()).load();
       for (final board in NoticeBoard.values) {
-        if (board.requiresLogin) continue;
+        if (board.requiresLogin || !board.listed) continue;
         try {
           final items = await _service.fetchNotices(board);
           if (items.any((n) => n.isNew && !read.contains(n.key))) return true;
@@ -148,7 +148,7 @@ class NoticeWatcher {
       final byBoard = <NoticeBoard, List<NoticeItem>>{};
       for (final board in NoticeBoard.values) {
         // 로그인이 필요한 게시판은 로그인 정보 없이 읽을 수 없어 건너뛴다.
-        if (board.requiresLogin) continue;
+        if (board.requiresLogin || !board.listed) continue;
         try {
           byBoard[board] = await _service.fetchNotices(board);
         } catch (e) {

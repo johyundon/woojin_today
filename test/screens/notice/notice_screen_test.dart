@@ -16,11 +16,20 @@ import 'package:daejin_app/screens/notice/notice_screen.dart';
 import 'package:daejin_app/services/notice_service.dart';
 
 class _FakeNotices implements NoticeServiceBase {
-  bool failMileage = false;
   bool timetableExpired = false;
 
-  /// 일반·장학 게시판 목록. 기본은 비어 있다.
-  List<NoticeItem> general = const [];
+  /// 일반·장학 게시판 목록. 일반에는 마일리지장학 공지가 함께 올라온다.
+  bool failGeneral = false;
+  List<NoticeItem> general = const [
+    NoticeItem(
+      title: '2026학년도 1학기 마일리지장학 대상자 공지',
+      author: '학생복지팀',
+      date: '2026.08.05',
+      viewCount: 2233,
+      tag: NoticeTag.general,
+      detailPath: '/g-m1',
+    ),
+  ];
   List<NoticeItem> scholarship = const [];
   final boards = <NoticeBoard>[];
   final forceFlags = <bool>[];
@@ -51,10 +60,12 @@ class _FakeNotices implements NoticeServiceBase {
         ),
       ];
     }
-    if (board == NoticeBoard.general) return general;
+    if (board == NoticeBoard.general) {
+      if (failGeneral) throw const NoticeException('fail');
+      return general;
+    }
     if (board == NoticeBoard.scholarship) return scholarship;
     if (board == NoticeBoard.mileage) {
-      if (failMileage) throw const NoticeException('fail');
       return const [
         NoticeItem(
           title: '2026학년도 1학기 마일리지장학 대상자 공지',
@@ -199,9 +210,10 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('놓치면 안 되는 공지'), findsOneWidget);
     expect(find.text('새 글 2개'), findsOneWidget);
-    for (final label in ['전체', '학사', '일반', '장학', '마일리지']) {
+    for (final label in ['전체', '학사', '일반', '장학']) {
       expect(find.text(label), findsWidgets);
     }
+    expect(find.text('마일리지'), findsNothing);
     expect(find.text('학과'), findsNothing);
     expect(find.text('행사'), findsNothing);
 
@@ -210,11 +222,12 @@ void main() {
     expect(find.text('학사팀 · 10.29'), findsOneWidget);
   });
 
-  testWidgets('마일리지 칩을 누르면 마일리지장학 공지만 보인다', (tester) async {
-    await _pump(tester, _FakeNotices());
+  testWidgets('마일리지 게시판은 따로 읽지 않고, 마일리지장학 공지는 일반에서 보인다', (tester) async {
+    final service = _FakeNotices();
+    await _pump(tester, service);
+    expect(service.boards, isNot(contains(NoticeBoard.mileage)));
 
-    await tester.ensureVisible(find.text('마일리지').first);
-    await tester.tap(find.text('마일리지').first);
+    await tester.tap(find.text('일반').first);
     await tester.pumpAndSettle();
     expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsOneWidget);
     expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
@@ -310,27 +323,27 @@ void main() {
   });
 
   testWidgets('한 게시판을 못 불러오면 안내를 띄우고, 다시 시도하면 채운다', (tester) async {
-    final service = _FakeNotices()..failMileage = true;
+    final service = _FakeNotices()..failGeneral = true;
     await _pump(tester, service);
 
-    expect(find.text('마일리지장학 공지를 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('일반공지를 불러오지 못했어요'), findsOneWidget);
     expect(find.text('부·복수전공 이수신청 안내'), findsOneWidget);
 
-    service.failMileage = false;
+    service.failGeneral = false;
     await tester.tap(find.text('다시 시도'));
     await tester.pumpAndSettle();
-    expect(find.text('마일리지장학 공지를 불러오지 못했어요'), findsNothing);
+    expect(find.text('일반공지를 불러오지 못했어요'), findsNothing);
     expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsOneWidget);
   });
 
   testWidgets('당겨서 새로고침하면 캐시를 무시하고 새로 받는다', (tester) async {
     final service = _FakeNotices();
     await _pump(tester, service);
-    expect(service.forceFlags, [false, false, false, false]);
+    expect(service.forceFlags, [false, false, false]);
 
     await tester.fling(find.text('부·복수전공 이수신청 안내'), const Offset(0, 400), 1000);
     await tester.pumpAndSettle();
-    expect(service.forceFlags.skip(4), [true, true, true, true]);
+    expect(service.forceFlags.skip(3), [true, true, true]);
   });
 
   testWidgets('"새 글 알림"은 기본 꺼짐이고, 저장된 값을 보여주며 끄면 저장된다', (tester) async {

@@ -78,7 +78,9 @@ void main() {
           _notice('B', '2026.11.06'),
           _notice('C', '2026.10.20'),
         ],
-        NoticeBoard.mileage: [_notice('D', '2026.11.04')],
+        NoticeBoard.general: [_notice('D', '2026.11.04')],
+        // 일반에 같은 글이 있는 마일리지 게시판은 묻지 않는다.
+        NoticeBoard.mileage: [_notice('M', '2026.11.10')],
       });
       final longEvent = _event(
         '달넘는일정',
@@ -112,6 +114,7 @@ void main() {
       ]);
       // 로그인이 필요한 게시판은 묻지 않는다.
       expect(notices.asked, isNot(contains(NoticeBoard.timetable)));
+      expect(notices.asked, isNot(contains(NoticeBoard.mileage)));
       // 2주 뒤가 다음 달이면 다음 달도 본다.
       expect(schedule.asked, containsAll([(2026, 11), (2026, 12)]));
     });

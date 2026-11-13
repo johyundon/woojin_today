@@ -152,7 +152,7 @@ void main() {
       expect(items.last.isRequired, isFalse);
       expect(items.every((n) => n.tag == NoticeTag.mileage), isTrue);
     });
-    test('일반 게시판은 마일리지장학 공지를 버리고 나머지는 남긴다', () {
+    test('일반 게시판은 마일리지장학 공지도 그대로 남긴다', () {
       final items = NoticeService.parseList(
         _list([
           _row(title: '[마일리지 5점] 비교과 프로그램 수요조사 안내', cls: 'notice '),
@@ -164,6 +164,7 @@ void main() {
 
       expect(items.map((n) => n.title), [
         '[마일리지 5점] 비교과 프로그램 수요조사 안내',
+        '2026학년도 1학기 마일리지장학 대상자 공지',
         '대진 콘텐츠 공모전 개최 안내',
       ]);
       expect(items.every((n) => n.tag == NoticeTag.general), isTrue);

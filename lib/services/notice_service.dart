@@ -16,7 +16,7 @@ enum NoticeBoard {
   academic('/daejin/1003/subview.do', NoticeTag.academic),
 
   /// 일반공지(게시판 189). 로그인 불필요. 마일리지장학 공지도 이 게시판에
-  /// 올라오지만 [mileage]에서 따로 보여주므로 여기서는 뺀다([parseList]).
+  /// 함께 올라온다.
   general('/daejin/1002/subview.do', NoticeTag.general),
 
   /// 장학공지(게시판 193). 로그인 불필요.
@@ -32,20 +32,31 @@ enum NoticeBoard {
   ),
 
   /// 마일리지장학 공지(게시판 189를 검색어 "마일리지장학"으로 거른 목록).
+  /// 같은 글이 [general]에도 있어서 공지 목록에는 넣지 않고([listed]) 마일리지
+  /// 화면에서만 쓴다.
   /// enc는 명세의 고정값이다. 명세의 조립 규칙으로 다시 만들면 인코딩 차이로 값이
   /// 달라질 수 있어 고정값을 그대로 쓴다.
   mileage(
     '/daejin/1002/subview.do?enc=Zm5jdDF8QEB8JTJGYmJzJTJGZGFlamluJTJGMTg5JTJGYXJ0Y2xMaXN0LmRvJTNGYmJzQ2xTZXElM0QlMjZiYnNPcGVuV3JkU2VxJTNEJTI2aXNWaWV3TWluZSUzRGZhbHNlJTI2c3JjaENvbHVtbiUzRHNqJTI2c3JjaFdyZCUzRCVFQiVBNyU4OCVFQyU5RCVCQyVFQiVBNiVBQyVFQyVBNyU4MCVFQyU5RSVBNSVFRCU5NSU5OSUyNg==',
     NoticeTag.mileage,
+    listed: false,
   );
 
-  const NoticeBoard(this.path, this.tag, {this.requiresLogin = false});
+  const NoticeBoard(
+    this.path,
+    this.tag, {
+    this.requiresLogin = false,
+    this.listed = true,
+  });
 
   final String path;
   final NoticeTag tag;
 
   /// 포털 로그인 쿠키가 있어야 읽을 수 있는 게시판인지.
   final bool requiresLogin;
+
+  /// 공지 목록(공지사항·홈 배너·검색·새 글 알림)에 넣는 게시판인지.
+  final bool listed;
 }
 
 class NoticeException implements Exception {
@@ -232,8 +243,7 @@ class NoticeService implements NoticeServiceBase {
   }
 
   /// 명세의 목록 파싱 규칙. 마일리지 게시판은 제목에 "마일리지"가 없는 행
-  /// (상단 고정 공지 등)을 버리고, 일반 게시판은 마일리지 게시판이 보여주는
-  /// "마일리지장학" 공지를 버린다. 상단 고정(`tr.notice`)은 [NoticeItem.isRequired].
+  /// (상단 고정 공지 등)을 버린다. 상단 고정(`tr.notice`)은 [NoticeItem.isRequired].
   @visibleForTesting
   static List<NoticeItem> parseList(String body, NoticeBoard board) {
     final rows = html_parser
@@ -251,9 +261,6 @@ class NoticeService implements NoticeServiceBase {
       );
       if (title.isEmpty) continue;
       if (board == NoticeBoard.mileage && !title.contains('마일리지')) continue;
-      if (board == NoticeBoard.general && title.contains('마일리지장학')) {
-        continue;
-      }
 
       String cell(String selector) =>
           _collapse(row.querySelector(selector)?.text ?? '');
