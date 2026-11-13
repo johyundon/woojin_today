@@ -17,7 +17,8 @@ import 'widgets/time_pick_sheet.dart';
 /// 저장하면 새 [CalendarEvent]를 반환하며 닫힌다(고치는 경우 id/색/라벨은
 /// 그대로). 닫기(X)나 뒤로 가면 null. 저장할 수 있는 조건은 "제목이 있고, 끝나는
 /// 날짜가 시작보다 빠르지 않을 것"이다. 시간은 "10~11시" 같은 구간이 아니라
-/// 하나만 고르고, 알림(기본 "정각")은 그 시간에 한 번만 울린다.
+/// 하나만 고른다. 알림은 일정 카드의 종 버튼(알림 설정 창)에서 정하고, 새 일정은
+/// 기본으로 정각 알림이 켜진다.
 class EventEditScreen extends StatefulWidget {
   const EventEditScreen({this.event, required this.initialDate, super.key});
 
@@ -52,10 +53,14 @@ class _EventEditScreenState extends State<EventEditScreen> {
   late TimeOfDay _time =
       widget.event?.startTime ?? const TimeOfDay(hour: 9, minute: 0);
 
-  /// 알림. 새 일정은 "정각" — 정한 시간에 한 번만 울린다.
-  late ReminderOffset? _offset = widget.event == null
-      ? ReminderOffset.atStart
-      : widget.event!.reminderOffset;
+  /// 알림 칩은 숨겨 둔다 — 알림은 종 버튼의 알림 설정 창 한 곳에서 정한다(사용자
+  /// 결정, 2026-11-13). 칩 코드는 지우지 않고 남겨 두며, 칩에서 고른 값은 저장하지
+  /// 않는다.
+  static const _showReminderChips = false;
+
+  late ReminderOffset? _offset = widget.event?.hasReminder == false
+      ? null
+      : ReminderOffset.atStart;
 
   bool get _isEdit => widget.event != null;
 
@@ -124,7 +129,8 @@ class _EventEditScreenState extends State<EventEditScreen> {
         startTime: _allDay ? null : _time,
         endTime: null,
         location: location.isEmpty ? null : location,
-        reminderOffset: _offset,
+        // 알림은 그대로 둔다. 새 일정은 정각(당일) 알림 하나.
+        reminderDaysBefore: original?.reminderDaysBefore ?? const [0],
       ),
     );
   }
@@ -387,29 +393,31 @@ class _EventEditScreenState extends State<EventEditScreen> {
                                     ),
                                   ),
                                 ),
-                                _Section(
-                                  label: '알림',
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      _OffsetChip(
-                                        label: '없음',
-                                        selected: _offset == null,
-                                        onTap: () =>
-                                            setState(() => _offset = null),
-                                      ),
-                                      for (final offset
-                                          in ReminderOffset.values)
+                                if (_showReminderChips)
+                                  _Section(
+                                    label: '알림',
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
                                         _OffsetChip(
-                                          label: offset.label,
-                                          selected: _offset == offset,
+                                          label: '없음',
+                                          selected: _offset == null,
                                           onTap: () =>
-                                              setState(() => _offset = offset),
+                                              setState(() => _offset = null),
                                         ),
-                                    ],
+                                        for (final offset
+                                            in ReminderOffset.values)
+                                          _OffsetChip(
+                                            label: offset.label,
+                                            selected: _offset == offset,
+                                            onTap: () => setState(
+                                              () => _offset = offset,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),

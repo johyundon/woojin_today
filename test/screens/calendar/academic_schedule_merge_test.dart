@@ -12,7 +12,7 @@ CalendarEvent _event(
   DateTime? start,
   DateTime? end,
   String title = 'x',
-  ReminderOffset? reminder,
+  List<int> reminder = const [],
 }) => CalendarEvent(
   id: id,
   startDate: start ?? DateTime(2026, 10, 1),
@@ -20,7 +20,7 @@ CalendarEvent _event(
   label: '학사일정',
   title: title,
   color: Colors.blue,
-  reminderOffset: reminder,
+  reminderDaysBefore: reminder,
 );
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
       start: midterm.start,
       end: midterm.end,
       title: '중간시험',
-      reminder: ReminderOffset.atStart,
+      reminder: const [0],
     );
     final r = mergeAcademicSchedule(
       current: [saved],
@@ -74,7 +74,7 @@ void main() {
       start: midterm.start,
       end: DateTime(2026, 10, 25),
       title: '중간시험',
-      reminder: ReminderOffset.atStart,
+      reminder: const [0],
     );
     final r = mergeAcademicSchedule(
       current: [saved],
@@ -84,7 +84,7 @@ void main() {
     );
 
     expect(r.events.single.endDate, DateTime(2026, 10, 26));
-    expect(r.events.single.reminderOffset, ReminderOffset.atStart);
+    expect(r.events.single.reminderDaysBefore, [0]);
     expect(r.changed.single.id, midterm.id);
   });
 

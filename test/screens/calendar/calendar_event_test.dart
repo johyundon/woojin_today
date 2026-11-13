@@ -10,7 +10,7 @@ CalendarEvent _event({
   TimeOfDay? startTime,
   TimeOfDay? endTime,
   String? location,
-  ReminderOffset? reminderOffset,
+  List<int> days = const [],
   DateTime? startDate,
 }) {
   final date = startDate ?? DateTime(2026, 10, 14);
@@ -24,7 +24,7 @@ CalendarEvent _event({
     startTime: startTime,
     endTime: endTime,
     location: location,
-    reminderOffset: reminderOffset,
+    reminderDaysBefore: days,
   );
 }
 
@@ -37,30 +37,58 @@ void main() {
       );
     });
 
-    test('정각/10분 전/1시간 전/하루 전을 시작 시각에서 거꾸로 계산한다', () {
-      const start = TimeOfDay(hour: 15, minute: 0);
-      DateTime? at(ReminderOffset o) =>
-          _event(startTime: start, reminderOffset: o).reminderAt;
-
-      expect(at(ReminderOffset.atStart), DateTime(2026, 10, 14, 15, 0));
-      expect(at(ReminderOffset.tenMinutes), DateTime(2026, 10, 14, 14, 50));
-      expect(at(ReminderOffset.oneHour), DateTime(2026, 10, 14, 14, 0));
-      expect(at(ReminderOffset.oneDay), DateTime(2026, 10, 13, 15, 0));
+    test('며칠 전마다 그날의 일정 시각에 울리고, reminderAt은 가장 가까운 것이다', () {
+      final event = _event(
+        startTime: const TimeOfDay(hour: 15, minute: 0),
+        days: const [0, 14, 1],
+      );
+      expect(event.reminderDaysBefore, [14, 1, 0]); // 큰 수부터 정렬
+      expect(event.reminderAts, [
+        DateTime(2026, 9, 30, 15, 0),
+        DateTime(2026, 10, 13, 15, 0),
+        DateTime(2026, 10, 14, 15, 0),
+      ]);
+      expect(event.reminderAt, DateTime(2026, 10, 14, 15, 0));
+      expect(event.reminders.map((r) => r.body), [
+        '내 일정 · 14일 전',
+        '내 일정 · 1일 전',
+        '내 일정 · 정각',
+      ]);
     });
 
-    test('종일 일정은 당일 오전 9시를 시작으로 본다', () {
-      final event = _event(reminderOffset: ReminderOffset.tenMinutes);
+    test('종일 일정은 오전 9시에 울리고 0일 전은 "당일"이다', () {
+      final event = _event(days: const [7, 0]);
       expect(event.isAllDay, isTrue);
-      expect(event.reminderAt, DateTime(2026, 10, 14, 8, 50));
+      expect(event.reminderAts, [
+        DateTime(2026, 10, 7, 9, 0),
+        DateTime(2026, 10, 14, 9, 0),
+      ]);
+      expect(event.reminders.last.body, '내 일정 · 당일');
     });
 
     test('날짜 경계를 넘는 하루 전 알림도 맞게 계산한다', () {
       final event = _event(
         startDate: DateTime(2026, 11, 1),
         startTime: const TimeOfDay(hour: 8, minute: 0),
-        reminderOffset: ReminderOffset.oneDay,
+        days: const [1],
       );
       expect(event.reminderAt, DateTime(2026, 10, 31, 8, 0));
+    });
+
+    test('범위(0~60) 밖과 중복은 버린다', () {
+      final event = _event(days: const [61, -1, 3, 3]);
+      expect(event.reminderDaysBefore, [3]);
+    });
+
+    test('날짜마다 예약 번호가 다르고, 취소 목록에 모두 들어 있다', () {
+      final event = _event(days: const [60, 7, 0]);
+      final suffixes = event.reminders.map((r) => r.idSuffix).toList();
+      expect(suffixes, ['#d60', '#d7', '']);
+      expect(CalendarEvent.allReminderIdSuffixes, containsAll(suffixes));
+      expect(
+        CalendarEvent.allReminderIdSuffixes,
+        containsAll(['#before', '#end']),
+      );
     });
   });
 
@@ -70,7 +98,7 @@ void main() {
       required DateTime start,
       required DateTime end,
       String title = '왕방축제',
-      ReminderOffset? offset = ReminderOffset.atStart,
+      List<int> days = const [0],
     }) => CalendarEvent(
       id: id,
       startDate: start,
@@ -78,7 +106,7 @@ void main() {
       label: '학사일정',
       title: title,
       color: Colors.purple,
-      reminderOffset: offset,
+      reminderDaysBefore: days,
     );
 
     test('11/1~11/30 신청 기간은 시작·마감 하루 전·마감일 오전 9시, 세 번이다', () {
@@ -142,18 +170,24 @@ void main() {
       expect(reminders.map((r) => r.kind), ReminderKind.values);
     });
 
-    test('"10분 전"이면 모든 알림이 그만큼 앞당겨진다', () {
+    test('며칠 전 알림은 시작일 기준으로 더해지고 마감 알림은 그대로다', () {
       final reminders = event(
-        start: DateTime(2026, 10, 14),
-        end: DateTime(2026, 10, 16),
-        offset: ReminderOffset.tenMinutes,
+        start: DateTime(2026, 11, 1),
+        end: DateTime(2026, 11, 30),
+        title: '2026학년도 겨울계절학기 수강신청',
+        days: const [14, 7, 0],
       ).reminders;
 
       expect(reminders.map((r) => r.at), [
-        DateTime(2026, 10, 14, 8, 50),
-        DateTime(2026, 10, 15, 8, 50),
-        DateTime(2026, 10, 16, 8, 50),
+        DateTime(2026, 10, 18, 9, 0),
+        DateTime(2026, 10, 25, 9, 0),
+        DateTime(2026, 11, 1, 9, 0),
+        DateTime(2026, 11, 29, 9, 0),
+        DateTime(2026, 11, 30, 9, 0),
       ]);
+      expect(reminders.first.body, '14일 뒤 시작 · 11월 1일 ~ 11월 30일');
+      final suffixes = reminders.map((r) => r.idSuffix).toList();
+      expect(suffixes.toSet().length, suffixes.length);
     });
 
     test('내가 만든 일정은 여러 날이어도 시작일 한 번이고 문구도 그대로다', () {
@@ -164,7 +198,7 @@ void main() {
       ).reminders;
 
       expect(reminders.single.at, DateTime(2026, 11, 1, 9, 0));
-      expect(reminders.single.body, '학사일정 · 정각');
+      expect(reminders.single.body, '학사일정 · 당일');
     });
 
     test('하루짜리 학사일정은 한 번이고, 알림이 꺼져 있으면 없다', () {
@@ -180,7 +214,7 @@ void main() {
         event(
           start: DateTime(2026, 11, 1),
           end: DateTime(2026, 11, 30),
-          offset: null,
+          days: const [],
         ).reminders,
         isEmpty,
       );
@@ -193,14 +227,14 @@ void main() {
         startTime: const TimeOfDay(hour: 15, minute: 0),
         endTime: const TimeOfDay(hour: 16, minute: 30),
         location: '도서관 3층',
-        reminderOffset: ReminderOffset.tenMinutes,
+        days: const [7, 0],
       );
       final restored = CalendarEvent.fromJson(original.toJson());
 
       expect(restored.startTime, const TimeOfDay(hour: 15, minute: 0));
       expect(restored.endTime, const TimeOfDay(hour: 16, minute: 30));
       expect(restored.location, '도서관 3층');
-      expect(restored.reminderOffset, ReminderOffset.tenMinutes);
+      expect(restored.reminderDaysBefore, [7, 0]);
       expect(restored.isAllDay, isFalse);
     });
 
@@ -219,13 +253,13 @@ void main() {
       final restored = CalendarEvent.fromJson(legacy());
       expect(restored.isAllDay, isTrue);
       expect(restored.location, isNull);
-      expect(restored.reminderOffset, isNull);
+      expect(restored.reminderDaysBefore, isEmpty);
       expect(restored.hasReminder, isFalse);
     });
 
     test('옛 알림 시각은 같은 시각에 울리도록 변환된다(9시 아니면 그 시각이 시작 시각)', () {
       final restored = CalendarEvent.fromJson(legacy(hour: 9, minute: 30));
-      expect(restored.reminderOffset, ReminderOffset.atStart);
+      expect(restored.reminderDaysBefore, [0]);
       expect(restored.startTime, const TimeOfDay(hour: 9, minute: 30));
       expect(restored.reminderAt, DateTime(2026, 10, 14, 9, 30));
     });
@@ -233,13 +267,24 @@ void main() {
     test('옛 알림 시각이 오전 9시면 종일 일정의 "정각"이 된다', () {
       final restored = CalendarEvent.fromJson(legacy(hour: 9, minute: 0));
       expect(restored.isAllDay, isTrue);
-      expect(restored.reminderOffset, ReminderOffset.atStart);
+      expect(restored.reminderDaysBefore, [0]);
       expect(restored.reminderAt, DateTime(2026, 10, 14, 9, 0));
     });
 
-    test('모르는 알림 방식 이름은 null로 읽는다', () {
-      final json = _event().toJson()..['reminderOffset'] = 'unknown';
-      expect(CalendarEvent.fromJson(json).reminderOffset, isNull);
+    test('시점 하나(reminderOffset)를 저장하던 이전 형식은 며칠 전으로 옮긴다', () {
+      Map<String, dynamic> old(String? name) => _event().toJson()
+        ..remove('reminderDaysBefore')
+        ..['reminderOffset'] = name;
+      List<int> days(String? name) =>
+          CalendarEvent.fromJson(old(name)).reminderDaysBefore;
+
+      expect(days('oneDay'), [1]);
+      expect(days('atStart'), [0]);
+      // 일 단위로 나타낼 수 없어 당일(정각)로 옮긴다.
+      expect(days('tenMinutes'), [0]);
+      expect(days('oneHour'), [0]);
+      expect(days(null), isEmpty);
+      expect(days('unknown'), isEmpty);
     });
   });
 }

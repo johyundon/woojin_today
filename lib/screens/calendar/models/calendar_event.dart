@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 알림을 일정 시작 몇 분 전에 울릴지.
+/// 예전 알림 방식(일정 시작 몇 분 전 하나). 지금은 [CalendarEvent.reminderDaysBefore]
+/// (며칠 전 목록)를 쓰고, 이 값은 옛 저장분을 옮길 때와 숨겨 둔 수정 화면 칩에서만
+/// 쓴다.
 enum ReminderOffset {
   atStart('정각', 0),
   tenMinutes('10분 전', 10),
@@ -31,8 +33,22 @@ enum ReminderKind {
   final String idSuffix;
 }
 
-/// 실제로 걸 알림 하나: 울릴 시각, 종류, 알림 본문.
-typedef ScheduledReminder = ({DateTime at, ReminderKind kind, String body});
+/// 실제로 걸 알림 하나: 울릴 시각, 종류, 알림 본문, 예약 번호 꼬리.
+typedef ScheduledReminder = ({
+  DateTime at,
+  ReminderKind kind,
+  String body,
+  String idSuffix,
+});
+
+/// "며칠 전" 알림으로 넣을 수 있는 가장 큰 값. 큰 숫자를 잘못 넣는 실수를 막는다.
+const int maxReminderDaysBefore = 60;
+
+/// "며칠 전" 이름. 0은 당일(시간이 있는 일정은 정각).
+String reminderDaysLabel(int days, {required bool allDay}) {
+  if (days > 0) return '$days일 전';
+  return allDay ? '당일' : '정각';
+}
 
 /// 종일 일정(시작 시간 없음)의 알림을 계산할 때 "시작 시각"으로 보는 시각.
 const TimeOfDay allDayReminderAnchor = TimeOfDay(hour: 9, minute: 0);
@@ -54,8 +70,8 @@ class CalendarEvent {
     this.startTime,
     this.endTime,
     this.location,
-    this.reminderOffset,
-  });
+    List<int> reminderDaysBefore = const [],
+  }) : reminderDaysBefore = _normalized(reminderDaysBefore);
 
   final String id;
 
@@ -78,11 +94,32 @@ class CalendarEvent {
   /// 장소(없으면 null).
   String? location;
 
-  /// "시작 N분 전" 알림. null이면 알림 꺼짐. 알림은 여러 날짜짜리 일정이어도
-  /// 시작일 기준으로 한 번만 울린다(제품 결정).
-  ReminderOffset? reminderOffset;
+  /// 시작일 며칠 전에 알림을 받을지(0 = 당일). 큰 수부터 정렬돼 있고, 비어 있으면
+  /// 알림 꺼짐. 종 버튼의 알림 설정 창에서 여러 개를 넣는다(사용자 결정, 2026-11-13).
+  List<int> reminderDaysBefore;
 
-  bool get hasReminder => reminderOffset != null;
+  bool get hasReminder => reminderDaysBefore.isNotEmpty;
+
+  /// 범위(0~[maxReminderDaysBefore]) 밖은 버리고, 중복 없이 큰 수부터 정렬한다.
+  static List<int> _normalized(Iterable<int> days) =>
+      days.where((d) => d >= 0 && d <= maxReminderDaysBefore).toSet().toList()
+        ..sort((a, b) => b.compareTo(a));
+
+  /// 알림 날짜들을 바꾼다(범위 확인·정렬 포함).
+  void setReminderDaysBefore(Iterable<int> days) =>
+      reminderDaysBefore = _normalized(days);
+
+  /// 시작일 알림 예약 번호 꼬리. 당일은 예전과 같은 번호(꼬리 없음)를 써서 이미
+  /// 걸어 둔 알림과 이어지게 한다.
+  static String _daysIdSuffix(int days) => days == 0 ? '' : '#d$days';
+
+  /// 이 일정에 걸릴 수 있는 알림 예약 번호 꼬리 전부. 끄거나 지울 때 이걸 다
+  /// 취소해야 남는 알림이 없다(예전 "하루 전" 알림도 꼬리 없는 번호에 걸려 있다).
+  static final List<String> allReminderIdSuffixes = [
+    for (var d = 0; d <= maxReminderDaysBefore; d++) _daysIdSuffix(d),
+    for (final k in ReminderKind.values)
+      if (k != ReminderKind.start) k.idSuffix,
+  ];
 
   bool get isAllDay => startTime == null;
 
@@ -95,55 +132,73 @@ class CalendarEvent {
       startDate.month != endDate.month ||
       startDate.day != endDate.day;
 
-  /// [reminderOffset]에 따른, [date]일의 실제 알림 시각. 알림이 꺼져 있으면 null.
-  /// 종일 일정은 [allDayReminderAnchor](오전 9시)를 시작으로 본다.
-  DateTime? _reminderOn(DateTime date) {
-    final offset = reminderOffset;
-    if (offset == null) return null;
+  /// [date]일 [daysBefore]일 전의 알림 시각. 시간이 있는 일정은 그 시각, 종일
+  /// 일정은 [allDayReminderAnchor](오전 9시)에 울린다.
+  DateTime _reminderOn(DateTime date, int daysBefore) {
     final t = startTime ?? allDayReminderAnchor;
-    final start = DateTime(date.year, date.month, date.day, t.hour, t.minute);
-    return start.subtract(Duration(minutes: offset.minutes));
+    return DateTime(
+      date.year,
+      date.month,
+      date.day - daysBefore,
+      t.hour,
+      t.minute,
+    );
   }
 
-  /// 시작일 기준 알림 시각(알림이 꺼져 있으면 null).
-  DateTime? get reminderAt => _reminderOn(startDate);
+  /// 시작일 기준 가장 늦은(일정에 가장 가까운) 알림 시각. 알림이 꺼져 있으면
+  /// null. 모든 알림이 지났을 때 안내 팝업에 보여주는 시각이다.
+  DateTime? get reminderAt => reminderDaysBefore.isEmpty
+      ? null
+      : _reminderOn(startDate, reminderDaysBefore.last);
 
   /// 실제로 울려야 할 알림 시각 전부([reminders]의 시각).
   List<DateTime> get reminderAts => [for (final r in reminders) r.at];
 
-  /// 실제로 걸 알림 전부. 사용자가 만든 일정과 하루짜리 일정은 시작일 한 번이다.
-  /// 여러 날에 걸친 학사일정은 시작일, 마감 하루 전(3일 이상일 때), 마감일까지
-  /// 최대 세 번이다 — 매일 울리면 긴 일정에서 너무 많고, 마감 당일 한 번만으로는
+  /// 실제로 걸 알림 전부(시각 순). 넣은 "며칠 전"마다 시작일 기준 알림이 하나씩이다.
+  /// 여러 날에 걸친 학사일정은 여기에 마감 하루 전(3일 이상일 때)과 마감일 알림이
+  /// 더해진다 — 매일 울리면 긴 일정에서 너무 많고, 마감 당일 한 번만으로는
   /// 신청·납부를 처리하기 빠듯해서다. 본문으로 어느 알림인지 구분한다.
   List<ScheduledReminder> get reminders {
-    final first = reminderAt;
-    if (first == null) return const [];
+    if (reminderDaysBefore.isEmpty) return const [];
     if (isUserEvent || !isMultiDay) {
       return [
-        (
-          at: first,
-          kind: ReminderKind.start,
-          body: '$label · ${reminderOffset!.label}',
-        ),
+        for (final d in reminderDaysBefore)
+          (
+            at: _reminderOn(startDate, d),
+            kind: ReminderKind.start,
+            body: '$label · ${reminderDaysLabel(d, allDay: isAllDay)}',
+            idSuffix: _daysIdSuffix(d),
+          ),
       ];
     }
+    final startDay = '${startDate.month}월 ${startDate.day}일';
     final endDay = '${endDate.month}월 ${endDate.day}일';
     final deadline = _deadlinePattern.hasMatch(title);
     final days = DateTime(endDate.year, endDate.month, endDate.day)
         .difference(DateTime(startDate.year, startDate.month, startDate.day))
         .inDays;
     return [
-      (at: first, kind: ReminderKind.start, body: '오늘부터 시작 · $endDay까지'),
+      for (final d in reminderDaysBefore)
+        (
+          at: _reminderOn(startDate, d),
+          kind: ReminderKind.start,
+          body: d == 0
+              ? '오늘부터 시작 · $endDay까지'
+              : '$d일 뒤 시작 · $startDay ~ $endDay',
+          idSuffix: _daysIdSuffix(d),
+        ),
       if (days >= 2)
         (
-          at: _reminderOn(endDate.subtract(const Duration(days: 1)))!,
+          at: _reminderOn(endDate, 1),
           kind: ReminderKind.dayBeforeEnd,
           body: deadline ? '내일 마감 · $endDay' : '내일 끝나요 · $endDay',
+          idSuffix: ReminderKind.dayBeforeEnd.idSuffix,
         ),
       (
-        at: _reminderOn(endDate)!,
+        at: _reminderOn(endDate, 0),
         kind: ReminderKind.end,
         body: deadline ? '오늘 마감' : '오늘 끝나요',
+        idSuffix: ReminderKind.end.idSuffix,
       ),
     ];
   }
@@ -164,7 +219,7 @@ class CalendarEvent {
     'endHour': endTime?.hour,
     'endMinute': endTime?.minute,
     'location': location,
-    'reminderOffset': reminderOffset?.name,
+    'reminderDaysBefore': reminderDaysBefore,
   };
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) {
@@ -176,20 +231,32 @@ class CalendarEvent {
 
     var startTime = time('startHour', 'startMinute');
 
-    final offsetName = json['reminderOffset'] as String?;
-    ReminderOffset? offset;
-    for (final value in ReminderOffset.values) {
-      if (value.name == offsetName) offset = value;
+    // 지금 형식은 "며칠 전" 목록(`reminderDaysBefore`).
+    var days = <int>[
+      for (final d in json['reminderDaysBefore'] as List<dynamic>? ?? const [])
+        if (d is int) d,
+    ];
+
+    // 그 전 형식은 "시작 N분 전" 하나(`reminderOffset`)였다. 하루 전은 1일 전으로,
+    // 정각·10분 전·1시간 전은 일 단위로 나타낼 수 없어 당일(정각)로 옮긴다
+    // (사용자 결정, 2026-11-13 — 10분~1시간 늦게 울리게 된다).
+    if (!json.containsKey('reminderDaysBefore')) {
+      final offsetName = json['reminderOffset'] as String?;
+      for (final value in ReminderOffset.values) {
+        if (value.name == offsetName) {
+          days = [value == ReminderOffset.oneDay ? 1 : 0];
+        }
+      }
     }
 
-    // 옛 저장분은 알림 시각을 직접 저장했다("그날 9:30에 울려라"). 같은 시각에
-    // 그대로 울리도록 변환한다 — 오전 9시면 종일 일정의 "정각"으로, 그 밖의
-    // 시각이면 그 시각을 일정 시작 시각으로 삼아 "정각"으로.
+    // 더 옛 저장분은 알림 시각을 직접 저장했다("그날 9:30에 울려라"). 같은 시각에
+    // 그대로 울리도록 변환한다 — 오전 9시면 종일 일정의 당일로, 그 밖의
+    // 시각이면 그 시각을 일정 시작 시각으로 삼아 당일(정각)로.
     final legacyHour = json['reminderHour'] as int?;
     final legacyMinute = json['reminderMinute'] as int?;
-    if (offset == null && legacyHour != null && legacyMinute != null) {
+    if (days.isEmpty && legacyHour != null && legacyMinute != null) {
       final legacy = TimeOfDay(hour: legacyHour, minute: legacyMinute);
-      offset = ReminderOffset.atStart;
+      days = [0];
       if (startTime == null && legacy != allDayReminderAnchor) {
         startTime = legacy;
       }
@@ -205,7 +272,7 @@ class CalendarEvent {
       startTime: startTime,
       endTime: time('endHour', 'endMinute'),
       location: json['location'] as String?,
-      reminderOffset: offset,
+      reminderDaysBefore: days,
     );
   }
 }

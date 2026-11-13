@@ -7,6 +7,7 @@ import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/weekday_labels.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/top_banner.dart';
 import 'event_edit_screen.dart';
 import 'models/calendar_event.dart';
 import 'services/academic_schedule_merge.dart';
@@ -18,6 +19,7 @@ import 'widgets/event_detail_sheet.dart';
 import 'widgets/event_row.dart';
 import 'widgets/reminder_past_dialog.dart';
 import 'widgets/reminder_set_dialog.dart';
+import 'widgets/reminder_settings_sheet.dart';
 
 /// [_CalendarScreenState._syncReminder]의 결과.
 enum _ReminderResult { ok, denied, past }
@@ -184,22 +186,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// 알림 스위치/종 버튼. 켜면 "정각" 알림(일정 시간에 한 번)을 걸고, 끄면 알림을
-  /// 없앤다. 이미 지난 시각이라 못 거는 경우에는 알림을 되돌려 놓은 뒤 팝업으로
-  /// 알려준다.
-  Future<void> _onReminderToggled(CalendarEvent event, bool turnOn) async {
-    if (!turnOn) {
-      setState(() => event.reminderOffset = null);
-      await _syncReminder(event);
-      await _persist();
+  /// 종 버튼·상세 팝업의 알림 줄. 알림 설정 창을 열고, 저장하면 넣은 "며칠 전"대로
+  /// 다시 건다(빈 목록이면 끈다). 시간 정보가 없는 일정(학사일정 등)은 언제 울리는지
+  /// 팝업으로 알려준다 — 여러 날 일정은 마감 하루 전·마감일까지 아직 안 지난 것만.
+  /// 이미 지난 날짜는 빼고 걸었다고 배너로 알려준다.
+  Future<void> _openReminderSettings(CalendarEvent event) async {
+    final days = await showReminderSettingsSheet(context, event: event);
+    if (days == null || !mounted) return;
+    final outcome = await _setReminderDays(event, days);
+    if (outcome.result != _ReminderResult.ok || days.isEmpty || !mounted) {
       return;
     }
-    final previous = event.reminderOffset;
-    setState(() => event.reminderOffset = ReminderOffset.atStart);
+    if (event.isAllDay) {
+      await showReminderSetDialog(context, dates: outcome.scheduled);
+    } else if (outcome.skipped > 0) {
+      showTopBanner(
+        context,
+        title: '지난 알림은 빼고 걸었어요',
+        message: '이미 지난 날짜 ${outcome.skipped}개는 울리지 않아요',
+        icon: Icons.notifications_paused_rounded,
+      );
+    }
+  }
+
+  /// [event]의 알림 날짜를 [days]로 바꾸고 다시 예약한다. 하나도 못 걸면(권한
+  /// 거부·전부 지난 시각) 원래대로 되돌리고, 전부 지났으면 팝업으로 알려준다.
+  Future<({_ReminderResult result, List<DateTime> scheduled, int skipped})>
+  _setReminderDays(CalendarEvent event, List<int> days) async {
+    final previous = List.of(event.reminderDaysBefore);
+    setState(() => event.setReminderDaysBefore(days));
     final attemptedAt = event.reminderAt;
     final outcome = await _syncReminder(event);
     if (outcome.result != _ReminderResult.ok && mounted) {
-      setState(() => event.reminderOffset = previous);
+      setState(() => event.setReminderDaysBefore(previous));
     }
     await _persist();
     if (outcome.result == _ReminderResult.past &&
@@ -207,18 +226,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
         mounted) {
       await showReminderPastDialog(context, attemptedAt: attemptedAt);
     }
-    // 시간 정보가 없는 일정(학사일정 등)은 언제 울리는지 팝업으로 알려준다. 여러 날
-    // 일정은 시작일·마감 하루 전·마감일 중 아직 안 지난 것만 나온다.
-    if (outcome.result == _ReminderResult.ok && event.isAllDay && mounted) {
-      await showReminderSetDialog(context, dates: outcome.scheduled);
-    }
+    return outcome;
   }
 
-  /// [event]에 걸려 있던 알림 예약을 전부 취소한다(시작일 알림과, 여러 날 일정의
-  /// 마감 하루 전·마감일 알림).
+  /// [event]에 걸려 있을 수 있는 알림 예약을 전부 취소한다("며칠 전"마다의 시작일
+  /// 알림과, 여러 날 일정의 마감 하루 전·마감일 알림).
   Future<void> _cancelReminders(CalendarEvent event) async {
-    for (final kind in ReminderKind.values) {
-      await _notifications.cancelReminder('${event.id}${kind.idSuffix}');
+    for (final suffix in CalendarEvent.allReminderIdSuffixes) {
+      await _notifications.cancelReminder('${event.id}$suffix');
     }
   }
 
@@ -226,34 +241,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// 울려야 할 알림([CalendarEvent.reminders]) 중 아직 안 지난 것만 건다 — 하나라도
   /// 걸리면 성공이고, 건 시각들을 [scheduled]로 돌려준다. 전부 지났으면
   /// [_ReminderResult.past], 권한이 없으면 안내 메시지를 띄우고
-  /// [_ReminderResult.denied]를 돌려준다. 실패하면 호출한 쪽이 알림 상태를 되돌린다.
-  Future<({_ReminderResult result, List<DateTime> scheduled})> _syncReminder(
-    CalendarEvent event,
-  ) async {
+  /// [_ReminderResult.denied]를 돌려준다. [skipped]는 지나서 건너뛴 "며칠 전"(시작일
+  /// 기준 알림)의 수다. 실패하면 호출한 쪽이 알림 상태를 되돌린다.
+  Future<({_ReminderResult result, List<DateTime> scheduled, int skipped})>
+  _syncReminder(CalendarEvent event) async {
+    const none = <DateTime>[];
     final all = event.reminders;
     if (all.isEmpty) {
       await _cancelReminders(event);
-      return (result: _ReminderResult.ok, scheduled: const <DateTime>[]);
+      return (result: _ReminderResult.ok, scheduled: none, skipped: 0);
     }
 
     final granted = await _notifications.requestPermission();
     if (!mounted) {
-      return (result: _ReminderResult.denied, scheduled: const <DateTime>[]);
+      return (result: _ReminderResult.denied, scheduled: none, skipped: 0);
     }
     if (!granted) {
       _showMessage('알림을 받으려면 설정에서 알림 권한을 허용해주세요');
       await _cancelReminders(event);
-      return (result: _ReminderResult.denied, scheduled: const <DateTime>[]);
+      return (result: _ReminderResult.denied, scheduled: none, skipped: 0);
     }
 
     final now = DateTime.now();
     final scheduled = <DateTime>[];
+    var skipped = 0;
     await _cancelReminders(event);
     for (final reminder in all) {
-      if (reminder.at.isBefore(now)) continue;
+      if (reminder.at.isBefore(now)) {
+        if (reminder.kind == ReminderKind.start) skipped++;
+        continue;
+      }
       await _notifications.scheduleReminder(
-        // 시작일·마감 하루 전·마감일 알림을 따로 취소할 수 있게 번호를 나눈다.
-        eventId: '${event.id}${reminder.kind.idSuffix}',
+        // "며칠 전"마다, 그리고 마감 하루 전·마감일 알림을 따로 취소할 수 있게
+        // 번호를 나눈다.
+        eventId: '${event.id}${reminder.idSuffix}',
         title: event.title,
         body: reminder.body,
         scheduledAt: reminder.at,
@@ -263,6 +284,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return (
       result: scheduled.isEmpty ? _ReminderResult.past : _ReminderResult.ok,
       scheduled: scheduled,
+      skipped: skipped,
     );
   }
 
@@ -271,7 +293,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final action = await showEventDetailSheet(
       context,
       event: event,
-      onReminderToggled: (turnOn) => _onReminderToggled(event, turnOn),
+      onReminderTap: () => _openReminderSettings(event),
     );
     if (!mounted || action == null) return;
     switch (action) {
@@ -317,7 +339,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // 알림을 걸 수 없으면(권한 거부/이미 지난 시각) 일정은 저장하고 알림만 뺀다.
     final attemptedAt = saved.reminderAt;
     final result = (await _syncReminder(saved)).result;
-    if (result != _ReminderResult.ok) saved.reminderOffset = null;
+    if (result != _ReminderResult.ok) saved.setReminderDaysBefore(const []);
 
     setState(() {
       final index = _events.indexWhere((e) => e.id == saved.id);
@@ -489,8 +511,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       final event = dayEvents[index];
                                       return EventRow(
                                         event: event,
-                                        onReminderToggled: (turnOn) =>
-                                            _onReminderToggled(event, turnOn),
+                                        // 종 버튼은 바로 켜고 끄지 않고 알림
+                                        // 설정 창을 연다(사용자 결정, 2026-11-13).
+                                        onReminderToggled: (_) =>
+                                            _openReminderSettings(event),
                                         onTap: () => _openEventDetail(event),
                                       );
                                     },

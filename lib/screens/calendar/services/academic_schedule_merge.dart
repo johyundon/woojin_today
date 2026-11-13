@@ -69,7 +69,7 @@ AcademicScheduleMerge mergeAcademicSchedule({
       events.add(e);
       continue;
     }
-    final updated = _fromItem(item)..reminderOffset = e.reminderOffset;
+    final updated = _fromItem(item)..reminderDaysBefore = e.reminderDaysBefore;
     events.add(updated);
     if (updated.hasReminder) changed.add(updated);
   }

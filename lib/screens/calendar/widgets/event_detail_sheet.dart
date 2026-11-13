@@ -11,13 +11,14 @@ import 'sheet_header.dart';
 enum EventDetailAction { edit, delete }
 
 /// 일정 카드를 눌렀을 때 아래에서 올라오는 상세 팝업(v7). 날짜/시간/
-/// 장소/알림을 보여주고, 알림은 여기서 바로 켜고 끌 수 있다. 직접 만든 일정이면
+/// 장소/알림을 보여주고, 알림 줄의 "설정" 버튼으로 알림 설정 창(며칠 전 알림)을
+/// 연다. 직접 만든 일정이면
 /// "삭제하기"/"수정하기" 버튼이 나오고, 누르면 그 동작을 반환하며 닫힌다.
 /// 학사일정은 수정·삭제할 수 없다는 안내와 "닫기" 버튼만 나온다.
 Future<EventDetailAction?> showEventDetailSheet(
   BuildContext context, {
   required CalendarEvent event,
-  required Future<void> Function(bool turnOn) onReminderToggled,
+  required Future<void> Function() onReminderTap,
 }) {
   return showModalBottomSheet<EventDetailAction>(
     context: context,
@@ -28,18 +29,15 @@ Future<EventDetailAction?> showEventDetailSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
     builder: (_) =>
-        _EventDetailBody(event: event, onReminderToggled: onReminderToggled),
+        _EventDetailBody(event: event, onReminderTap: onReminderTap),
   );
 }
 
 class _EventDetailBody extends StatefulWidget {
-  const _EventDetailBody({
-    required this.event,
-    required this.onReminderToggled,
-  });
+  const _EventDetailBody({required this.event, required this.onReminderTap});
 
   final CalendarEvent event;
-  final Future<void> Function(bool turnOn) onReminderToggled;
+  final Future<void> Function() onReminderTap;
 
   @override
   State<_EventDetailBody> createState() => _EventDetailBodyState();
@@ -68,25 +66,31 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
     return end == null ? _time(start) : '${_time(start)} – ${_time(end)}';
   }
 
-  /// 알림 줄 문구. 시간 정보가 없는 종일 일정(학사일정 등)의 "정각" 알림은 오전 9시에
-  /// 울리므로 "정각"이라고만 쓰지 않고 언제 울리는지 그대로 보여준다. 여러 날에 걸친
-  /// 학사일정은 시작일과 마감일(3일 이상이면 마감 전날도) 울린다.
+  /// 알림 줄 문구. 넣은 "며칠 전"을 "7일 전·당일"처럼 잇는다. 시간 정보가 없는
+  /// 종일 일정(학사일정 등)은 오전 9시에 울리므로 그 시각을 붙이고, 여러 날 일정의
+  /// "당일"은 "시작일"로 쓴다. 여러 날 학사일정은 마감일(3일 이상이면 마감 전날도)도
+  /// 울린다.
   String get _reminderText {
-    final offset = event.reminderOffset;
-    if (offset == null) return '알림 없음';
-    if (event.isAllDay && offset == ReminderOffset.atStart) {
-      if (!event.isMultiDay) return '당일 오전 9시';
-      if (event.isUserEvent) return '시작일 오전 9시';
-      final hasDayBefore = event.reminders.any(
-        (r) => r.kind == ReminderKind.dayBeforeEnd,
-      );
-      return hasDayBefore ? '시작일·마감 전날·마감일 오전 9시' : '시작일·마감일 오전 9시';
+    final days = event.reminderDaysBefore;
+    if (days.isEmpty) return '알림 없음';
+    final parts = [
+      for (final d in days)
+        event.isMultiDay && d == 0
+            ? '시작일'
+            : reminderDaysLabel(d, allDay: event.isAllDay),
+    ];
+    if (event.isMultiDay && !event.isUserEvent) {
+      if (event.reminders.any((r) => r.kind == ReminderKind.dayBeforeEnd)) {
+        parts.add('마감 전날');
+      }
+      parts.add('마감일');
     }
-    return offset.label;
+    final text = parts.join('·');
+    return event.isAllDay ? '$text 오전 9시' : text;
   }
 
-  Future<void> _toggle(bool turnOn) async {
-    await widget.onReminderToggled(turnOn);
+  Future<void> _openSettings() async {
+    await widget.onReminderTap();
     if (mounted) setState(() {});
   }
 
@@ -150,20 +154,24 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
               icon: Icons.notifications_active_rounded,
               label: '알림',
               value: _reminderText,
-              trailing: SizedBox(
-                width: 48,
-                height: 28,
-                child: FittedBox(
-                  child: Switch(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    value: event.hasReminder,
-                    onChanged: _toggle,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: AppColors.inkNavy,
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: AppColors.checkLine,
-                    trackOutlineColor: const WidgetStatePropertyAll(
-                      Colors.transparent,
+              trailing: Pressable(
+                onTap: _openSettings,
+                pressedScale: 0.93,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.fill,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '설정',
+                    style: TextStyle(
+                      color: AppColors.textStrong,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
