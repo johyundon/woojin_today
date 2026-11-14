@@ -26,19 +26,19 @@ class MileageMockData {
     MileageActivity(
       title: '신입생 멘토링 참여',
       date: '10.08',
-      points: 200,
+      points: '200',
       icon: Icons.groups,
     ),
     MileageActivity(
       title: '진로 특강 출석',
       date: '10.02',
-      points: 100,
+      points: '100',
       icon: Icons.mic,
     ),
     MileageActivity(
       title: '지도교수 상담 완료',
       date: '09.25',
-      points: 150,
+      points: '150',
       icon: Icons.school,
     ),
   ];

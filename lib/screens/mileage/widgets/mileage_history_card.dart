@@ -6,7 +6,7 @@ import '../models/mileage_models.dart';
 /// 적립 내역 줄 사이 선 rgb(232, 234, 238)(v7 디자인 47 mileage).
 const _rowLine = Color(0xFFE8EAEE);
 
-/// 흰 카드 안에 최근 적립 내역을 줄줄이 보여준다("신입생 멘토링 참여 +200").
+/// 흰 카드 안에 적립 내역(비교과 이수)을 줄줄이 보여준다("취업박람회 현장지도 +9").
 class MileageHistoryCard extends StatelessWidget {
   const MileageHistoryCard({required this.activities, super.key});
 

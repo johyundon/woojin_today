@@ -12,7 +12,8 @@ String formatPoints(int value) => value.toString().replaceAllMapped(
 /// 파란 카드 위 연한 글자색 rgb(220, 234, 255)(v7 디자인 47 mileage).
 const _onBlueSoftText = Color(0xFFDCEAFF);
 
-/// 파란 "내 마일리지" 카드 — 총 포인트, 다음 등급까지 남은 포인트와 진행 바.
+/// 파란 "현재 마일리지" 카드 — 지금 점수, 학기마다 초기화된다는 안내,
+/// 다음 등급까지 남은 포인트와 진행 바.
 ///
 /// 등급 문구·진행 바는 학교 API에 등급 기준이 없어 기본으로 숨긴다
 /// ([showNextTier]). 코드는 기준을 알게 되면 다시 켤 수 있게 남겨 두었다.
@@ -23,7 +24,7 @@ class MileageTotalCard extends StatelessWidget {
     super.key,
   });
 
-  /// 내 마일리지 점수.
+  /// 내 마일리지 점수(학기마다 초기화된다).
   final int total;
 
   /// 다음 등급까지 남은 포인트와 진행 바(목데이터 기준)를 보여줄지.
@@ -51,7 +52,7 @@ class MileageTotalCard extends StatelessWidget {
               Icon(Icons.stars_rounded, size: 15, color: _onBlueSoftText),
               SizedBox(width: 5),
               Text(
-                '내 마일리지',
+                '현재 마일리지',
                 style: TextStyle(
                   color: _onBlueSoftText,
                   fontSize: 12,
@@ -90,6 +91,15 @@ class MileageTotalCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '학기마다 초기화돼요',
+            style: TextStyle(
+              color: _onBlueSoftText,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
           if (showNextTier) ...[

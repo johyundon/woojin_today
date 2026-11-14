@@ -10,8 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// 응답 HTML은 2026-10-31 실제 응답 구조(점수·순위·스크립트의 학과/학년 코드)와
-// 명세서(상세_3 2·4번) 예시를 따라 만든 것이다. 학번은 모두 가짜다.
+// 응답 HTML은 2026-10-31 실제 응답 구조(점수·순위), 2026-11-14 실제 비교과
+// 이수 내역 응답 구조(9칸 표, 페이지당 5건, 소수 마일리지)와 명세서(상세_3 2번)
+// 예시를 따라 만든 것이다. 학번·활동은 모두 가짜다.
 
 const _statusHtml = '''
 <div class="mymileage_score">
@@ -32,18 +33,21 @@ const _statusHtml = '''
 </script>
 ''';
 
+/// 실제 응답처럼 한 행이 상태/활동 영역/활동명/운영시작일/운영종료일/운영부서/
+/// 출석현황/출석률/획득마일리지 9칸이다. [rows]는 (영역, 활동명, 시작일, 부서, 점수).
 String _historyPage(List<List<String>> rows, {int total = 7}) =>
     '''
-<table><thead><tr><th>획득일</th><th>구분</th><th>활동명</th><th>획득 마일리지</th></tr></thead>
+<div class="section_marea"><div class="tbl tbl_col"><table>
+<thead><tr><th>상태</th><th>활동 영역</th><th>활동명</th><th>운영시작일</th><th>운영종료일</th><th>운영부서</th><th>출석현황</th><th>출석률</th><th>획득마일리지</th></tr></thead>
 <tbody>
-${rows.map((r) => '<tr>${r.map((c) => '<td>$c</td>').join()}</tr>').join()}
-</tbody></table>
+${rows.map((r) => '<tr><td class="font_nightblue">이수</td><td class="ta_l">${r[0]}</td><td class="ta_l">${r[1]}</td><td>${r[2]}</td><td>${r[2]}</td><td>${r[3]}</td><td>1 / 1</td><td>100%</td><td>${r[4]}</td></tr>').join()}
+</tbody></table></div></div>
 <script>var currentPage = '1'; var totalCnt = '$total';</script>
 ''';
 
 const _emptyHistory = '''
-<table><thead><tr><th>획득일</th><th>구분</th><th>활동명</th><th>획득 마일리지</th></tr></thead>
-<tbody><tr><td colspan="4">마일리지 취득 현황이 없습니다</td></tr></tbody></table>
+<table><thead><tr><th>상태</th><th>활동 영역</th><th>활동명</th></tr></thead>
+<tbody><tr><td colspan="9">이수 내역이 없습니다</td></tr></tbody></table>
 <script>var currentPage = '1'; var totalCnt = '0';</script>
 ''';
 
@@ -78,19 +82,20 @@ MockClient _twin(
       return http.Response('', 200);
     case '/myStatus/a/n/getMyStatusListAjax.do':
       return _html(statusBody);
-    case '/myStatus/a/n/getMileageStatusInfoAjax.do':
+    case '/mileageHis/a/n/getMileageHistListAjax.do':
       if (historyBody != null) return _html(historyBody);
+      // 실제 서버처럼 날짜순이 아니게 섞어 준다.
       return _html(switch (request.bodyFields['pageIndex']) {
         '1' => _historyPage([
-          ['2026-09-10', '봉사활동', '교내 봉사', '5'],
-          ['2026-03-15', '학술활동', '세미나', '10'],
-          ['2026-02-20', '비교과', '특강', '3'],
-          ['2025-11-02', '봉사활동', '헌혈', '7'],
-          ['2025-09-01', '학술활동', '경진대회', '4'],
+          ['학습역량 강화 지원', '케미토링', '2026-05-01', '교수학습지원센터', '50'],
+          ['취, 창업 지원', '취업박람회', '2025-05-19', '취업팀', '9'],
+          ['취, 창업 지원', '자격증 취득반', '2023-11-07', '학생성공팀', '28'],
+          ['학습역량 강화 지원', '웰컴스쿨', '2021-03-18', '인성교육팀', '7.5'],
+          ['진로 및 심리 상담지원', '집단심리검사', '2021-05-03', '상담센터', '1.5'],
         ]),
         _ => _historyPage([
-          ['2026-10-01', '비교과', '취업특강', '6'],
-          ['2026-08-31', '비교과', '여름특강', 'x'],
+          ['학습역량 강화 지원', '스타트업', '2021-03-12', '비교과지원센터', '1'],
+          ['봉사', '날짜 모름', '-', '봉사센터', 'x'],
         ]),
       });
   }
@@ -165,7 +170,7 @@ void main() {
 
   final now = DateTime(2026, 10, 31, 12);
 
-  group('내 현황·지급 내역', () {
+  group('내 현황·비교과 이수 내역', () {
     Future<MileageStatus> fetch(
       http.Client client, {
       DateTime? at,
@@ -176,21 +181,28 @@ void main() {
       forceRefresh: forceRefresh,
     );
 
-    test('로그인 한 번으로 점수·순위와 모든 페이지의 지급 내역을 받는다', () async {
+    test('로그인 한 번으로 점수·순위와 모든 페이지의 비교과 이수 내역을 받는다', () async {
       final log = <http.Request>[];
       final status = await fetch(_twin(log));
 
       expect(status.points, 35);
       expect(status.sameGradeRank, 126);
       expect(status.history.map((e) => e.title), [
-        '교내 봉사',
-        '세미나',
-        '특강',
-        '헌혈',
-        '경진대회',
-        '취업특강',
-        '여름특강',
-      ]);
+        '케미토링',
+        '취업박람회',
+        '자격증 취득반',
+        '집단심리검사',
+        '웰컴스쿨',
+        '스타트업',
+        '날짜 모름',
+      ], reason: '운영시작일 최신순, 날짜를 못 읽은 행은 맨 뒤');
+      final first = status.history.first;
+      expect(first.date, '2026-05-01');
+      expect(first.category, '학습역량 강화 지원');
+      expect(first.department, '교수학습지원센터');
+      expect(first.status, '이수');
+      expect(first.points, 50);
+      expect(status.history[4].points, 7.5, reason: '소수 마일리지');
       expect(status.history.last.points, 0, reason: '숫자가 아니면 0');
       expect(
         log.where((r) => r.url.path == '/login/a/n/loginProc.do'),
@@ -198,13 +210,12 @@ void main() {
       );
 
       final historyCalls = log
-          .where((r) => r.url.path.endsWith('getMileageStatusInfoAjax.do'))
+          .where((r) => r.url.path.endsWith('getMileageHistListAjax.do'))
           .toList();
       expect(historyCalls, hasLength(2), reason: '7건 → 5건씩 2페이지');
       expect(historyCalls.first.bodyFields, {
         'userId': '11110001',
-        'sustCd': 'AA0194',
-        'shyrCd': '3',
+        'programType': 'NCR_PROGRAM',
         'pageIndex': '1',
       });
     });
@@ -227,10 +238,10 @@ void main() {
       );
     });
 
-    test('응답에 점수나 학과·학년 코드가 없으면 noData로 실패한다', () async {
+    test('응답에 점수나 순위가 없으면 noData로 실패한다', () async {
       for (final body in [
         '<p>로그인이 필요합니다</p>',
-        _statusHtml.replaceAll('sustCd', 'other'),
+        _statusHtml.replaceAll('ranking', 'other'),
       ]) {
         await expectLater(
           fetch(_twin([], statusBody: body)),
@@ -278,22 +289,26 @@ void main() {
     });
   });
 
-  test('이번 학기 합계는 지급 내역 날짜로 계산한다', () {
+  test('저장 형식(JSON)으로 바꿨다가 되읽어도 같다', () {
     final status = MileageStatus(
       points: 0,
       sameGradeRank: 1,
       fetchedAt: now,
       history: const [
-        MileageEntry(date: '2026-10-01', category: '', title: '', points: 6),
-        MileageEntry(date: '2026.09.01', category: '', title: '', points: 5),
-        MileageEntry(date: '2026-08-31', category: '', title: '', points: 100),
-        MileageEntry(date: '2027-02-28', category: '', title: '', points: 2),
-        MileageEntry(date: '날짜없음', category: '', title: '', points: 50),
+        MileageEntry(
+          date: '2021-03-18',
+          category: '학습역량 강화 지원',
+          title: '웰컴스쿨',
+          department: '인성교육팀',
+          status: '이수',
+          points: 7.5,
+        ),
       ],
     );
-    expect(status.semesterPoints(DateTime(2026, 10, 31)), 13);
-    expect(status.semesterPoints(DateTime(2027, 1, 15)), 13);
-    expect(status.semesterPoints(DateTime(2026, 5, 1)), 100);
+    final back = MileageStatus.fromJson(
+      jsonDecode(jsonEncode(status.toJson())) as Map<String, dynamic>,
+    );
+    expect(back.history.single.toJson(), status.history.single.toJson());
   });
 
   group('장학 대상자', () {

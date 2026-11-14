@@ -11,32 +11,29 @@ import '../../widgets/twin_credentials_form.dart';
 import 'models/mileage_models.dart';
 import 'widgets/mileage_history_card.dart';
 import 'widgets/mileage_scholarship_tab.dart';
-import 'widgets/mileage_total_card.dart' show MileageTotalCard, formatPoints;
+import 'widgets/mileage_total_card.dart';
 
 typedef MileageCredentials = ({String userId, String userPwd});
 
-/// "모은 마일리지" 화면(v7 디자인). 총 포인트 카드, 이번 학기 카드, 장학
-/// 대상자 카드, 적립 내역을 보여준다.
+/// "마일리지" 화면(v7 디자인). 현재 점수 카드, 장학 대상자 카드, 적립 내역
+/// (내가 이수한 비교과 프로그램)을 보여준다.
+///
+/// 마일리지는 학기마다 초기화되므로 점수를 쌓이는 값처럼 보이지 않게 했다.
+/// 원래 있던 "이번 학기" 합계 카드는 같은 이유로 없앴다.
 ///
 /// 흐름: 학번·비밀번호(자동 로그인 때 저장한 값, 없으면 입력) → T-WIN에 한 번
-/// 로그인해 내 점수와 지급 내역을 받는다(하루 캐시). 당겨서 새로고침하면 캐시를
+/// 로그인해 내 점수와 비교과 이수 내역을 받는다(하루 캐시). 당겨서 새로고침하면 캐시를
 /// 무시하고 새로 받는다. "장학 대상자" 카드를 누르면 학교 홈페이지의 대상자 공지와
 /// 명단 확인 화면으로 간다.
 ///
 /// 학교 API에 없는 값(다음 등급·진행 바, "장학 기준 2,000P")은 숨겼다. 목데이터
 /// ([MileageMockData] 등)와 그 값을 그리는 코드는 남겨 두었다.
 class MileageScreen extends StatefulWidget {
-  const MileageScreen({
-    this.service,
-    this.readCredentials,
-    this.now,
-    super.key,
-  });
+  const MileageScreen({this.service, this.readCredentials, super.key});
 
   /// 테스트용 주입 지점들.
   final MileageServiceBase? service;
   final Future<MileageCredentials?> Function()? readCredentials;
-  final DateTime Function()? now;
 
   @override
   State<MileageScreen> createState() => _MileageScreenState();
@@ -235,7 +232,7 @@ class _MileageScreenState extends State<MileageScreen> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        '모은 마일리지',
+                        '마일리지',
                         style: TextStyle(
                           color: AppColors.textStrong,
                           fontSize: 26,
@@ -280,38 +277,40 @@ class _MileageScreenState extends State<MileageScreen> {
     if (status == null) {
       return [_Message(text: _error ?? '마일리지 정보를 불러오지 못했어요.', onRetry: _load)];
     }
-    final now = (widget.now ?? DateTime.now)();
     return [
       MileageTotalCard(total: status.points),
       const SizedBox(height: 12),
-      IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _PointCard(
-                color: AppColors.blueSoft,
-                valueColor: AppColors.blueText,
-                label: '이번 학기',
-                value: '+${formatPoints(status.semesterPoints(now))}P',
-              ),
-            ),
-            const SizedBox(width: 10),
-            // 원래 "장학 기준 2,000P" 카드였다. 기준 점수는 API에 없어 숨기고,
-            // 같은 자리에서 대상자 확인으로 들어가게 했다.
-            Expanded(
-              child: _PointCard(
-                color: _scholarshipCardBackground,
-                valueColor: _scholarshipCardValue,
-                label: '장학 대상자',
-                value: '확인 →',
-                onTap: _openScholarshipTargets,
-              ),
-            ),
-          ],
+      // 원래 "장학 기준 2,000P" 카드였다. 기준 점수는 API에 없어 숨기고,
+      // 같은 자리에서 대상자 확인으로 들어가게 했다.
+      _PointCard(
+        color: _scholarshipCardBackground,
+        valueColor: _scholarshipCardValue,
+        label: '장학 대상자',
+        value: '확인 →',
+        onTap: _openScholarshipTargets,
+      ),
+      const SizedBox(height: 24),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Text.rich(
+          TextSpan(
+            text: '적립 내역',
+            children: [
+              if (status.history.isNotEmpty)
+                TextSpan(
+                  text: '  ${status.history.length}건',
+                  style: const TextStyle(color: AppColors.blue),
+                ),
+            ],
+          ),
+          style: const TextStyle(
+            color: AppColors.textStrong,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 10),
       MileageHistoryCard(
         activities: [for (final e in status.history) _toActivity(e)],
       ),
@@ -321,23 +320,34 @@ class _MileageScreenState extends State<MileageScreen> {
   static MileageActivity _toActivity(MileageEntry e) {
     final d = e.parsedDate;
     String two(int v) => v.toString().padLeft(2, '0');
+    final day = d == null ? e.date : '${d.year}.${two(d.month)}.${two(d.day)}';
+    final points = e.points == e.points.truncateToDouble()
+        ? e.points.toInt().toString()
+        : e.points.toString();
     return MileageActivity(
       title: e.title,
-      date: d == null
-          ? e.date
-          : '${d.year}.${two(d.month)}.${two(d.day)} · ${e.category}',
-      points: e.points,
+      date: [
+        day,
+        if (e.department.isNotEmpty) e.department,
+        // 이수가 아닌 상태(미이수 등)는 실제 응답에서 못 봤지만 오면 같이 적는다.
+        if (e.status.isNotEmpty && e.status != '이수') e.status,
+      ].join(' · '),
+      points: points,
       icon: _iconFor(e.category),
     );
   }
 
+  /// 활동 영역(예: "취, 창업 지원 Let's DJ (Discover Job)")으로 아이콘을 고른다.
   static IconData _iconFor(String category) {
     if (category.contains('봉사')) return Icons.volunteer_activism_rounded;
-    if (category.contains('학술') || category.contains('상담')) {
-      return Icons.school_rounded;
+    if (category.contains('취') || category.contains('창업')) {
+      return Icons.work_rounded;
     }
-    if (category.contains('특강') || category.contains('교육')) {
-      return Icons.mic_rounded;
+    if (category.contains('상담') || category.contains('심리')) {
+      return Icons.psychology_rounded;
+    }
+    if (category.contains('학습') || category.contains('학술')) {
+      return Icons.school_rounded;
     }
     return Icons.stars_rounded;
   }

@@ -118,7 +118,7 @@ abstract final class AppFeatures {
 
   static final mileage = AppFeature(
     label: '마일리지',
-    description: '쌓은 점수와 내역',
+    description: '내 점수와 비교과 내역',
     icon: Icons.stars_rounded,
     keywords: const ['장학', '장학금', '포인트', '점수'],
     open: (context, links) => _push(context, const MileageScreen()),

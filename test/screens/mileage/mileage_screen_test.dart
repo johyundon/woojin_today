@@ -19,16 +19,20 @@ class _FakeMileage implements MileageServiceBase {
 
   static const _history = [
     MileageEntry(
-      date: '2026-10-08',
-      category: '봉사활동',
-      title: '신입생 멘토링 참여',
-      points: 20,
+      date: '2026-05-01',
+      category: '학습역량 강화 지원',
+      title: '전공기초학력향상프로그램',
+      department: '교수학습지원센터',
+      status: '이수',
+      points: 50,
     ),
     MileageEntry(
-      date: '2026-03-15',
-      category: '학술활동',
-      title: '학과 세미나 참석',
-      points: 3,
+      date: '2021-03-18',
+      category: '학습역량 강화 지원',
+      title: '대진웰컴스쿨',
+      department: '인성교육팀',
+      status: '미이수',
+      points: 7.5,
     ),
   ];
 
@@ -88,26 +92,32 @@ Widget _app(
     userPwd: 'pw',
   ),
 }) => MaterialApp(
-  home: MileageScreen(
-    service: service,
-    readCredentials: () async => stored,
-    now: () => DateTime(2026, 10, 31),
-  ),
+  home: MileageScreen(service: service, readCredentials: () async => stored),
 );
 
 void main() {
-  testWidgets('내 점수 · 이번 학기 합계 · 적립 내역을 그리고 API에 없는 값은 숨긴다', (tester) async {
+  testWidgets('현재 점수와 초기화 안내, 적립 내역(비교과 이수)을 그리고 누적처럼 보이는 값은 없다', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app(_FakeMileage()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('모은 마일리지'), findsOneWidget);
+    expect(find.text('마일리지'), findsOneWidget);
+    expect(find.text('모은 마일리지'), findsNothing);
+    expect(find.text('현재 마일리지'), findsOneWidget);
     expect(find.text('1,240'), findsOneWidget);
-    expect(find.text('+20P'), findsOneWidget, reason: '9월 이후 내역만 이번 학기');
-    expect(find.text('신입생 멘토링 참여'), findsOneWidget);
-    expect(find.text('2026.10.08 · 봉사활동'), findsOneWidget);
-    expect(find.text('+20'), findsOneWidget);
-    expect(find.text('학과 세미나 참석'), findsOneWidget);
+    expect(find.text('학기마다 초기화돼요'), findsOneWidget);
+    expect(find.text('이번 학기'), findsNothing);
+
+    expect(find.textContaining('적립 내역'), findsOneWidget);
+    expect(find.textContaining('2건'), findsOneWidget);
+    expect(find.text('전공기초학력향상프로그램'), findsOneWidget);
+    expect(find.text('2026.05.01 · 교수학습지원센터'), findsOneWidget);
+    expect(find.text('+50'), findsOneWidget);
+    expect(find.text('대진웰컴스쿨'), findsOneWidget);
+    expect(find.text('2021.03.18 · 인성교육팀 · 미이수'), findsOneWidget);
+    expect(find.text('+7.5'), findsOneWidget);
 
     expect(find.textContaining('실버까지'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
@@ -118,7 +128,7 @@ void main() {
     await tester.pumpWidget(_app(_FakeMileage(history: const [])));
     await tester.pumpAndSettle();
     expect(find.text('적립 내역이 없어요'), findsOneWidget);
-    expect(find.text('+0P'), findsOneWidget);
+    expect(find.textContaining('건'), findsNothing);
   });
 
   testWidgets('저장된 학번이 없으면 입력받아 조회한다', (tester) async {
@@ -169,7 +179,7 @@ void main() {
     await tester.pumpWidget(_app(service));
     await tester.pumpAndSettle();
 
-    await tester.fling(find.text('모은 마일리지'), const Offset(0, 400), 1000);
+    await tester.fling(find.text('마일리지'), const Offset(0, 400), 1000);
     await tester.pumpAndSettle();
 
     expect(service.calls.map((c) => c.forceRefresh), [false, true]);

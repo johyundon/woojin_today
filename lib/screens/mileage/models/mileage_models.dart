@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// 마일리지 적립 내역 한 건.
+/// 마일리지 적립 내역(비교과 이수) 한 건.
 class MileageActivity {
   const MileageActivity({
     required this.title,
@@ -11,9 +11,11 @@ class MileageActivity {
 
   final String title;
 
-  /// "10.08" 형태의 적립일.
+  /// 날짜와 부가 정보 한 줄(예: "2026.05.01 · 교수학습지원센터").
   final String date;
-  final int points;
+
+  /// 화면에 보일 점수 글자(예: "50", "7.5").
+  final String points;
   final IconData icon;
 }
 
