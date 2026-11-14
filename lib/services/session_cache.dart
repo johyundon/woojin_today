@@ -27,6 +27,10 @@ class SessionCache {
   /// 로그인 화면·자동 로그인(스플래시)에서 채우고 [clear]로 지운다.
   static String? homepageCookie;
 
+  /// 지금 로그인한 학생의 학번. 로그인 직후([postLoginScreen])에 채우고 [clear]로
+  /// 지운다. 학번별로 나눠 저장하는 기기 데이터(캘린더 일정)가 쓴다.
+  static String? userId;
+
   /// [StudentInfoServiceBase.fetchStudentInfo] 결과를 [userId2] 기준으로
   /// 캐싱한다. 이 서비스 호출은 jsessionId/wmonid를 쓰지 않으므로(명세:
   /// SUGANG_SIMPLE_COOKIE 패턴) 키에도 포함하지 않는다.
@@ -119,5 +123,6 @@ class SessionCache {
     _courseCatalogCache.clear();
     _myTimetableCache.clear();
     homepageCookie = null;
+    userId = null;
   }
 }

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../services/session_cache.dart';
 import '../services/terms_acceptance_storage.dart';
+import 'calendar/services/calendar_reminder_restore.dart';
 import 'onboarding_screen.dart';
 import 'student_id_login_complete_screen.dart';
 import 'terms_agreement_screen.dart';
@@ -17,6 +21,10 @@ Future<Widget> postLoginScreen({
   String? userId2,
   TermsAcceptanceStorage? storage,
 }) async {
+  // 학번별로 저장하는 캘린더 일정이 이 학생의 칸을 읽도록 기억하고, 로그아웃 때
+  // 지워졌던 일정 알림을 다시 건다(기다리지 않음).
+  SessionCache.userId = userId;
+  unawaited(restoreCalendarReminders());
   final s = storage ?? TermsAcceptanceStorage();
   if (!await s.hasAccepted(userId)) {
     return TermsAgreementScreen(

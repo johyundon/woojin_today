@@ -58,6 +58,28 @@ void main() {
     expect(await prefs.getString('daejin_saved_timetables'), isNull);
   });
 
+  test('학번별 캘린더 일정은 남겨 다시 로그인하면 돌아온다(예전 한 칸은 지움)', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final prefs = SharedPreferencesAsync();
+    await prefs.setString('daejin_calendar_events_20211476', '[]');
+    await prefs.setString('daejin_calendar_events', '[]');
+    var notificationsCancelled = false;
+
+    await clearUserDataOnLogout(
+      prefs: prefs,
+      cancelNotifications: () async => notificationsCancelled = true,
+      cancelNoticeBackground: () async {},
+    );
+
+    expect(await prefs.getString('daejin_calendar_events_20211476'), '[]');
+    expect(await prefs.getString('daejin_calendar_events'), isNull);
+    // 일정은 남겨도 예약 알림은 지워야 다른 학생 폰 화면에 안 울린다.
+    expect(notificationsCancelled, isTrue);
+  });
+
   test('한 단계가 실패해도 나머지는 계속 지운다', () async {
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../screens/calendar/services/calendar_event_storage.dart';
 import 'credential_storage.dart';
 import 'notice_background.dart';
 import 'notification_service.dart';
@@ -12,13 +13,15 @@ import 'terms_acceptance_storage.dart';
 /// 같은 기기로 다른 학생이 로그인할 수 있으므로 다음을 모두 비운다.
 /// - 자동 로그인용 학번·비밀번호(키체인)
 /// - 학생정보·시간표·개설과목 임시 기억([SessionCache])
-/// - 기기 저장소(저장한 시간표, 캘린더 일정, 공지 읽음 등)
+/// - 기기 저장소(저장한 시간표, 공지 읽음 등). 캘린더 일정은 학번별 칸에 남긴다.
 /// - 예전 방식 저장소의 캐시(학과 등수 평점, 공지 목록, 학식, 학사일정)
 /// - 예약된 알림 전체(캘린더 일정, 강의시간)
 /// - 앱이 꺼져 있을 때의 새 공지 확인 작업([NoticeBackground])
 ///
 /// 기기 저장소는 학번별 약관 동의·온보딩 완료 기록
-/// ([TermsAcceptanceStorage.isKeptOnLogout])만 남기고 전부 지운다 — 같은 학생이
+/// ([TermsAcceptanceStorage.isKeptOnLogout])과 학번별 캘린더 일정
+/// ([CalendarEventStorage.isKeptOnLogout], 사용자 결정 2026-11-14 — 다시 로그인하면
+/// 내 일정이 돌아오게)만 남기고 전부 지운다 — 같은 학생이
 /// 다시 로그인했을 때 약관·온보딩을 또 보지 않게 하려는 것이고, 이 기록에는
 /// 학번과 "봤다"는 표시만 있다. 사용자와 무관한 기기 설정을 저장하게 되면 이
 /// 부분을 다시 봐야 한다.
@@ -43,7 +46,11 @@ Future<void> clearUserDataOnLogout({
   await _run('기기 저장소', () async {
     final p = prefs ?? SharedPreferencesAsync();
     final toRemove = (await p.getKeys())
-        .where((k) => !TermsAcceptanceStorage.isKeptOnLogout(k))
+        .where(
+          (k) =>
+              !TermsAcceptanceStorage.isKeptOnLogout(k) &&
+              !CalendarEventStorage.isKeptOnLogout(k),
+        )
         .toSet();
     if (toRemove.isNotEmpty) await p.clear(allowList: toRemove);
   });
