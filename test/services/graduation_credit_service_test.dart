@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:daejin_app/screens/graduation/models/graduation_credit.dart';
 import 'package:daejin_app/services/graduation_credit_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -66,6 +67,9 @@ void main() {
       expect(first.name, '과목01');
       expect(first.credit, 2);
       expect(first.grade, 'A+');
+      expect(first.area, '교필');
+      final liberal = summary.categories.firstWhere((c) => c.label == '교선');
+      expect(liberal.courses.map((c) => c.area), contains('교선4균형'));
 
       final major = summary.categories.firstWhere((c) => c.label == '전선');
       expect(major.courses.last.semester, '2026-2');
@@ -229,5 +233,48 @@ void main() {
         throwsA(isA<GraduationCreditNetworkException>()),
       );
     });
+  });
+
+  test('저장값에 세부 영역을 남기고, 예전 저장값(영역 없음)도 읽는다', () {
+    final summary = GraduationCreditSummary(
+      categories: const [
+        GraduationCreditCategory(
+          label: '교선',
+          earned: 2,
+          courses: [
+            GraduationCourseRecord(
+              name: 'a',
+              semester: '2021-1',
+              credit: 2,
+              grade: 'A',
+              area: '교선1균형',
+            ),
+          ],
+        ),
+      ],
+      fetchedAt: DateTime(2026, 11, 14),
+    );
+    final json = summary.toJson();
+    expect(
+      GraduationCreditSummary.fromJson(json)
+          .categories
+          .single
+          .courses
+          .single
+          .area,
+      '교선1균형',
+    );
+    ((json['categories'] as List).single['courses'] as List).single.remove(
+      'area',
+    );
+    expect(
+      GraduationCreditSummary.fromJson(json)
+          .categories
+          .single
+          .courses
+          .single
+          .area,
+      '',
+    );
   });
 }

@@ -451,6 +451,7 @@ class GraduationCreditService implements GraduationCreditServiceBase {
         semester: cells[semesterIndex].text.trim(),
         credit: credit,
         grade: grade,
+        area: area,
       ),
     );
   }

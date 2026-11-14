@@ -31,8 +31,11 @@ class GraduationCourseRecord {
     required this.semester,
     required this.credit,
     required this.grade,
+    this.area = '',
   });
 
+  /// 학교 표의 이수영역 칸 그대로(예: 교필, 교선4균형, 전선). 없으면 빈 문자열.
+  final String area;
   final String name;
   final String semester;
   final int credit;
@@ -106,6 +109,7 @@ class GraduationCreditSummary {
                 'semester': r.semester,
                 'credit': r.credit,
                 'grade': r.grade,
+                'area': r.area,
               },
           ],
         },
@@ -137,6 +141,7 @@ class GraduationCreditSummary {
                     semester: r['semester'] as String,
                     credit: r['credit'] as int,
                     grade: r['grade'] as String,
+                    area: r['area'] as String? ?? '',
                   ),
               ],
             ),

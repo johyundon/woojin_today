@@ -36,6 +36,62 @@ class GraduationCreditScreen extends StatefulWidget {
   /// 테스트에서 가짜 서비스를 넣을 때 쓴다. 없으면 실제 서비스.
   final GraduationCreditServiceBase? service;
 
+  /// 칩에 보여줄 묶음 — 주전공 → 복수전공 → 교양 순서. 학교 이수구분(전필·전선,
+  /// 교필·교선 등)의 학점·기준·과목을 묶음별로 더한다. 복수전공은 기준도 과목도
+  /// 없으면(복수전공을 안 하는 학생) 뺀다. 어느 묶음에도 없는 구분(예: 일선)은
+  /// 칩으로 보여주지 않는다(총 이수학점에는 들어 있다).
+  @visibleForTesting
+  static List<GraduationCreditCategory> groupCategories(
+    List<GraduationCreditCategory> categories,
+  ) {
+    GraduationCreditCategory merge(
+      String label,
+      bool Function(String label) belongs,
+    ) {
+      final members = [
+        for (final c in categories)
+          if (belongs(c.label)) c,
+      ];
+      final requireds = [
+        for (final c in members)
+          if (c.required != null) c.required!,
+      ];
+      return GraduationCreditCategory(
+        label: label,
+        earned: members.fold(0, (sum, c) => sum + c.earned),
+        required: requireds.isEmpty
+            ? null
+            : requireds.fold<int>(0, (sum, r) => sum + r),
+        courses: [
+          for (final c in members)
+            for (final r in c.courses)
+              // 예전에 저장해 둔 값엔 세부 이수영역이 없어 학교 구분 이름으로 채운다.
+              r.area.isNotEmpty
+                  ? r
+                  : GraduationCourseRecord(
+                      name: r.name,
+                      semester: r.semester,
+                      credit: r.credit,
+                      grade: r.grade,
+                      area: c.label,
+                    ),
+        ],
+      );
+    }
+
+    final major = merge('주전공', (l) => const {'전기', '전필', '전선'}.contains(l));
+    final doubleMajor = merge('복수전공', (l) => l.startsWith('복'));
+    final liberal = merge('교양', (l) => const {'교필', '교선', '기초'}.contains(l));
+    return [
+      major,
+      if ((doubleMajor.required ?? 0) > 0 ||
+          doubleMajor.earned > 0 ||
+          doubleMajor.courses.isNotEmpty)
+        doubleMajor,
+      liberal,
+    ];
+  }
+
   @override
   State<GraduationCreditScreen> createState() => _GraduationCreditScreenState();
 }
@@ -209,7 +265,7 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
       s.categories.isEmpty && s.totalEarned == null;
 
   List<Widget> _content(GraduationCreditSummary summary) {
-    final categories = summary.categories;
+    final groups = GraduationCreditScreen.groupCategories(summary.categories);
     // 기준이 있는 영역과 기준 칸이 빈 영역을 나눠 각각 카드로 보여준다.
     final areasWithRule = [
       for (final a in summary.areas)
@@ -228,25 +284,24 @@ class _GraduationCreditScreenState extends State<GraduationCreditScreen> {
         gpaMinimum: summary.gpaMinimum,
       ),
       const SizedBox(height: 12),
-      // 칩 줄은 시트 좌우 여백 안에서만 보이게 하고, 그 선에서 칩이 잘리게
-      // 한다. 그림자가 위아래로는 잘리면 안 돼서 가로만 자른다.
+      // v7 디자인(11-2 졸업학점): 주전공 · 복수전공 · 교양 칩이 한 줄을 고르게 나눠 쓴다.
       SizedBox(
         height: 108,
-        child: ClipRect(
-          clipper: _HorizontalOnlyClipper(),
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            itemCount: categories.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, index) =>
-                _CategoryChip(category: categories[index], onTap: _openDetail),
-          ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (index, group) in groups.indexed) ...[
+              if (index > 0) const SizedBox(width: 10),
+              Expanded(
+                child: _CategoryChip(category: group, onTap: _openDetail),
+              ),
+            ],
+          ],
         ),
       ),
       const SizedBox(height: 12),
       if (areasWithRule.isNotEmpty) ...[
-        _AreaProgressCard(title: '교양 영역별 이수현황', items: areasWithRule),
+        _AreaProgressCard(title: '영역별 이수현황', items: areasWithRule),
         const SizedBox(height: 12),
       ],
       _GraduationRuleNotice(rules: summary.rules),
@@ -327,16 +382,6 @@ class _StatusCard extends StatelessWidget {
             ),
     );
   }
-}
-
-/// 좌우만 자르고 위아래는 넉넉히 열어 두는 클리퍼 — 칩 그림자가 잘리지 않게.
-class _HorizontalOnlyClipper extends CustomClipper<Rect> {
-  @override
-  Rect getClip(Size size) =>
-      Rect.fromLTRB(0, -48, size.width, size.height + 48);
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Rect> oldClipper) => false;
 }
 
 /// 헤더: 흰 네모 뒤로가기 버튼, 회색 "졸업학점" 배지, 큰 제목, 오른쪽 위
@@ -661,9 +706,9 @@ class _DashedLinePainter extends CustomPainter {
   bool shouldRepaint(covariant _DashedLinePainter oldDelegate) => false;
 }
 
-/// 가로 스크롤 줄의 이수구분 칩 하나("전선 48/30 · 9과목"). 누르면 그
-/// 구분에서 들은 과목 목록을 화면 위에 오버레이 카드로 보여준다(과목이
-/// 없으면 — 예: 복수전공 0과목 — 열지 않는다).
+/// 묶음 칩 하나("주전공 27/60 · 9과목"). 누르면 그 묶음에서 들은 과목 목록을
+/// 화면 위에 오버레이 카드로 보여준다(과목이 없으면 — 예: 복수전공 0과목 —
+/// 열지 않는다).
 class _CategoryChip extends StatelessWidget {
   const _CategoryChip({required this.category, required this.onTap});
 
@@ -678,7 +723,6 @@ class _CategoryChip extends StatelessWidget {
       onTap: () => onTap(category),
       enabled: category.courses.isNotEmpty,
       child: Container(
-        width: 111,
         padding: const EdgeInsets.all(16),
         decoration: _cardDecoration(),
         child: Column(
@@ -742,18 +786,42 @@ class _CategoryChip extends StatelessWidget {
 
 /// 칩을 누르면 뜨는 상세 카드 — 바텀시트가 아니라 화면 가운데에 떠 있는
 /// 오버레이 카드다. 과목 행 사이엔 구분선 없이 여백만 둔다.
-class _CourseDetailCard extends StatelessWidget {
+///
+/// 제목 아래에 세부 이수영역(교필·교선4균형·전선 등)과 이수학기로 과목을 거르는
+/// 필터 줄이 있다. 고를 값이 두 가지 이상일 때만 그 줄을 보여준다.
+class _CourseDetailCard extends StatefulWidget {
   const _CourseDetailCard({required this.category});
 
   final GraduationCreditCategory category;
 
   @override
+  State<_CourseDetailCard> createState() => _CourseDetailCardState();
+}
+
+class _CourseDetailCardState extends State<_CourseDetailCard> {
+  /// null이면 전체.
+  String? _area;
+  String? _semester;
+
+  @override
   Widget build(BuildContext context) {
+    final category = widget.category;
     final restText = category.required == null
         ? '학점'
         : '/${category.required}학점';
     final valueColor = _categoryValueColor(category);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.6;
+
+    final areas = {for (final c in category.courses) c.area}.toList();
+    final semesters = {for (final c in category.courses) c.semester}.toList()
+      ..sort();
+    final courses = [
+      for (final c in category.courses)
+        if ((_area == null || c.area == _area) &&
+            (_semester == null || c.semester == _semester))
+          c,
+    ];
+    final filtered = _area != null || _semester != null;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -795,57 +863,150 @@ class _CourseDetailCard extends StatelessWidget {
               ),
             ],
           ),
+          if (areas.length > 1) ...[
+            const SizedBox(height: 12),
+            _FilterRow(
+              allLabel: '전체 영역',
+              options: areas,
+              selected: _area,
+              onSelected: (v) => setState(() => _area = v),
+            ),
+          ],
+          if (semesters.length > 1) ...[
+            const SizedBox(height: 8),
+            _FilterRow(
+              allLabel: '전체 학기',
+              options: semesters,
+              selected: _semester,
+              onSelected: (v) => setState(() => _semester = v),
+            ),
+          ],
+          if (filtered) ...[
+            const SizedBox(height: 10),
+            Text(
+              '${courses.length}과목 · '
+              '${courses.fold<int>(0, (sum, c) => sum + c.credit)}학점',
+              style: const TextStyle(
+                color: AppColors.textSub,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: category.courses.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 14),
-              itemBuilder: (context, index) {
-                final course = category.courses[index];
-                return Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            child: courses.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      '조건에 맞는 과목이 없어요',
+                      style: TextStyle(color: AppColors.textSub, fontSize: 13),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: courses.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
+                    itemBuilder: (context, index) {
+                      final course = courses[index];
+                      return Row(
                         children: [
-                          Text(
-                            course.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.textStrong,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  course.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textStrong,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  [
+                                    if (course.area.isNotEmpty) course.area,
+                                    course.semester,
+                                    '${course.credit}학점',
+                                  ].join(' · '),
+                                  style: const TextStyle(
+                                    color: AppColors.textSub,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          // 이번 학기 수강 중인 과목은 성적 칸이 비어 있다.
                           Text(
-                            '${course.semester} · ${course.credit}학점',
-                            style: const TextStyle(
-                              color: AppColors.textSub,
-                              fontSize: 12,
+                            course.grade.isEmpty ? '수강중' : course.grade,
+                            style: TextStyle(
+                              color: course.grade.isEmpty
+                                  ? AppColors.textMuted
+                                  : AppColors.blue,
+                              fontSize: course.grade.isEmpty ? 12 : 14,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    // 이번 학기 수강 중인 과목은 성적 칸이 비어 있다.
-                    Text(
-                      course.grade.isEmpty ? '수강중' : course.grade,
-                      style: TextStyle(
-                        color: course.grade.isEmpty
-                            ? AppColors.textMuted
-                            : AppColors.blue,
-                        fontSize: course.grade.isEmpty ? 12 : 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                );
-              },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 상세 카드의 필터 한 줄 — "전체" 칩 뒤에 고를 값 칩이 가로로 늘어서고, 넘치면
+/// 옆으로 민다. 고른 칩은 파랑 바탕에 흰 글자.
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.allLabel,
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String allLabel;
+  final List<String> options;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String label, String? value) {
+      final on = selected == value;
+      return Pressable(
+        onTap: () => onSelected(value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: on ? AppColors.blue : AppColors.fill,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: on ? Colors.white : AppColors.textSub,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
           ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip(allLabel, null),
+          for (final o in options) ...[const SizedBox(width: 6), chip(o, o)],
         ],
       ),
     );

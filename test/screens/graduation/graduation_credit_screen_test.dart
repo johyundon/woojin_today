@@ -24,6 +24,42 @@ final _summary = GraduationCreditSummary(
           semester: '2021-1',
           credit: 2,
           grade: 'A+',
+          area: '교필',
+        ),
+      ],
+    ),
+    GraduationCreditCategory(
+      label: '교선',
+      earned: 4,
+      required: 24,
+      courses: [
+        GraduationCourseRecord(
+          name: '균형과목',
+          semester: '2023-2',
+          credit: 2,
+          grade: 'B',
+          area: '교선1균형',
+        ),
+        // 예전에 저장한 값처럼 세부 영역이 비어 있으면 구분 이름(교선)으로 채운다.
+        GraduationCourseRecord(
+          name: '영역없는과목',
+          semester: '2021-1',
+          credit: 2,
+          grade: 'A',
+        ),
+      ],
+    ),
+    GraduationCreditCategory(
+      label: '전필',
+      earned: 6,
+      required: 12,
+      courses: [
+        GraduationCourseRecord(
+          name: '전필과목',
+          semester: '2024-1',
+          credit: 3,
+          grade: 'A',
+          area: '전필',
         ),
       ],
     ),
@@ -37,6 +73,7 @@ final _summary = GraduationCreditSummary(
           semester: '2026-2',
           credit: 3,
           grade: '',
+          area: '전선',
         ),
       ],
     ),
@@ -77,6 +114,30 @@ Widget _app(GraduationCreditServiceBase service, {String? userId2 = 'uid'}) =>
     );
 
 void main() {
+  test('칩은 주전공 → 복수전공 → 교양 순서로 학교 구분을 더해 묶는다', () {
+    final groups = GraduationCreditScreen.groupCategories(_summary.categories);
+    expect(groups.map((g) => g.label), ['주전공', '복수전공', '교양']);
+    final major = groups[0];
+    expect(major.earned, 54);
+    expect(major.required, 42);
+    expect(major.courses.map((c) => c.name), ['전필과목', '수강중과목']);
+    expect(groups[1].earned, 0);
+    expect(groups[1].required, 36);
+    final liberal = groups[2];
+    expect(liberal.earned, 17);
+    expect(liberal.required, 36);
+    expect(liberal.courses.map((c) => c.area), ['교필', '교선1균형', '교선']);
+  });
+
+  test('복수전공 기준도 과목도 없으면 복수전공 칩을 빼고, 일선은 칩에 없다', () {
+    final groups = GraduationCreditScreen.groupCategories(const [
+      GraduationCreditCategory(label: '전선', earned: 3, required: 30),
+      GraduationCreditCategory(label: '교필', earned: 2, required: 12),
+      GraduationCreditCategory(label: '일선', earned: 9),
+    ]);
+    expect(groups.map((g) => g.label), ['주전공', '교양']);
+  });
+
   testWidgets('총 이수학점·졸업평점·구분 칩·교양영역·안내문을 보여준다', (tester) async {
     await tester.pumpWidget(_app(_FakeService([_summary])));
     await tester.pumpAndSettle();
@@ -86,7 +147,18 @@ void main() {
     expect(find.text('107/126'), findsOneWidget);
     expect(find.text('3.50'), findsOneWidget);
     expect(find.text('/ 2.00'), findsOneWidget);
-    expect(find.text('교필'), findsOneWidget);
+    expect(find.text('주전공'), findsOneWidget);
+    expect(find.text('복수전공'), findsOneWidget);
+    expect(find.text('교양'), findsOneWidget);
+    expect(find.text('교필'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('주전공')).dx,
+      lessThan(tester.getTopLeft(find.text('복수전공')).dx),
+    );
+    expect(
+      tester.getTopLeft(find.text('복수전공')).dx,
+      lessThan(tester.getTopLeft(find.text('교양')).dx),
+    );
 
     await tester.scrollUntilVisible(
       find.text('1영역'),
@@ -112,17 +184,46 @@ void main() {
     await tester.pumpWidget(_app(_FakeService([_summary])));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('교필'));
+    await tester.tap(find.text('교양'));
     await tester.pumpAndSettle();
     expect(find.text('과목01'), findsOneWidget);
     expect(find.text('A+'), findsOneWidget);
 
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('전선'));
+    await tester.tap(find.text('주전공'));
     await tester.pumpAndSettle();
     expect(find.text('수강중과목'), findsOneWidget);
     expect(find.text('수강중'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('상세보기에서 세부 영역·학기로 과목을 거른다', (tester) async {
+    await tester.pumpWidget(_app(_FakeService([_summary])));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('교양'));
+    await tester.pumpAndSettle();
+    expect(find.text('전체 영역'), findsOneWidget);
+    expect(find.text('전체 학기'), findsOneWidget);
+    expect(find.text('과목01'), findsOneWidget);
+    expect(find.text('균형과목'), findsOneWidget);
+    expect(find.text('영역없는과목'), findsOneWidget);
+
+    await tester.tap(find.text('교선1균형'));
+    await tester.pumpAndSettle();
+    expect(find.text('과목01'), findsNothing);
+    expect(find.text('균형과목'), findsOneWidget);
+    expect(find.text('1과목 · 2학점'), findsOneWidget);
+
+    await tester.tap(find.text('전체 영역'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2021-1'));
+    await tester.pumpAndSettle();
+    expect(find.text('과목01'), findsOneWidget);
+    expect(find.text('영역없는과목'), findsOneWidget);
+    expect(find.text('균형과목'), findsNothing);
+    expect(find.text('2과목 · 4학점'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
