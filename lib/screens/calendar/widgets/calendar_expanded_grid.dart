@@ -154,11 +154,11 @@ class CalendarExpandedGrid extends StatelessWidget {
                         top: _numberHeight + s.lane * (_barHeight + _barGap),
                         left:
                             s.startCol * columnWidth +
-                            (s.continuesBefore ? 0 : 2),
+                            (s.continuesBefore ? 0 : 1),
                         width:
                             (s.endCol - s.startCol + 1) * columnWidth -
-                            (s.continuesBefore ? 0 : 2) -
-                            (s.continuesAfter ? 0 : 2),
+                            (s.continuesBefore ? 0 : 1) -
+                            (s.continuesAfter ? 0 : 1),
                         height: _barHeight,
                         child: onEventTap == null
                             ? _EventBar(segment: s)
@@ -339,7 +339,7 @@ class _EventBar extends StatelessWidget {
   Widget build(BuildContext context) {
     const radius = Radius.circular(5);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
         color: segment.event.color,
