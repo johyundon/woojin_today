@@ -19,7 +19,8 @@ CalendarEvent _event(
   endDate: end ?? start ?? DateTime(2026, 10, 1),
   label: '학사일정',
   title: title,
-  color: Colors.blue,
+  // 지금 색 규칙과 같은 색으로 저장돼 있던 일정.
+  color: academicScheduleColor(title),
   reminderDaysBefore: reminder,
 );
 
@@ -130,6 +131,42 @@ void main() {
     expect(academicScheduleColor('재학생 등록 기간'), calendarEventPalette[0]);
     expect(academicScheduleColor('겨울방학'), calendarEventPalette[3]);
     expect(academicScheduleColor('개교기념일 휴업'), calendarEventPalette[3]);
-    expect(academicScheduleColor('수업일수 1/3선'), calendarEventPalette[1]);
+    // 낱말에 안 걸리는 제목은 제목마다 고정된 색(한 색으로 몰리지 않음).
+    expect(
+      academicScheduleColor('수업일수 1/3선'),
+      academicScheduleColor('수업일수 1/3선'),
+    );
+    final others = {
+      for (final t in ['수업일수 1/3선', '다전공 이수 신청', '학생회 총선거', '개강', '종강'])
+        academicScheduleColor(t),
+    };
+    expect(others.length, greaterThan(1));
+    expect(calendarEventPalette, containsAll(others));
+  });
+
+  test('예전 색으로 저장된 학사일정은 새 색으로 바뀌고 알림은 유지된다', () {
+    final item = AcademicScheduleItem(
+      start: DateTime(2026, 11, 1),
+      end: DateTime(2026, 11, 30),
+      title: '다전공 이수 신청',
+    );
+    final old = CalendarEvent(
+      id: item.id,
+      startDate: item.start,
+      endDate: item.end,
+      label: '학사일정',
+      title: item.title,
+      color: const Color(0xFF000000),
+      reminderDaysBefore: const [1],
+    );
+    final r = mergeAcademicSchedule(
+      current: [old],
+      fetched: [item],
+      year: 2026,
+      month: 11,
+    );
+    expect(r.events.single.color, academicScheduleColor(item.title));
+    expect(r.events.single.reminderDaysBefore, [1]);
+    expect(r.changed, isEmpty);
   });
 }

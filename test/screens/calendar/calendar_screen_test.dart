@@ -13,6 +13,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:daejin_app/screens/calendar/calendar_screen.dart';
 import 'package:daejin_app/screens/calendar/models/calendar_event.dart';
 import 'package:daejin_app/screens/calendar/services/calendar_event_storage.dart';
+import 'package:daejin_app/screens/calendar/widgets/calendar_expanded_grid.dart';
 import 'package:daejin_app/screens/calendar/widgets/ringing_bell.dart';
 import 'package:daejin_app/services/academic_schedule_service.dart';
 
@@ -241,6 +242,86 @@ void main() {
     );
     expect(tester.getTopLeft(headerFinder), headerBefore);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('달력을 아래로 끌면 펼쳐져 일정 막대가 보이고, 날짜를 누르면 접힌다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    // 처음엔 접힌(점) 달력이다. 12일엔 일정이 없어 목록 카드도 없다.
+    await tester.tap(find.text('12').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsNothing);
+    expect(find.text('왕방축제'), findsNothing);
+
+    await tester.drag(find.text('15').first, const Offset(0, 200));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsOneWidget);
+    // 14~15일이 주를 넘으면 막대가 두 줄로 나뉘므로 하나 이상.
+    expect(find.text('왕방축제'), findsWidgets);
+    expect(tester.takeException(), isNull);
+
+    // 펼친 달력에서 날짜를 누르면 접히고 그날 일정 목록이 나온다.
+    await tester.tap(find.text('14').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsNothing);
+    expect(find.text('일정 1개'), findsOneWidget);
+    expect(find.text('왕방축제'), findsOneWidget); // 카드
+  });
+
+  testWidgets('펼친 달력에서 일정 막대를 누르면 그 일정의 상세 팝업이 뜬다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    await tester.drag(find.text('15').first, const Offset(0, 200));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsOneWidget);
+
+    await tester.tap(find.text('왕방축제').first);
+    await tester.pumpAndSettle();
+    expect(find.text('학교에서 등록한 일정은 수정, 삭제할 수 없어요'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('손잡이를 누르면 펼쳐지고, 다시 누르면 접힌다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    await tester.tap(find.byKey(const ValueKey('expand-handle-down')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('expand-handle-up')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsNothing);
+  });
+
+  testWidgets('처음 들어오면 "아래로 끌면…" 안내가 한 번 뜨고, 닫으면 다시 안 뜬다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('아래로 끌면 일정이 달력에 보여요'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('expand-hint')),
+        matching: find.byIcon(Icons.close_rounded),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('아래로 끌면 일정이 달력에 보여요'), findsNothing);
+
+    // 다시 들어와도 뜨지 않는다.
+    await tester.pumpWidget(const SizedBox());
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('아래로 끌면 일정이 달력에 보여요'), findsNothing);
+  });
+
+  testWidgets('펼친 달력을 위로 끌면 다시 접힌다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    await tester.drag(find.text('15').first, const Offset(0, 200));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsOneWidget);
+
+    await tester.drag(find.text('15').first, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarExpandedGrid), findsNothing);
   });
 
   testWidgets('학사일정 카드를 누르면 상세 팝업이 뜨고, 삭제/수정 버튼은 없다', (tester) async {

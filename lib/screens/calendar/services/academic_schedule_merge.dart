@@ -66,7 +66,15 @@ AcademicScheduleMerge mergeAcademicSchedule({
     }
     kept.add(e.id);
     if (_sameDay(item.end, e.endDate)) {
-      events.add(e);
+      // 색 규칙이 바뀌었으면(예전에 저장된 일정) 새 색으로 바꾸고 알림은 그대로 둔다.
+      final color = academicScheduleColor(item.title);
+      events.add(
+        e.color == color
+            ? e
+            : (_fromItem(item)
+                ..reminderDaysBefore = e.reminderDaysBefore
+                ..reminderTime = e.reminderTime),
+      );
       continue;
     }
     final updated = _fromItem(item)
@@ -87,7 +95,9 @@ AcademicScheduleMerge mergeAcademicSchedule({
 }
 
 /// 학사일정 막대 색. 분류 정보가 없어 제목 낱말로 나눈다(사용자 결정, 2026-10-31):
-/// 시험 → 주황, 수강·등록 → 파랑, 방학·휴업 → 초록, 나머지 → 보라.
+/// 시험 → 주황, 수강·등록 → 파랑, 방학·휴업 → 초록. 나머지는 예전엔 모두 보라였는데
+/// 펼친 달력에서 막대가 한 색으로만 보여서(사용자 결정, 2026-11-14) 제목마다 다섯 색
+/// 중 하나를 고정으로 골라 준다(같은 제목은 언제나 같은 색).
 Color academicScheduleColor(String title) {
   if (title.contains('시험')) return calendarEventPalette[2];
   if (title.contains('수강') || title.contains('등록')) {
@@ -96,7 +106,12 @@ Color academicScheduleColor(String title) {
   if (title.contains('방학') || title.contains('휴업')) {
     return calendarEventPalette[3];
   }
-  return calendarEventPalette[1];
+  // String.hashCode는 실행마다 같다는 보장이 없어 직접 계산한다.
+  var hash = 0;
+  for (final unit in title.codeUnits) {
+    hash = (hash * 31 + unit) & 0x7fffffff;
+  }
+  return calendarEventPalette[hash % calendarEventPalette.length];
 }
 
 CalendarEvent _fromItem(AcademicScheduleItem item) => CalendarEvent(
