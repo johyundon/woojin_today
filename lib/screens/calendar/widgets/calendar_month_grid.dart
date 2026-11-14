@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
@@ -19,6 +20,9 @@ class CalendarMonthGrid extends StatelessWidget {
     this.rangeStart,
     this.rangeEnd,
     this.isEnabled,
+    this.isSelected,
+    this.onDayDragged,
+    this.onDragEnd,
     super.key,
   });
 
@@ -43,6 +47,21 @@ class CalendarMonthGrid extends StatelessWidget {
   /// 고를 수 있는 날인지(날짜 고르기 시트에서만 씀). false인 날은 흐리게 보이고
   /// 눌리지 않는다. null이면 모든 날을 고를 수 있다.
   final bool Function(DateTime date)? isEnabled;
+
+  /// 여러 날을 골라 둔 표시(알림 날짜 여러 개 고르기에서만 씀). true인 날은
+  /// [selectedDay]처럼 파란 칸으로 보인다.
+  final bool Function(DateTime date)? isSelected;
+
+  /// 날짜 칸 위를 끌 때(드래그) 손가락 아래에 있는 날(일)을 알린다. 끌기 시작한
+  /// 칸에서 한 번, 다른 칸으로 옮겨 갈 때마다 다시 부른다(같은 칸이면 다시 안
+  /// 부름). null이면 끌기를 받지 않는다(여러 날 고르기 창에서만 씀).
+  final ValueChanged<int>? onDayDragged;
+
+  /// 끌기가 끝났을 때.
+  final VoidCallback? onDragEnd;
+
+  /// 한 주 줄의 높이(칸 44 + 줄 사이 2). 끈 위치를 날짜로 바꿀 때 쓴다.
+  static const double _weekStride = 46;
 
   /// [day]일에 걸친 일정들의 색(최대 3개, 중복 색은 한 번만).
   List<Color> _dotColors(int day) {
@@ -102,23 +121,76 @@ class CalendarMonthGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        for (var week = 0; week < weekCount; week++)
-          Padding(
-            padding: EdgeInsets.only(top: week == 0 ? 0 : 2),
-            child: Row(
-              children: [
-                for (var col = 0; col < 7; col++)
-                  Expanded(
-                    child: _buildCell(
-                      week * 7 + col - leadingBlanks + 1,
-                      daysInMonth,
-                      isTodayMonth,
-                    ),
+        _withDrag(
+          leadingBlanks: leadingBlanks,
+          daysInMonth: daysInMonth,
+          child: Column(
+            children: [
+              for (var week = 0; week < weekCount; week++)
+                Padding(
+                  padding: EdgeInsets.only(top: week == 0 ? 0 : 2),
+                  child: Row(
+                    children: [
+                      for (var col = 0; col < 7; col++)
+                        Expanded(
+                          child: _buildCell(
+                            week * 7 + col - leadingBlanks + 1,
+                            daysInMonth,
+                            isTodayMonth,
+                          ),
+                        ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
+        ),
       ],
+    );
+  }
+
+  /// [onDayDragged]가 있으면 날짜 칸들을 끌기로 감싼다. 끈 위치(가로 7칸 ×
+  /// 주 줄)를 날짜로 바꿔, 칸이 바뀔 때마다 알린다.
+  Widget _withDrag({
+    required int leadingBlanks,
+    required int daysInMonth,
+    required Widget child,
+  }) {
+    final onDrag = onDayDragged;
+    if (onDrag == null) return child;
+    int? last;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int? dayAt(Offset p) {
+          if (p.dx < 0 || p.dx >= constraints.maxWidth || p.dy < 0) {
+            return null;
+          }
+          final col = (p.dx / (constraints.maxWidth / 7)).floor();
+          final week = (p.dy / _weekStride).floor();
+          final day = week * 7 + col - leadingBlanks + 1;
+          return day < 1 || day > daysInMonth ? null : day;
+        }
+
+        void report(Offset p) {
+          final day = dayAt(p);
+          if (day == null || day == last) return;
+          last = day;
+          onDrag(day);
+        }
+
+        return GestureDetector(
+          // 처음 누른 칸부터 끌기로 친다(살짝 움직인 거리도 버리지 않음).
+          dragStartBehavior: DragStartBehavior.down,
+          onPanStart: (d) {
+            last = null;
+            report(d.localPosition);
+          },
+          onPanUpdate: (d) => report(d.localPosition),
+          onPanEnd: (_) => onDragEnd?.call(),
+          onPanCancel: () => onDragEnd?.call(),
+          child: child,
+        );
+      },
     );
   }
 
@@ -135,7 +207,11 @@ class CalendarMonthGrid extends StatelessWidget {
         hasRange &&
         !date.isBefore(_dateOnly(start)) &&
         !date.isAfter(_dateOnly(end));
-    final selected = day == selectedDay || isRangeStart || isRangeEnd;
+    final selected =
+        day == selectedDay ||
+        isRangeStart ||
+        isRangeEnd ||
+        (isSelected?.call(date) ?? false);
     final isToday = isTodayMonth && day == today.day;
     final dots = _dotColors(day);
     final enabled = isEnabled?.call(date) ?? true;

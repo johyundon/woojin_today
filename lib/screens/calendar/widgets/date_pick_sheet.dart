@@ -167,6 +167,224 @@ class _DatePickSheetState extends State<_DatePickSheet> {
   }
 }
 
+/// 날짜를 여러 개 고르는 바텀시트(알림 받을 날 고르기). 날짜를 누를 때마다
+/// 골라지고 다시 누르면 풀린다. 날짜 위를 손가락으로 끌면 처음 칸부터 지금 칸까지
+/// 연속으로 골라진다(골라진 칸에서 시작하면 풀린다)(사용자 요청, 2026-11-14). [firstDate]~[lastDate] 밖은 흐리게 막고,
+/// [maxCount]개까지만 고를 수 있다. 저장하면 고른 날들(날짜 순)을, 취소하면 null을
+/// 반환한다. 하나도 안 고르면 저장이 비활성이다.
+Future<List<DateTime>?> showMultiDatePickSheet(
+  BuildContext context, {
+  required String title,
+  required DateTime initialMonth,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  required int maxCount,
+  DateTime? today,
+}) {
+  return showModalBottomSheet<List<DateTime>>(
+    context: context,
+    isScrollControlled: true,
+    // 날짜 위를 아래로 끌어 고를 때 창이 같이 내려가 닫히지 않게 한다.
+    enableDrag: false,
+    backgroundColor: Colors.white,
+    barrierColor: CalendarColors.barrier,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    ),
+    builder: (_) => _MultiDatePickSheet(
+      title: title,
+      initialMonth: initialMonth,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      maxCount: maxCount,
+      today: today ?? DateTime.now(),
+    ),
+  );
+}
+
+class _MultiDatePickSheet extends StatefulWidget {
+  const _MultiDatePickSheet({
+    required this.title,
+    required this.initialMonth,
+    required this.firstDate,
+    required this.lastDate,
+    required this.maxCount,
+    required this.today,
+  });
+
+  final String title;
+  final DateTime initialMonth;
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final int maxCount;
+  final DateTime today;
+
+  @override
+  State<_MultiDatePickSheet> createState() => _MultiDatePickSheetState();
+}
+
+class _MultiDatePickSheetState extends State<_MultiDatePickSheet> {
+  late DateTime _month = DateTime(
+    widget.initialMonth.year,
+    widget.initialMonth.month,
+  );
+  final Set<DateTime> _picked = {};
+
+  DateTime get _first => DateTime(
+    widget.firstDate.year,
+    widget.firstDate.month,
+    widget.firstDate.day,
+  );
+
+  DateTime get _last => DateTime(
+    widget.lastDate.year,
+    widget.lastDate.month,
+    widget.lastDate.day,
+  );
+
+  bool _isEnabled(DateTime date) =>
+      !date.isBefore(_first) && !date.isAfter(_last);
+
+  void _moveMonth(int delta) =>
+      setState(() => _month = DateTime(_month.year, _month.month + delta));
+
+  /// 끌기 시작할 때의 고른 날들과 시작 칸. 끄는 동안 시작 칸~지금 칸을 이
+  /// 상태 위에 다시 칠해서, 되돌아 끌면 줄어든다.
+  Set<DateTime>? _dragBase;
+  DateTime? _dragAnchor;
+  bool _dragAdds = true;
+
+  void _onDrag(int day) {
+    final date = DateTime(_month.year, _month.month, day);
+    setState(() {
+      if (_dragBase == null) {
+        _dragBase = {..._picked};
+        _dragAnchor = date;
+        _dragAdds = !_picked.contains(date);
+      }
+      final from = date.isBefore(_dragAnchor!) ? date : _dragAnchor!;
+      final to = date.isBefore(_dragAnchor!) ? _dragAnchor! : date;
+      _picked
+        ..clear()
+        ..addAll(_dragBase!);
+      for (
+        var d = from;
+        !d.isAfter(to);
+        d = DateTime(d.year, d.month, d.day + 1)
+      ) {
+        if (!_isEnabled(d)) continue;
+        if (!_dragAdds) {
+          _picked.remove(d);
+        } else if (_picked.length < widget.maxCount) {
+          _picked.add(d);
+        }
+      }
+    });
+  }
+
+  void _endDrag() {
+    _dragBase = null;
+    _dragAnchor = null;
+  }
+
+  void _toggle(int day) {
+    final date = DateTime(_month.year, _month.month, day);
+    setState(() {
+      if (!_picked.remove(date) && _picked.length < widget.maxCount) {
+        _picked.add(date);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final full = _picked.length >= widget.maxCount;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        10,
+        20,
+        20 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SheetGrabber(),
+          const SizedBox(height: 20),
+          Text(
+            widget.title,
+            style: const TextStyle(
+              color: AppColors.textStrong,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _picked.isEmpty
+                ? '누르거나 끌어서 여러 날을 고를 수 있어요'
+                : full
+                ? '${_picked.length}일 골랐어요 · 더는 고를 수 없어요'
+                : '${_picked.length}일 골랐어요',
+            style: TextStyle(
+              color: full ? CalendarColors.deleteRed : AppColors.textSub,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _MonthArrow(
+                icon: Icons.chevron_left_rounded,
+                onTap: DateTime(_first.year, _first.month).isBefore(_month)
+                    ? () => _moveMonth(-1)
+                    : null,
+              ),
+              Expanded(
+                child: Text(
+                  '${_month.year}년 ${_month.month}월',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textStrong,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _MonthArrow(
+                icon: Icons.chevron_right_rounded,
+                onTap: DateTime(_last.year, _last.month).isAfter(_month)
+                    ? () => _moveMonth(1)
+                    : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          CalendarMonthGrid(
+            focusedMonth: _month,
+            events: const [],
+            selectedDay: null,
+            today: widget.today,
+            isEnabled: _isEnabled,
+            isSelected: _picked.contains,
+            onDaySelected: _toggle,
+            onDayDragged: _onDrag,
+            onDragEnd: _endDrag,
+          ),
+          const SizedBox(height: 16),
+          SheetButtonRow(
+            onCancel: () => Navigator.of(context).pop(),
+            onSave: _picked.isEmpty
+                ? null
+                : () => Navigator.of(context).pop(_picked.toList()..sort()),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 시작~끝 날짜를 한 번에 고르는 바텀시트. 처음엔 지금 기간이 표시되고, 날짜를
 /// 누르면 그 날이 새 시작일이 되며, 이어서 다른 날을 누르면 끝나는 날이 된다
 /// (시작보다 앞 날을 누르면 그 날이 새 시작일). 달을 넘겨 고를 수도 있다. 시작만

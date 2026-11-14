@@ -191,9 +191,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// 팝업으로 알려준다 — 여러 날 일정은 마감 하루 전·마감일까지 아직 안 지난 것만.
   /// 이미 지난 날짜는 빼고 걸었다고 배너로 알려준다.
   Future<void> _openReminderSettings(CalendarEvent event) async {
-    final days = await showReminderSettingsSheet(context, event: event);
-    if (days == null || !mounted) return;
-    final outcome = await _setReminderDays(event, days);
+    final picked = await showReminderSettingsSheet(context, event: event);
+    if (picked == null || !mounted) return;
+    final days = picked.days;
+    final outcome = await _setReminderDays(event, days, time: picked.time);
     if (outcome.result != _ReminderResult.ok || days.isEmpty || !mounted) {
       return;
     }
@@ -212,13 +213,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// [event]의 알림 날짜를 [days]로 바꾸고 다시 예약한다. 하나도 못 걸면(권한
   /// 거부·전부 지난 시각) 원래대로 되돌리고, 전부 지났으면 팝업으로 알려준다.
   Future<({_ReminderResult result, List<DateTime> scheduled, int skipped})>
-  _setReminderDays(CalendarEvent event, List<int> days) async {
+  _setReminderDays(
+    CalendarEvent event,
+    List<int> days, {
+    TimeOfDay? time,
+  }) async {
     final previous = List.of(event.reminderDaysBefore);
-    setState(() => event.setReminderDaysBefore(days));
+    final previousTime = event.reminderTime;
+    setState(() {
+      event.setReminderDaysBefore(days);
+      event.reminderTime = time;
+    });
     final attemptedAt = event.reminderAt;
     final outcome = await _syncReminder(event);
     if (outcome.result != _ReminderResult.ok && mounted) {
-      setState(() => event.setReminderDaysBefore(previous));
+      setState(() {
+        event.setReminderDaysBefore(previous);
+        event.reminderTime = previousTime;
+      });
     }
     await _persist();
     if (outcome.result == _ReminderResult.past &&

@@ -72,9 +72,7 @@ class _EventDetailBodyState extends State<_EventDetailBody> {
   String get _reminderText {
     final days = event.reminderDaysBefore;
     if (days.isEmpty) return '알림 없음';
-    String label(int d) => event.isMultiDay && d == 0
-        ? '시작일'
-        : reminderDaysLabel(d, allDay: event.isAllDay);
+    final label = event.reminderDayLabel;
     if (days.length <= 2) return days.map(label).join('·');
     return '${label(days.first)} 외 ${days.length - 1}개';
   }

@@ -6,8 +6,9 @@ import 'calendar_colors.dart';
 import 'ringing_bell.dart';
 
 /// 시간 정보가 없는 일정(학사일정 등)에 알림을 걸었을 때 띄우는 안내 팝업(v7).
-/// 알림이 언제 울리는지([dates] 각각의 오전 9시)를 알려주고 "확인"으로
-/// 닫는다. 날짜가 둘이면 "10월 14일, 15일 오전 9시에"처럼 함께 보여준다.
+/// 알림이 언제 울리는지([dates]와 그 시각, 기본은 오전 9시)를 알려주고 "확인"으로
+/// 닫는다. 날짜가 둘이면 "10월 14일, 15일 오전 9시에"처럼 함께 보여준다. 고른 날은
+/// 모두 같은 시각에 울리므로 첫 날짜의 시각을 쓴다.
 Future<void> showReminderSetDialog(
   BuildContext context, {
   required List<DateTime> dates,
@@ -20,6 +21,12 @@ Future<void> showReminderSetDialog(
     final sameMonth = i > 0 && d.month == dates[i - 1].month;
     label.write(sameMonth ? '${d.day}일' : '${d.month}월 ${d.day}일');
   }
+  final at = dates.isEmpty ? null : dates.first;
+  final time = at == null
+      ? '오전 9시'
+      : '${at.hour < 12 ? '오전' : '오후'} '
+            '${at.hour % 12 == 0 ? 12 : at.hour % 12}시'
+            '${at.minute == 0 ? '' : ' ${at.minute}분'}';
   return showDialog<void>(
     context: context,
     barrierColor: CalendarColors.barrier,
@@ -64,7 +71,7 @@ Future<void> showReminderSetDialog(
             ),
             const SizedBox(height: 8),
             Text(
-              '$label 오전 9시에\n알림이 울립니다',
+              '$label $time에\n알림이 울립니다',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textBody,

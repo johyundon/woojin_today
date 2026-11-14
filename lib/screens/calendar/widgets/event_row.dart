@@ -12,6 +12,9 @@ import 'ringing_bell.dart';
 /// 둥근 사각 알림 종 버튼. 카드를 누르면 상세 팝업이 열리고, 종 버튼을 누르면 알림 설정
 /// 창이 열린다(캘린더 화면이 처리).
 class EventRow extends StatelessWidget {
+  /// 카드 왼쪽 시간 칸(시작/끝 시간)을 보일지. 숨겨 둔 상태다.
+  static const _showTimeColumn = false;
+
   const EventRow({
     required this.event,
     required this.onReminderToggled,
@@ -52,8 +55,9 @@ class EventRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 시간이 없는 일정(학사일정 등)은 "종일" 글자와 그 칸을 빼서 카드를 왼쪽으로
-          // 붙인다(사용자 요청, 2026-10-31).
-          if (event.startTime != null) ...[
+          // 붙인다(사용자 요청, 2026-10-31). 시간이 있는 일정의 시간 칸도 지금은
+          // 숨긴다(사용자 요청, 2026-11-14 — 코드는 남겨 둠, [_showTimeColumn]).
+          if (_showTimeColumn && event.startTime != null) ...[
             SizedBox(
               width: 44,
               // 시작 시간은 위, 끝 시간은 아래 끝에 둔다(v7).

@@ -37,22 +37,23 @@ void main() {
       );
     });
 
-    test('며칠 전마다 그날의 일정 시각에 울리고, reminderAt은 가장 가까운 것이다', () {
+    test('며칠 전마다 그날 오전 9시(기본)에 울리고, reminderAt은 가장 가까운 것이다', () {
+      // 일정 시각(15:00)과 상관없이 기본 알림 시각은 오전 9시다.
       final event = _event(
         startTime: const TimeOfDay(hour: 15, minute: 0),
         days: const [0, 14, 1],
       );
       expect(event.reminderDaysBefore, [14, 1, 0]); // 큰 수부터 정렬
       expect(event.reminderAts, [
-        DateTime(2026, 9, 30, 15, 0),
-        DateTime(2026, 10, 13, 15, 0),
-        DateTime(2026, 10, 14, 15, 0),
+        DateTime(2026, 9, 30, 9, 0),
+        DateTime(2026, 10, 13, 9, 0),
+        DateTime(2026, 10, 14, 9, 0),
       ]);
-      expect(event.reminderAt, DateTime(2026, 10, 14, 15, 0));
+      expect(event.reminderAt, DateTime(2026, 10, 14, 9, 0));
       expect(event.reminders.map((r) => r.body), [
         '내 일정 · 2주 전',
         '내 일정 · 1일 전',
-        '내 일정 · 정각',
+        '내 일정 · 당일',
       ]);
     });
 
@@ -67,11 +68,8 @@ void main() {
     });
 
     test('날짜 경계를 넘는 하루 전 알림도 맞게 계산한다', () {
-      final event = _event(
-        startDate: DateTime(2026, 11, 1),
-        startTime: const TimeOfDay(hour: 8, minute: 0),
-        days: const [1],
-      );
+      final event = _event(startDate: DateTime(2026, 11, 1), days: const [1])
+        ..reminderTime = const TimeOfDay(hour: 8, minute: 0);
       expect(event.reminderAt, DateTime(2026, 10, 31, 8, 0));
     });
 
@@ -109,105 +107,43 @@ void main() {
       reminderDaysBefore: days,
     );
 
-    test('11/1~11/30 신청 기간은 시작·마감 하루 전·마감일 오전 9시, 세 번이다', () {
+    test('여러 날 학사일정도 고른 날에만 울리고, 마감 알림은 따로 걸지 않는다', () {
       final reminders = event(
         start: DateTime(2026, 11, 1),
         end: DateTime(2026, 11, 30),
         title: '2026학년도 겨울계절학기 수강신청',
-      ).reminders;
-
-      expect(reminders.map((r) => r.at), [
-        DateTime(2026, 11, 1, 9, 0),
-        DateTime(2026, 11, 29, 9, 0),
-        DateTime(2026, 11, 30, 9, 0),
-      ]);
-      expect(reminders.map((r) => r.kind), [
-        ReminderKind.start,
-        ReminderKind.dayBeforeEnd,
-        ReminderKind.end,
-      ]);
-      expect(reminders.map((r) => r.body), [
-        '오늘부터 시작 · 11월 30일까지',
-        '내일 마감 · 11월 30일',
-        '오늘 마감',
-      ]);
-    });
-
-    test('신청·납부 같은 말이 없으면 "마감" 대신 "끝나요"라고 한다', () {
-      final reminders = event(
-        start: DateTime(2026, 12, 21),
-        end: DateTime(2027, 2, 28),
-        title: '동계방학',
-      ).reminders;
-
-      expect(reminders.map((r) => r.body), [
-        '오늘부터 시작 · 2월 28일까지',
-        '내일 끝나요 · 2월 28일',
-        '오늘 끝나요',
-      ]);
-      // 달·해가 바뀌어도 하루 전은 정확히 그 전날이다.
-      expect(reminders[1].at, DateTime(2027, 2, 27, 9, 0));
-    });
-
-    test('2일짜리는 하루 전이 시작일과 겹쳐서 시작·마감 두 번이다', () {
-      final reminders = event(
-        start: DateTime(2026, 10, 14),
-        end: DateTime(2026, 10, 15),
-      ).reminders;
-
-      expect(reminders.map((r) => r.at), [
-        DateTime(2026, 10, 14, 9, 0),
-        DateTime(2026, 10, 15, 9, 0),
-      ]);
-    });
-
-    test('3일짜리부터 하루 전 알림이 생긴다', () {
-      final reminders = event(
-        start: DateTime(2026, 10, 14),
-        end: DateTime(2026, 10, 16),
-      ).reminders;
-
-      expect(reminders.map((r) => r.kind), ReminderKind.values);
-    });
-
-    test('며칠 전 알림은 시작일 기준으로 더해지고 마감 알림은 그대로다', () {
-      final reminders = event(
-        start: DateTime(2026, 11, 1),
-        end: DateTime(2026, 11, 30),
-        title: '2026학년도 겨울계절학기 수강신청',
-        days: const [14, 7, 0],
+        days: const [14, 0, -17],
       ).reminders;
 
       expect(reminders.map((r) => r.at), [
         DateTime(2026, 10, 18, 9, 0),
-        DateTime(2026, 10, 25, 9, 0),
         DateTime(2026, 11, 1, 9, 0),
-        DateTime(2026, 11, 29, 9, 0),
-        DateTime(2026, 11, 30, 9, 0),
+        DateTime(2026, 11, 18, 9, 0),
       ]);
-      expect(reminders.first.body, '14일 뒤 시작 · 11월 1일 ~ 11월 30일');
-      final suffixes = reminders.map((r) => r.idSuffix).toList();
-      expect(suffixes.toSet().length, suffixes.length);
+      expect(reminders.map((r) => r.kind).toSet(), {ReminderKind.start});
+      expect(reminders.map((r) => r.body), [
+        '14일 뒤 시작 · 11월 1일 ~ 11월 30일',
+        '오늘부터 시작 · 11월 30일까지',
+        '진행 중 · 11월 30일까지',
+      ]);
+      expect(reminders.last.idSuffix, '#d-17');
+      expect(CalendarEvent.allReminderIdSuffixes, contains('#d-17'));
+      // 예전 버전이 건 마감 알림도 취소할 수 있게 번호는 남아 있다.
+      expect(
+        CalendarEvent.allReminderIdSuffixes,
+        containsAll(['#before', '#end']),
+      );
     });
 
-    test('진행 중인 날도 고를 수 있고, 마감 전날·마감일과 겹치면 한 번만 울린다', () {
-      final reminders = event(
-        start: DateTime(2026, 11, 20),
-        end: DateTime(2026, 11, 26),
-        title: '2027학년도 학생회 총선거',
-        // 11/23(진행 중), 11/25(마감 전날과 겹침), 11/26(마감일과 겹침)
-        days: const [-3, -5, -6],
-      ).reminders;
-
-      expect(reminders.map((r) => r.at), [
-        DateTime(2026, 11, 23, 9, 0),
-        DateTime(2026, 11, 25, 9, 0),
-        DateTime(2026, 11, 26, 9, 0),
-      ]);
-      expect(reminders.first.body, '진행 중 · 11월 26일까지');
-      expect(reminders.first.idSuffix, '#d-3');
-      expect(CalendarEvent.allReminderIdSuffixes, contains('#d-3'));
-      expect(reminderDaysLabel(-3, allDay: true), '시작 3일 뒤');
+    test('화면에 보이는 이름: 기본 줄은 며칠 전, 직접 고른 날은 날짜', () {
+      final e = event(
+        start: DateTime(2026, 11, 1),
+        end: DateTime(2026, 11, 30),
+      );
+      expect(e.reminderDayLabel(0), '시작일');
+      expect(e.reminderDayLabel(14), '2주 전');
+      expect(e.reminderDayLabel(-17), '11월 18일');
+      expect(e.reminderDayLabel(5), '10월 27일');
     });
 
     test('내가 만든 일정은 여러 날이어도 시작일 한 번이고 문구도 그대로다', () {
@@ -258,6 +194,26 @@ void main() {
       expect(restored.isAllDay, isFalse);
     });
 
+    test('알림 시간을 정하면 고른 날 모두 그 시각에 울리고, 저장/불러오기도 된다', () {
+      final event = _event(days: const [1, 0])
+        ..reminderTime = const TimeOfDay(hour: 21, minute: 30);
+      expect(event.reminderAts, [
+        DateTime(2026, 10, 13, 21, 30),
+        DateTime(2026, 10, 14, 21, 30),
+      ]);
+
+      final restored = CalendarEvent.fromJson(event.toJson());
+      expect(restored.reminderTime, const TimeOfDay(hour: 21, minute: 30));
+      // 옛 형식 키(reminderHour)로 잘못 읽혀 시작 시각이 바뀌지 않는다.
+      expect(restored.startTime, isNull);
+      expect(restored.reminderDaysBefore, [1, 0]);
+
+      // 정하지 않으면 종일 일정은 오전 9시(기본).
+      expect(_event(days: const [0]).reminderAts, [
+        DateTime(2026, 10, 14, 9, 0),
+      ]);
+    });
+
     Map<String, dynamic> legacy({int? hour, int? minute}) => {
       'id': 'old-1',
       'startDate': '2026-10-14T00:00:00.000',
@@ -281,6 +237,7 @@ void main() {
       final restored = CalendarEvent.fromJson(legacy(hour: 9, minute: 30));
       expect(restored.reminderDaysBefore, [0]);
       expect(restored.startTime, const TimeOfDay(hour: 9, minute: 30));
+      expect(restored.reminderTime, const TimeOfDay(hour: 9, minute: 30));
       expect(restored.reminderAt, DateTime(2026, 10, 14, 9, 30));
     });
 

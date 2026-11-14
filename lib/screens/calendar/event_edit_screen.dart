@@ -131,6 +131,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
         location: location.isEmpty ? null : location,
         // 알림은 그대로 둔다. 새 일정은 정각(당일) 알림 하나.
         reminderDaysBefore: original?.reminderDaysBefore ?? const [0],
+        reminderTime: original?.reminderTime,
       ),
     );
   }

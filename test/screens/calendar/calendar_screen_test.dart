@@ -475,7 +475,7 @@ void main() {
       });
     });
 
-    testWidgets('여러 날(내일~모레): 시작일과 마감일 두 날짜가 팝업에 나온다', (tester) async {
+    testWidgets('여러 날(내일~모레): 고른 시작일만 팝업에 나오고 마감일은 따로 안 걸린다', (tester) async {
       await _withIosPlatform(() async {
         final start = day(1);
         final end = day(2);
@@ -483,11 +483,7 @@ void main() {
 
         await _saveDefaultReminder(tester);
 
-        final second = start.month == end.month ? '${end.day}일' : md(end);
-        expect(
-          find.text('${md(start)}, $second 오전 9시에\n알림이 울립니다'),
-          findsOneWidget,
-        );
+        expect(find.text('${md(start)} 오전 9시에\n알림이 울립니다'), findsOneWidget);
         await tester.tap(find.text('확인'));
         await tester.pumpAndSettle();
 
@@ -500,50 +496,24 @@ void main() {
       });
     });
 
-    testWidgets('여러 날(내일~5일 뒤): 시작·마감 전날·마감일 세 날짜가 나온다', (tester) async {
+    testWidgets('이미 시작된 일정(어제~내일): 고를 줄이 없어 날짜 추가를 안내하고, 그냥 저장하면 알림은 꺼진 채다', (
+      tester,
+    ) async {
       await _withIosPlatform(() async {
-        final start = day(1);
-        final before = day(4);
-        final end = day(5);
-        await pumpWithAcademicEvent(tester, start: start, end: end);
+        await pumpWithAcademicEvent(tester, start: day(-1), end: day(1));
 
-        await _saveDefaultReminder(tester);
-
-        String next(DateTime prev, DateTime d) =>
-            prev.month == d.month ? '${d.day}일' : md(d);
-        expect(
-          find.text(
-            '${md(start)}, ${next(start, before)}, ${next(before, end)} '
-            '오전 9시에\n알림이 울립니다',
-          ),
-          findsOneWidget,
-        );
-        await tester.tap(find.text('확인'));
+        await tester.tap(find.byIcon(Icons.notifications_none));
+        await tester.pumpAndSettle();
+        expect(find.text('아래 날짜 추가로 알림 받을 날을 골라 주세요'), findsOneWidget);
+        await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('수강신청 변경 기간'));
-        await tester.pumpAndSettle();
-        expect(find.text('시작일'), findsOneWidget);
-        expect(tester.takeException(), isNull);
+        expect(find.text('알림이 설정됐어요'), findsNothing);
+        expect(find.byIcon(Icons.notifications_none), findsOneWidget);
       });
     });
 
-    testWidgets('이미 시작된 일정(어제~내일): 시작일은 지났으니 마감일(내일)만 걸린다', (tester) async {
-      await _withIosPlatform(() async {
-        final end = day(1);
-        await pumpWithAcademicEvent(tester, start: day(-1), end: end);
-
-        await _saveDefaultReminder(tester);
-
-        expect(find.text('이미 지난 시간이에요'), findsNothing);
-        expect(find.text('${md(end)} 오전 9시에\n알림이 울립니다'), findsOneWidget);
-        await tester.tap(find.text('확인'));
-        await tester.pumpAndSettle();
-        expect(find.byIcon(Icons.notifications_active), findsOneWidget);
-      });
-    });
-
-    testWidgets('기간이 전부 지난 일정(그저께~어제)은 알림이 안 걸리고 지난 시간 팝업이 뜬다', (tester) async {
+    testWidgets('기간이 전부 지난 일정(그저께~어제)은 알림이 안 걸린다', (tester) async {
       await _withIosPlatform(() async {
         await pumpWithAcademicEvent(tester, start: day(-2), end: day(-1));
         // 선택된 날(오늘)에는 이 일정이 안 걸리므로 어제를 눌러 연다.
@@ -559,10 +529,11 @@ void main() {
         }
         await tester.pumpAndSettle();
 
+        // 지난 날은 목록에 없어서, 저장해도 알림이 걸리지 않는다.
         await _saveDefaultReminder(tester);
 
-        expect(find.text('이미 지난 시간이에요'), findsOneWidget);
         expect(find.text('알림이 설정됐어요'), findsNothing);
+        expect(find.byIcon(Icons.notifications_none), findsWidgets);
       });
     });
   });
@@ -605,18 +576,19 @@ void main() {
       }
     }
 
-    testWidgets('카드에 시간 하나와 장소가 보이고, 상세 팝업에 전부 나온다', (tester) async {
+    testWidgets('카드에는 시간 없이 장소만 보이고, 상세 팝업에 전부 나온다', (tester) async {
       await pumpWithMyEvent(tester);
 
-      expect(find.text('15:00'), findsOneWidget);
+      // 카드 왼쪽 시간 칸은 숨겼다(사용자 요청, 2026-11-14).
+      expect(find.text('15:00'), findsNothing);
       expect(find.text('도서관 3층'), findsOneWidget);
 
       await tester.tap(find.text('팀플 회의'));
       await tester.pumpAndSettle();
 
-      expect(find.text('15:00'), findsNWidgets(2)); // 카드 + 팝업의 시간 줄
+      expect(find.text('15:00'), findsOneWidget); // 팝업의 시간 줄
       expect(find.text('도서관 3층'), findsNWidgets(2));
-      expect(find.text('정각'), findsOneWidget); // 알림 줄
+      expect(find.text('당일'), findsOneWidget); // 알림 줄
       expect(find.text('삭제하기'), findsOneWidget);
       expect(find.text('수정하기'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -677,7 +649,7 @@ void main() {
       });
     });
 
-    testWidgets('알림 종 버튼으로 켜면 "정각" 알림이 걸리고 저장된다', (tester) async {
+    testWidgets('알림 종 버튼으로 켜면 "당일" 알림이 걸리고 저장된다', (tester) async {
       await _withIosPlatform(() async {
         await pumpWithMyEvent(tester, days: const [], daysAhead: 1);
 
@@ -690,24 +662,21 @@ void main() {
       });
     });
 
-    testWidgets('이미 지난 시각에 알림을 걸면 팝업으로 알려주고 알림은 켜지지 않는다', (tester) async {
-      // 오늘 00:00 시작 → "정각" 알림 시각도 오늘 00:00이라 언제 돌려도 이미 지났다.
+    testWidgets('이미 지난 시각은 설정 창에 안 보이고, 저장해도 알림은 켜지지 않는다', (tester) async {
+      // 오늘 일정의 "당일" 알림은 오늘 오전 9시라, 9시 전에 돌리면 아직 안 지났다.
+      if (DateTime.now().hour < 9) return;
       await pumpWithMyEvent(
         tester,
         days: const [],
         start: const TimeOfDay(hour: 0, minute: 0),
       );
 
-      await _saveDefaultReminder(tester);
-
-      expect(find.text('이미 지난 시간이에요'), findsOneWidget);
-      expect(find.textContaining('00:00'), findsWidgets); // 어느 시각이 지났는지 보여준다
-      expect(find.byType(SnackBar), findsNothing);
-      expect(find.byIcon(Icons.notifications_active), findsNothing);
-
-      await tester.tap(find.text('확인'));
+      await tester.tap(find.byIcon(Icons.notifications_none));
       await tester.pumpAndSettle();
-      expect(find.text('이미 지난 시간이에요'), findsNothing);
+      expect(find.text('당일'), findsNothing);
+      await tester.tap(find.text('저장'));
+      await tester.pumpAndSettle();
+
       expect(find.byIcon(Icons.notifications_none), findsOneWidget);
       final saved = await CalendarEventStorage().loadAll();
       expect(saved.single.hasReminder, isFalse);
@@ -715,10 +684,9 @@ void main() {
     });
 
     testWidgets('알림이 켜진 일정을 지난 시각으로 고쳐 저장하면 일정은 저장되고 팝업이 뜬다', (tester) async {
-      await pumpWithMyEvent(
-        tester,
-        start: const TimeOfDay(hour: 0, minute: 0), // 오늘 00:00 정각 = 이미 지남
-      );
+      // 오늘 일정의 "당일" 알림은 오늘 오전 9시라, 9시 전에 돌리면 아직 안 지났다.
+      if (DateTime.now().hour < 9) return;
+      await pumpWithMyEvent(tester, start: const TimeOfDay(hour: 0, minute: 0));
 
       await tester.tap(find.text('팀플 회의'));
       await tester.pumpAndSettle();
@@ -740,19 +708,21 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('일정 시각이 아직 안 지났으면 "정각" 알림은 걸린다(23:59 일정)', (tester) async {
-      // 일정 시각이 곧 오는데 "10분 전"만 이미 지난 상황을 흉내 낸다 — 종 버튼은
-      // 정각이 기본이라 걸려야 한다. (23:59~24:00 사이에 돌리면 실패한다.)
+    testWidgets('시간이 있는 일정도 기본 알림은 그날 오전 9시에 걸린다', (tester) async {
+      final platform = _RecordingIosPlatform();
+      FlutterLocalNotificationsPlatform.instance = platform;
       await _withIosPlatform(() async {
         await pumpWithMyEvent(
           tester,
           days: const [],
+          daysAhead: 1,
           start: const TimeOfDay(hour: 23, minute: 59),
         );
 
         await _saveDefaultReminder(tester);
 
-        expect(find.text('이미 지난 시간이에요'), findsNothing);
+        final t = DateTime.now();
+        expect(platform.active, [DateTime(t.year, t.month, t.day + 1, 9)]);
         expect(find.byIcon(Icons.notifications_active), findsOneWidget);
       });
     });
@@ -763,7 +733,7 @@ void main() {
       // 체크를 모두 풀고 저장하면 꺼진다.
       await tester.tap(find.byIcon(Icons.notifications_active));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('정각'));
+      await tester.tap(find.text('당일'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
@@ -846,11 +816,11 @@ void main() {
         await pumpWithMyEvent(tester, days: const [], daysAhead: 2);
         final today = DateTime.now();
         DateTime at(int daysBefore) =>
-            DateTime(today.year, today.month, today.day + 2 - daysBefore, 15);
+            DateTime(today.year, today.month, today.day + 2 - daysBefore, 9);
 
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
-        // 처음엔 당일(정각)만 골라져 있다.
+        // 처음엔 당일만 골라져 있다.
         bool selected(String label) =>
             tester
                 .widget<Semantics>(
@@ -866,7 +836,7 @@ void main() {
                 .properties
                 .selected ==
             true;
-        expect(selected('정각'), isTrue);
+        expect(selected('당일'), isTrue);
         expect(selected('1일 전'), isFalse);
 
         // 모레 일정이면 3일 전부터는 이미 지나 목록에 없다.
@@ -874,17 +844,17 @@ void main() {
           expect(find.text(past), findsNothing);
         }
 
-        // 1일 전을 켜고, 정각은 끈다.
+        // 1일 전을 켜고, 당일은 끈다.
         await tester.tap(find.text('1일 전'));
-        await tester.tap(find.text('정각'));
+        await tester.tap(find.text('당일'));
         await tester.pumpAndSettle();
         expect(selected('1일 전'), isTrue);
-        expect(selected('정각'), isFalse);
+        expect(selected('당일'), isFalse);
 
         await tester.tap(find.text('저장'));
         await tester.pump(const Duration(milliseconds: 500));
 
-        // 1일 전(내일 15:00)만 걸렸다.
+        // 1일 전(내일 오전 9시)만 걸렸다.
         final saved = await CalendarEventStorage().loadAll();
         expect(platform.active, [at(1)]);
         expect(saved.single.reminderDaysBefore, [1]);
@@ -896,34 +866,38 @@ void main() {
       final platform = _RecordingIosPlatform();
       FlutterLocalNotificationsPlatform.instance = platform;
       await _withIosPlatform(() async {
-        // 오늘(= 20일 전) 알림이 지나지 않게 23:59 일정으로 한다.
-        await pumpWithMyEvent(
-          tester,
-          days: const [],
-          daysAhead: 20,
-          start: const TimeOfDay(hour: 23, minute: 59),
-        );
+        await pumpWithMyEvent(tester, days: const [], daysAhead: 20);
         await tester.tap(find.byIcon(Icons.notifications_none));
         await tester.pumpAndSettle();
         await tester.tap(find.text('2주 전'));
         await tester.pumpAndSettle();
-        // "날짜 추가"로 오늘(= 20일 전)을 고른다.
+        // "날짜 추가"로 내일(= 19일 전)을 고른다(오늘 오전 9시는 지났을 수 있다).
+        final now = DateTime.now();
+        final tomorrow = DateTime(now.year, now.month, now.day + 1);
         await tester.tap(find.text('날짜 추가'));
+        await tester.pumpAndSettle();
+        if (tomorrow.month != now.month) {
+          await tester.tap(find.byIcon(Icons.chevron_right_rounded).last);
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('${tomorrow.day}').last);
         await tester.pumpAndSettle();
         await tester.tap(find.text('저장').last);
         await tester.pumpAndSettle();
-        expect(find.text('20일 전'), findsOneWidget);
+        // 직접 고른 날은 "19일 전"이 아니라 날짜로 보인다.
+        final todayLabel = '${tomorrow.month}월 ${tomorrow.day}일';
+        expect(find.text(todayLabel), findsOneWidget);
         await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();
-        expect(platform.active.length, 3); // 20일 전, 2주 전, 정각
+        expect(platform.active.length, 3); // 내일(19일 전), 2주 전, 당일
 
         // 상세 팝업에는 짧게 보이고, "설정"으로 같은 창이 열린다.
         await tester.tap(find.text('팀플 회의'));
         await tester.pumpAndSettle();
-        expect(find.text('20일 전 외 2개'), findsOneWidget);
+        expect(find.text('$todayLabel 외 2개'), findsOneWidget);
         await tester.tap(find.text('설정'));
         await tester.pumpAndSettle();
-        for (final label in ['20일 전', '2주 전', '정각']) {
+        for (final label in [todayLabel, '2주 전', '당일']) {
           await tester.tap(find.text(label));
         }
         await tester.pumpAndSettle();
@@ -1002,7 +976,7 @@ void main() {
 
         await tester.tap(find.text('저장하기'));
         await tester.pumpAndSettle();
-        // 기본 정각 알림(오늘 09:00)이 이미 지났으면 안내 팝업이 뜬다.
+        // 기본 당일 알림(오늘 오전 9시)이 이미 지났으면 안내 팝업이 뜬다.
         final past = find.text('이미 지난 시간이에요').evaluate().isNotEmpty;
         if (past) {
           await tester.tap(find.text('확인'));
@@ -1010,7 +984,6 @@ void main() {
         }
 
         expect(find.text('스터디'), findsOneWidget);
-        expect(find.text('09:00'), findsOneWidget);
         final saved = await CalendarEventStorage().loadAll();
         final added = saved.singleWhere((e) => e.title == '스터디');
         expect(added.isUserEvent, isTrue);
