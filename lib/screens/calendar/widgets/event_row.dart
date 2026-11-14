@@ -19,6 +19,7 @@ class EventRow extends StatelessWidget {
     required this.event,
     required this.onReminderToggled,
     required this.onTap,
+    this.now,
     super.key,
   });
 
@@ -29,6 +30,15 @@ class EventRow extends StatelessWidget {
 
   /// 카드를 눌렀을 때(상세 팝업 열기).
   final VoidCallback onTap;
+
+  /// "지금"(테스트에서 고정할 수 있게). null이면 실제 현재 시각.
+  final DateTime? now;
+
+  /// 아직 안 울린 알림 시각들(이른 것부터).
+  List<DateTime> get _upcomingReminders {
+    final current = now ?? DateTime.now();
+    return event.reminderAts.where((t) => t.isAfter(current)).toList()..sort();
+  }
 
   String get _periodText {
     String md(DateTime d) =>
@@ -50,6 +60,7 @@ class EventRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final upcoming = _upcomingReminders;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,13 +158,34 @@ class EventRow extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            _subtitle,
-                            style: const TextStyle(
-                              color: AppColors.textSub,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          // 기간/장소 줄 오른쪽에 다음 알림 칩을 붙인다 — 줄을 새로
+                          // 늘리지 않아 카드 길이가 그대로다(사용자 결정, 2026-11-14).
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textSub,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              if (upcoming.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                _NextReminderChip(
+                                  next: upcoming.first,
+                                  more: upcoming.length - 1,
+                                  // 좁은 화면이면 시간은 빼고 날짜만(카드가
+                                  // IntrinsicHeight 안이라 LayoutBuilder를 못 쓴다).
+                                  showTime:
+                                      MediaQuery.sizeOf(context).width >= 360,
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
@@ -206,4 +238,58 @@ String _formatTime(TimeOfDay time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
+}
+
+/// 카드 아래 줄의 "🔔 11.18 오후 10시 +2" 칩. 다음에 울릴 알림 하나와, 그 뒤로
+/// 남은 알림 수를 보여준다.
+class _NextReminderChip extends StatelessWidget {
+  const _NextReminderChip({
+    required this.next,
+    required this.more,
+    required this.showTime,
+  });
+
+  final DateTime next;
+  final int more;
+  final bool showTime;
+
+  String get _text {
+    final date = '${next.month}.${next.day}';
+    final hour = next.hour % 12 == 0 ? 12 : next.hour % 12;
+    final time =
+        '${next.hour < 12 ? '오전' : '오후'} $hour시'
+        '${next.minute == 0 ? '' : ' ${next.minute}분'}';
+    final extra = more > 0 ? ' +$more' : '';
+    return showTime ? '$date $time$extra' : '$date$extra';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.blueSoft,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.notifications_rounded,
+            size: 11,
+            color: AppColors.blueText,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            _text,
+            style: const TextStyle(
+              color: AppColors.blueText,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

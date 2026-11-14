@@ -96,4 +96,37 @@ void main() {
     expect(cardTaps, 1);
     expect(toggles, isEmpty);
   });
+
+  testWidgets('알림이 켜져 있으면 아래 줄에 다음 알림과 남은 개수 칩이 보이고, 지난 알림은 빠진다', (
+    tester,
+  ) async {
+    Future<void> pump(CalendarEvent e, DateTime now) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: EventRow(
+            event: e,
+            onReminderToggled: (_) {},
+            onTap: () {},
+            now: now,
+          ),
+        ),
+      ),
+    );
+
+    final e = event()
+      ..setReminderDaysBefore(const [3, 1, 0])
+      ..reminderTime = const TimeOfDay(hour: 22, minute: 0);
+    // 10/28 22시, 10/30 22시, 10/31 22시 중 10/29 정오 기준 다음은 10/30.
+    await pump(e, DateTime(2026, 10, 29, 12));
+    expect(find.text('10.30 오후 10시 +1'), findsOneWidget);
+    expect(find.text('10.31'), findsOneWidget); // 기간 줄은 그대로
+
+    // 알림이 다 지났으면 칩이 없다.
+    await pump(e, DateTime(2026, 11, 1));
+    expect(find.byIcon(Icons.notifications_rounded), findsNothing);
+
+    // 알림이 꺼져 있으면 칩이 없다.
+    await pump(event(), DateTime(2026, 10, 29));
+    expect(find.byIcon(Icons.notifications_rounded), findsNothing);
+  });
 }
