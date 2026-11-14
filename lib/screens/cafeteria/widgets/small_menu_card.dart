@@ -5,11 +5,15 @@ import '../cafeteria_colors.dart';
 import '../models/cafeteria_menu.dart';
 
 /// 코너별 메뉴 카드 — 코너/분류 배지와 아이콘, 메뉴 두 줄, 가격. 두 장씩 나란히
-/// 놓는다(v7 디자인 48 cafeteria의 메뉴 카드).
+/// 놓는다(디자인 "07 학식"의 메뉴 카드).
 class SmallMenuCard extends StatelessWidget {
-  const SmallMenuCard({required this.item, super.key});
+  const SmallMenuCard({required this.item, this.showVenue = false, super.key});
 
   final CafeteriaMenuItem item;
+
+  /// 배지에 코너 이름 대신 식당 이름("교직원식당")을 쓸지. 전체 탭에서 학생식당이
+  /// 아닌 메뉴를 구분하려고 쓴다.
+  final bool showVenue;
 
   /// 분류에 맞는 아이콘(디자인: 한식 rice_bowl, 일품 ramen_dining, 분식
   /// lunch_dining, 그 밖 restaurant).
@@ -55,7 +59,9 @@ class SmallMenuCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      item.category == null
+                      showVenue
+                          ? item.venue.label
+                          : item.category == null
                           ? item.restaurant
                           : '${item.restaurant} · ${item.category}',
                       maxLines: 1,

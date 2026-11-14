@@ -1,14 +1,15 @@
-/// 식당 종류 — 화면 위쪽 탭(학생식당/교직원식당).
+/// 식당 종류 — 화면 위쪽 탭(전체 다음의 학생식당/교직원식당/카페).
+///
+/// 학교 서버는 식당을 구분해 주지 않고 카페 메뉴도 주지 않아, 실제 데이터는
+/// 모두 학생식당으로 들어온다. 교직원식당·카페 탭은 데이터가 없으면 비어 있다.
 enum CafeteriaVenue {
-  student('학생식당', '학생 가격'),
-  staff('교직원식당', '교직원 가격');
+  student('학생식당'),
+  staff('교직원식당'),
+  cafe('카페');
 
-  const CafeteriaVenue(this.label, this.priceLabel);
+  const CafeteriaVenue(this.label);
 
   final String label;
-
-  /// 큰 카드의 가격 앞에 붙는 말.
-  final String priceLabel;
 }
 
 /// 하루의 끼니 — 아침/점심/저녁.
@@ -30,7 +31,6 @@ class CafeteriaMenuItem {
     required this.price,
     this.venue = CafeteriaVenue.student,
     this.category,
-    this.popularRank,
   });
 
   /// 식당/코너 이름 (예: "데일리밥").
@@ -47,12 +47,6 @@ class CafeteriaMenuItem {
 
   /// "한식", "일품" 같은 분류 칩(없으면 칩을 그리지 않는다).
   final String? category;
-
-  /// 인기 순위(1이면 "인기 1위" 칩). 없으면 칩을 그리지 않는다.
-  final int? popularRank;
-
-  /// 즐겨찾기 표시에 쓰는 키(날짜는 호출하는 쪽이 붙인다).
-  String get key => '${venue.name}/$restaurant/${dishes.join(',')}';
 
   String get dishesText => dishes.join(' · ');
 

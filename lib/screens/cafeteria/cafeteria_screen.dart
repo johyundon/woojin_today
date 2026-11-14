@@ -9,12 +9,11 @@ import 'models/cafeteria_menu.dart';
 import 'widgets/cafeteria_date_picker_dialog.dart';
 import 'widgets/cafeteria_venue_tabs.dart';
 import 'widgets/cafeteria_week_row.dart';
-import 'widgets/featured_menu_card.dart';
 import 'widgets/small_menu_card.dart';
 
-/// "오늘 뭐 먹지?" 화면(v7 디자인). 위쪽에서 요일(월~금 한 주)과 식당(학생식당/
-/// 교직원식당)을 고르면, 그 식당의 메뉴가 대표 카드 하나와 두 칸씩 놓인 코너
-/// 카드들로 나온다. 아침/점심/저녁은 위쪽 파란 배지를 눌러 바꾼다.
+/// "오늘 뭐 먹지?" 화면(디자인 "07 학식"). 위쪽에서 요일(월~금 한 주)과 식당 탭
+/// (전체/학생식당/교직원식당/카페)을 고르면, 메뉴가 같은 크기의 카드로 두 칸씩
+/// 나온다. 아침/점심/저녁은 위쪽 파란 배지를 눌러 바꾼다.
 ///
 /// 메뉴는 학교 사이트에서 받아 오며([CafeteriaMenuService]), 날짜가 바뀌면 그 날의
 /// 메뉴를 다시 조회한다. 서버는 학생식당/교직원식당을 구분해 주지 않아 받은 메뉴는
@@ -36,11 +35,10 @@ class CafeteriaScreen extends StatefulWidget {
 class _CafeteriaScreenState extends State<CafeteriaScreen> {
   late final DateTime _now = widget.now ?? DateTime.now();
   late DateTime _selectedDate = _dateOnly(_now);
-  CafeteriaVenue _venue = CafeteriaVenue.student;
-  late CafeteriaMeal _meal = _defaultMeal();
 
-  /// 즐겨찾기한 메뉴(날짜+메뉴). 화면이 열려 있는 동안만 유지된다.
-  final Set<String> _favorites = {};
+  /// 고른 식당 탭. null이면 "전체".
+  CafeteriaVenue? _venue;
+  late CafeteriaMeal _meal = _defaultMeal();
 
   late final CafeteriaMenuServiceBase _service =
       widget.service ?? ServiceFactory.cafeteriaMenu();
@@ -92,8 +90,6 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     return CafeteriaMeal.dinner;
   }
 
-  String _dateKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
-
   void _selectDate(DateTime date) {
     setState(() => _selectedDate = _dateOnly(date));
     _loadMenu();
@@ -118,17 +114,21 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
   /// 지금 탭/끼니에 보여줄 메뉴.
   List<CafeteriaMenuItem> _itemsToShow(DailyCafeteriaMenu? menu) {
     if (menu == null) return const [];
-    return menu.itemsFor(_meal).where((item) => item.venue == _venue).toList();
+    final items = menu.itemsFor(_meal);
+    if (_venue == null) return items;
+    return items.where((item) => item.venue == _venue).toList();
   }
 
-  /// 위쪽 알약 문구 — 식당/끼니/시간.
+  /// 위쪽 알약 문구 — 식당/끼니/시간. 전체 탭은 학생식당 기준으로 쓴다.
   String get _pillText {
     switch (_venue) {
+      case null:
       case CafeteriaVenue.student:
-        final time = _meal == CafeteriaMeal.lunch ? ' 11:30 ~ 13:30' : '';
+        final time = _meal == CafeteriaMeal.lunch ? ' 11:30 - 13:30' : '';
         return '학생회관 1층 · ${_meal.label}$time';
       case CafeteriaVenue.staff:
-        return '교직원식당 · ${_meal.label}';
+      case CafeteriaVenue.cafe:
+        return '${_venue!.label} · ${_meal.label}';
     }
   }
 
@@ -298,35 +298,29 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     );
   }
 
+  /// 메뉴 카드를 두 장씩 한 줄로 놓는다. 한 줄 안의 두 카드는 높이를 같게 맞춘다.
   Widget _buildMenus(List<CafeteriaMenuItem> items) {
-    final featured = items.first;
-    final others = items.skip(1).toList();
-    final favKey = '${_dateKey(_selectedDate)}/${featured.key}';
+    // 전체 탭에서는 학생식당이 아닌 메뉴에 식당 이름 배지를 단다.
+    Widget card(CafeteriaMenuItem item) => SmallMenuCard(
+      item: item,
+      showVenue: _venue == null && item.venue != CafeteriaVenue.student,
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
       child: Column(
         children: [
-          FeaturedMenuCard(
-            item: featured,
-            favorite: _favorites.contains(favKey),
-            onFavoriteTap: () => setState(() {
-              if (!_favorites.remove(favKey)) _favorites.add(favKey);
-            }),
-          ),
-          if (others.isNotEmpty) const SizedBox(height: 10),
-          // 두 장씩 한 줄. 한 줄 안의 두 카드는 높이를 같게 맞춘다.
-          for (var i = 0; i < others.length; i += 2) ...[
+          for (var i = 0; i < items.length; i += 2) ...[
             if (i > 0) const SizedBox(height: 10),
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: SmallMenuCard(item: others[i])),
+                  Expanded(child: card(items[i])),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: i + 1 < others.length
-                        ? SmallMenuCard(item: others[i + 1])
+                    child: i + 1 < items.length
+                        ? card(items[i + 1])
                         : const SizedBox.shrink(),
                   ),
                 ],

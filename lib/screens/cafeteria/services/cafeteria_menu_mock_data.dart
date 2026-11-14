@@ -81,7 +81,6 @@ class CafeteriaMenuMockData {
             dishes: ['제육볶음', '된장찌개', '잡곡밥', '콩나물무침', '깍두기'],
             price: 5000,
             category: '한식',
-            popularRank: 1,
           ),
           CafeteriaMenuItem(
             restaurant: '일품',
