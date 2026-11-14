@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import 'home/widgets/home_bottom_nav.dart';
 import 'home/widgets/home_notice_banner.dart';
+import 'home/widgets/home_top_icon_button.dart';
 import 'home_placeholder_screen.dart';
 import 'search/app_features.dart';
+import 'search/search_screen.dart';
 import '../widgets/pressable.dart';
 
 /// "모아보기" 화면 (v7 디자인 14·15).
@@ -111,6 +113,13 @@ class CollectionScreen extends StatelessWidget {
     ),
   ];
 
+  /// 통합 검색 화면. 홈의 돋보기와 같은 화면을 같은 값으로 연다.
+  void _openSearch(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => SearchScreen(links: _links)),
+    );
+  }
+
   void _openPlaceholder(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()));
@@ -173,14 +182,11 @@ class CollectionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // 디자인에는 없지만 기존 화면에 있던 "편집" 표시를 남겨 둔다.
-                      Text(
-                        '편집',
-                        style: TextStyle(
-                          color: AppColors.textSub,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      // Figma "04 모아보기"의 찾기 버튼. 홈 위쪽 검색 버튼과 같다.
+                      HomeV7IconButton(
+                        asset: HomeV7IconButton.searchAsset,
+                        semanticLabel: '검색',
+                        onTap: () => _openSearch(context),
                       ),
                     ],
                   ),
