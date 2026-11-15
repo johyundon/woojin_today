@@ -264,7 +264,7 @@ void main() {
     expect(service.calls, 1); // 처음 화면을 열 때(2026년 2학기) 한 번뿐
   });
 
-  testWidgets('지난 학기는 수강 과목이 없어도 저장·자동 생성·과목 추가가 없다', (tester) async {
+  testWidgets('지난 학기도 저장·자동 생성·과목 추가를 할 수 있다', (tester) async {
     await _pump(
       tester,
       _FakeService([
@@ -279,12 +279,12 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
-    expect(find.text('지난 학기 시간표예요'), findsOneWidget);
+    expect(find.text('지난 학기 시간표예요'), findsNothing);
     expect(find.text('지난 학기에 수강신청한 과목이 없어요.'), findsOneWidget);
     expect(find.text('이번 학기에 수강신청한 과목이 없어요.'), findsNothing);
-    expect(find.text('저장'), findsNothing);
-    expect(find.text('자동 생성'), findsNothing);
-    expect(find.text('과목 추가'), findsNothing);
+    expect(find.text('저장'), findsOneWidget);
+    expect(find.text('자동 생성'), findsOneWidget);
+    expect(find.text('과목 추가'), findsOneWidget);
   });
 
   testWidgets('개설과목이 있는 학기로 바꾸면 알림창이 뜨지 않는다', (tester) async {
