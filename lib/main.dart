@@ -7,6 +7,7 @@ import 'services/notice_background.dart';
 import 'services/notice_watcher.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
+import 'theme/instant_page_transitions.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,13 @@ class MyApp extends StatelessWidget {
         dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: Colors.white,
+        ),
+        // 화면 전환 애니메이션 없이 바로 넘긴다(iOS 뒤로 쓸기는 유지).
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.iOS: InstantPageTransitionsBuilder(),
+            TargetPlatform.android: InstantPageTransitionsBuilder(),
+          },
         ),
       ),
       home: const SplashScreen(),
