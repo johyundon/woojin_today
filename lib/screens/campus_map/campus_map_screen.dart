@@ -380,6 +380,40 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
+  /// 지도에서 건물 자리를 누르면 차례대로 출발 → 도착으로 정한다.
+  /// - 출발이 비어 있으면(기본 화면 포함) 누른 건물이 출발.
+  /// - 출발만 있으면 누른 건물이 도착, 바로 길을 그린다.
+  /// - 둘 다 있으면 누른 건물을 새 출발로 다시 시작한다.
+  /// 건물에서 먼 곳을 누르면 무시한다.
+  Future<void> _onMapTap(LatLng latLng) async {
+    if (_pickerTarget != _PickerTarget.none) return;
+    final building = nearestCampusBuilding(
+      GeoPoint(lat: latLng.latitude, lng: latLng.longitude),
+    );
+    if (building == null) return;
+    final hasOrigin = _origin != null || _originIsMe;
+    final hasDestination = _destination != null || _destinationIsMe;
+    // 출발 건물을 한 번 더 누른 것(두 번 톡톡 포함)은 도착으로 치지 않는다.
+    if (hasOrigin && !hasDestination && building == _origin) return;
+    setState(() {
+      if (hasOrigin && !hasDestination) {
+        _destination = building;
+        _destinationIsMe = false;
+      } else if (!hasOrigin && hasDestination) {
+        _origin = building;
+        _originIsMe = false;
+      } else {
+        _origin = building;
+        _originIsMe = false;
+        _destination = null;
+        _destinationIsMe = false;
+      }
+      _selectedBuilding = null;
+      _routeClasses = null;
+    });
+    await _fetchRoute();
+  }
+
   void _onMarkerTap(String markerId) {
     final building = _findBuilding(markerId);
     if (building == null) return;
@@ -590,6 +624,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               onMapCreated: (controller) => _mapController = controller,
               onMarkerTap: (markerId, latLng, zoomLevel) =>
                   _onMarkerTap(markerId),
+              onMapTap: _onMapTap,
             ),
             Positioned(
               top: 0,
