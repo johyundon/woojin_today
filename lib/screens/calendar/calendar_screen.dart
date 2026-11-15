@@ -956,7 +956,8 @@ class _CalendarScreenState extends State<CalendarScreen>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              // 달력(막대 포함) 양옆 여백 16(사용자 요청, 2026-11-15).
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SizedBox(
                 // 요일 줄(약 20) + 주 줄들.
                 height: 20 + weekCount * _scrollWeekHeight,
@@ -1093,7 +1094,8 @@ class _CalendarScreenState extends State<CalendarScreen>
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textStrong,
-                fontSize: 18,
+                // "2026년 11월" 글자 크기 20(사용자 요청, 2026-11-15).
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
               ),
