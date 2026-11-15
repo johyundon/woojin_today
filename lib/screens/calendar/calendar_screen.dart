@@ -74,6 +74,17 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// 달력이 펼쳐진 정도(0=접힘: 점 달력 + 그날 일정 목록, 1=펼침: 날짜 칸 안에
   /// 일정 막대). 끄는 동안은 손가락을 따라 움직이고, 손을 떼면 가까운 쪽(또는
   /// 튕긴 방향)으로 마저 움직인다.
+  /// 시안(Figma 2242-14759, 2026-11-15)대로 "위는 막대 달력, 아래는 고른 날의
+  /// 일정"을 한 장으로 스크롤하는 화면을 쓸지. false면 예전의 "점 달력 + 끌어서
+  /// 펼치기" 화면이다(안 쓰는 화면이지만 지우지 않고 남겨 둔다).
+  static const bool _useScrollLayout = true;
+
+  /// 스크롤 화면에서 한 주 줄의 높이(시안 기준 약 100). 막대 3줄과 "+N"이 들어간다.
+  static const double _scrollWeekHeight = 104;
+
+  /// 스크롤 화면에서 날짜를 누르면 아래 일정 영역으로 내려가려고 쓰는 표시.
+  final _dayListKey = GlobalKey();
+
   late final AnimationController _expand = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 320),
@@ -125,8 +136,11 @@ class _CalendarScreenState extends State<CalendarScreen>
       _events = saved.where((e) => !samples.contains(e)).toList();
       _loaded = true;
     });
-    _handleBounce.forward(from: 0);
-    unawaited(_maybeShowHint());
+    // 끌어서 펼치는 예전 화면에서만 쓰는 손잡이 움직임과 첫 안내.
+    if (!_useScrollLayout) {
+      _handleBounce.forward(from: 0);
+      unawaited(_maybeShowHint());
+    }
     if (samples.isNotEmpty) {
       for (final event in samples) {
         await _cancelReminders(event);
@@ -217,6 +231,21 @@ class _CalendarScreenState extends State<CalendarScreen>
       );
     });
     _syncMonth(month);
+  }
+
+  /// 스크롤 화면에서 날짜를 누르면 그날을 고르고, 아래 일정 영역으로 부드럽게
+  /// 내려간다(시안 메모 B, 사용자 결정 2026-11-15). 직접 스크롤해도 보인다(A).
+  void _onScrollDaySelected(int day) {
+    _onDaySelected(day);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _dayListKey.currentContext;
+      if (!mounted || target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   void _onDaySelected(int day) {
@@ -670,7 +699,8 @@ class _CalendarScreenState extends State<CalendarScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.canvas,
+        // 시안: 영역 구분용 배경색 없이 전체 흰색(2026-11-15).
+        backgroundColor: _useScrollLayout ? Colors.white : AppColors.canvas,
         extendBody: true,
         // "+"는 하단 탭 바 바로 위 오른쪽에 떠 있다(v7).
         floatingActionButton: _addButton(),
@@ -692,208 +722,385 @@ class _CalendarScreenState extends State<CalendarScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-                child: Row(
-                  children: [
-                    _monthButton(
-                      Icons.chevron_left_rounded,
-                      _goToPreviousMonth,
-                    ),
-                    Expanded(
-                      child: Text(
-                        '${_focusedMonth.year}년 ${_focusedMonth.month}월',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textStrong,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.88,
-                        ),
+              if (_useScrollLayout) ...[
+                _scrollAppBar(),
+                _scrollMonthNav(),
+              ] else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                  child: Row(
+                    children: [
+                      _monthButton(
+                        Icons.chevron_left_rounded,
+                        _goToPreviousMonth,
                       ),
-                    ),
-                    _monthButton(Icons.chevron_right_rounded, _goToNextMonth),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(36),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x0F000000),
-                        offset: Offset(0, -4),
-                        blurRadius: 20,
-                      ),
-                    ],
-                  ),
-                  // 좌우 여백은 접힌/펼친 화면이 각자 준다(펼친 달력은 막대를
-                  // 넓게 보이려고 여백을 줄인다).
-                  padding: const EdgeInsets.only(top: 20),
-                  // 패널을 아래로 끌면 달력이 펼쳐지고 위로 끌면 접힌다. 일정
-                  // 목록 안에서 끄는 건 목록 스크롤이 먼저 받는다.
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onVerticalDragStart: (_) => _expand.stop(),
-                    onVerticalDragUpdate: _onPanelDragUpdate,
-                    onVerticalDragEnd: _onPanelDragEnd,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: _expandTransition(
-                            expanded: Padding(
-                              key: const ValueKey('calendar-expanded'),
-                              // 하단 탭 바와 "+" 버튼에 마지막 주가
-                              // 가리지 않게.
-                              padding: EdgeInsets.fromLTRB(
-                                4,
-                                0,
-                                4,
-                                MediaQuery.paddingOf(context).bottom + 72,
-                              ),
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: CalendarExpandedGrid(
-                                      focusedMonth: _focusedMonth,
-                                      events: _eventsInFocusedMonth,
-                                      selectedDay: selectedDay,
-                                      today: DateTime.now(),
-                                      onDaySelected: _onExpandedDaySelected,
-                                      onEventTap: _openEventDetail,
-                                    ),
-                                  ),
-                                  _expandHandle(expanded: true),
-                                ],
-                              ),
-                            ),
-                            collapsed: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Column(
-                                key: const ValueKey('calendar-collapsed'),
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 달력 격자와 날짜 줄은 고정하고, 아래 일정 목록만
-                                  // 스크롤된다.
-                                  CalendarMonthGrid(
-                                    focusedMonth: _focusedMonth,
-                                    events: _eventsInFocusedMonth,
-                                    selectedDay: selectedDay,
-                                    today: DateTime.now(),
-                                    onDaySelected: _onDaySelected,
-                                  ),
-                                  // 손잡이는 원래 달력과 날짜 줄 사이 여백(26)
-                                  // 안에 넣어 화면 높이가 늘지 않게 한다.
-                                  _expandHandle(expanded: false),
-                                  if (selectedDay != null &&
-                                      selectedDate != null) ...[
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        4,
-                                        4,
-                                        4,
-                                        12,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.baseline,
-                                        textBaseline: TextBaseline.alphabetic,
-                                        children: [
-                                          Text(
-                                            '${selectedDate.month}월 ${selectedDate.day}일 '
-                                            '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
-                                            style: const TextStyle(
-                                              color: AppColors.textStrong,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: -0.45,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '일정 ${dayEvents.length}개',
-                                            style: const TextStyle(
-                                              color: AppColors.blue,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: dayEvents.isEmpty
-                                          ? const Center(
-                                              child: Text(
-                                                '이 날은 일정이 없어요',
-                                                style: TextStyle(
-                                                  color: AppColors.textSub,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            )
-                                          : Builder(
-                                              builder: (context) =>
-                                                  ListView.separated(
-                                                    // 하단 탭 바(extendBody라 아래 여백에 들어 있다)와
-                                                    // "+" 버튼에 마지막 카드가 가리지 않게.
-                                                    padding: EdgeInsets.only(
-                                                      bottom:
-                                                          MediaQuery.paddingOf(
-                                                            context,
-                                                          ).bottom +
-                                                          80,
-                                                    ),
-                                                    itemCount: dayEvents.length,
-                                                    separatorBuilder: (_, _) =>
-                                                        const SizedBox(
-                                                          height: 8,
-                                                        ),
-                                                    itemBuilder: (context, index) {
-                                                      final event =
-                                                          dayEvents[index];
-                                                      return EventRow(
-                                                        event: event,
-                                                        // 종 버튼은 바로 켜고 끄지 않고 알림
-                                                        // 설정 창을 연다(사용자 결정, 2026-11-13).
-                                                        onReminderToggled: (_) =>
-                                                            _openReminderSettings(
-                                                              event,
-                                                            ),
-                                                        onTap: () =>
-                                                            _openEventDetail(
-                                                              event,
-                                                            ),
-                                                      );
-                                                    },
-                                                  ),
-                                            ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                      Expanded(
+                        child: Text(
+                          '${_focusedMonth.year}년 ${_focusedMonth.month}월',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.textStrong,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.88,
                           ),
                         ),
-                        // 처음 한 번 손잡이 아래에 뜨는 안내 말풍선.
-                        if (_showHint) _hintBubble(),
-                      ],
-                    ),
+                      ),
+                      _monthButton(Icons.chevron_right_rounded, _goToNextMonth),
+                    ],
                   ),
                 ),
+              Expanded(
+                child: _useScrollLayout
+                    ? _buildScrollBody(
+                        context,
+                        selectedDay: selectedDay,
+                        selectedDate: selectedDate,
+                        dayEvents: dayEvents,
+                      )
+                    : _buildPanelBody(
+                        context,
+                        selectedDay: selectedDay,
+                        selectedDate: selectedDate,
+                        dayEvents: dayEvents,
+                      ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 예전 화면(점 달력 + 끌어서 펼치기 + 그날 일정 목록). [_useScrollLayout]이
+  /// false일 때만 쓴다.
+  Widget _buildPanelBody(
+    BuildContext context, {
+    required int? selectedDay,
+    required DateTime? selectedDate,
+    required List<CalendarEvent> dayEvents,
+  }) {
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0F000000),
+            offset: Offset(0, -4),
+            blurRadius: 20,
+          ),
+        ],
+      ),
+      // 좌우 여백은 접힌/펼친 화면이 각자 준다(펼친 달력은 막대를
+      // 넓게 보이려고 여백을 줄인다).
+      padding: const EdgeInsets.only(top: 20),
+      // 패널을 아래로 끌면 달력이 펼쳐지고 위로 끌면 접힌다. 일정
+      // 목록 안에서 끄는 건 목록 스크롤이 먼저 받는다.
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onVerticalDragStart: (_) => _expand.stop(),
+        onVerticalDragUpdate: _onPanelDragUpdate,
+        onVerticalDragEnd: _onPanelDragEnd,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: _expandTransition(
+                expanded: Padding(
+                  key: const ValueKey('calendar-expanded'),
+                  // 하단 탭 바와 "+" 버튼에 마지막 주가
+                  // 가리지 않게.
+                  padding: EdgeInsets.fromLTRB(
+                    4,
+                    0,
+                    4,
+                    MediaQuery.paddingOf(context).bottom + 72,
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: CalendarExpandedGrid(
+                          focusedMonth: _focusedMonth,
+                          events: _eventsInFocusedMonth,
+                          selectedDay: selectedDay,
+                          today: DateTime.now(),
+                          onDaySelected: _onExpandedDaySelected,
+                          onEventTap: _openEventDetail,
+                        ),
+                      ),
+                      _expandHandle(expanded: true),
+                    ],
+                  ),
+                ),
+                collapsed: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    key: const ValueKey('calendar-collapsed'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 달력 격자와 날짜 줄은 고정하고, 아래 일정 목록만
+                      // 스크롤된다.
+                      CalendarMonthGrid(
+                        focusedMonth: _focusedMonth,
+                        events: _eventsInFocusedMonth,
+                        selectedDay: selectedDay,
+                        today: DateTime.now(),
+                        onDaySelected: _onDaySelected,
+                      ),
+                      // 손잡이는 원래 달력과 날짜 줄 사이 여백(26)
+                      // 안에 넣어 화면 높이가 늘지 않게 한다.
+                      _expandHandle(expanded: false),
+                      if (selectedDay != null && selectedDate != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${selectedDate.month}월 ${selectedDate.day}일 '
+                                '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
+                                style: const TextStyle(
+                                  color: AppColors.textStrong,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.45,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '일정 ${dayEvents.length}개',
+                                style: const TextStyle(
+                                  color: AppColors.blue,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: dayEvents.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    '이 날은 일정이 없어요',
+                                    style: TextStyle(
+                                      color: AppColors.textSub,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
+                              : Builder(
+                                  builder: (context) => ListView.separated(
+                                    // 하단 탭 바(extendBody라 아래 여백에 들어 있다)와
+                                    // "+" 버튼에 마지막 카드가 가리지 않게.
+                                    padding: EdgeInsets.only(
+                                      bottom:
+                                          MediaQuery.paddingOf(context).bottom +
+                                          80,
+                                    ),
+                                    itemCount: dayEvents.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final event = dayEvents[index];
+                                      return EventRow(
+                                        event: event,
+                                        // 종 버튼은 바로 켜고 끄지 않고 알림
+                                        // 설정 창을 연다(사용자 결정, 2026-11-13).
+                                        onReminderToggled: (_) =>
+                                            _openReminderSettings(event),
+                                        onTap: () => _openEventDetail(event),
+                                      );
+                                    },
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 처음 한 번 손잡이 아래에 뜨는 안내 말풍선.
+            if (_showHint) _hintBubble(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 시안대로 바꾼 화면: 위는 일정 막대가 보이는 달력, 아래는 고른 날의 일정.
+  /// 둘을 한 장으로 이어 스크롤한다. 배경은 모두 흰색이다.
+  Widget _buildScrollBody(
+    BuildContext context, {
+    required int? selectedDay,
+    required DateTime? selectedDate,
+    required List<CalendarEvent> dayEvents,
+  }) {
+    final daysInMonth = DateTime(
+      _focusedMonth.year,
+      _focusedMonth.month + 1,
+      0,
+    ).day;
+    final leadingBlanks =
+        DateTime(_focusedMonth.year, _focusedMonth.month, 1).weekday % 7;
+    final weekCount = ((leadingBlanks + daysInMonth) / 7).ceil();
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: SizedBox(
+                // 요일 줄(약 20) + 주 줄들.
+                height: 20 + weekCount * _scrollWeekHeight,
+                child: CalendarExpandedGrid(
+                  focusedMonth: _focusedMonth,
+                  events: _eventsInFocusedMonth,
+                  selectedDay: selectedDay,
+                  today: DateTime.now(),
+                  onDaySelected: _onScrollDaySelected,
+                  onEventTap: _openEventDetail,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              key: _dayListKey,
+              width: double.infinity,
+              // 날짜를 눌러 내려왔을 때 일정 영역이 화면 위쪽에 붙을 수 있게
+              // 최소한 화면 한 장 높이를 준다.
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              padding: EdgeInsets.fromLTRB(16, 22, 16, bottomInset + 88),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x0F000000),
+                    offset: Offset(0, -4),
+                    blurRadius: 20,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (selectedDate != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '${selectedDate.month}월 ${selectedDate.day}일 '
+                            '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
+                            style: const TextStyle(
+                              color: AppColors.textStrong,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.45,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '일정 ${dayEvents.length}개',
+                            style: const TextStyle(
+                              color: AppColors.blue,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (dayEvents.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
+                          child: Text(
+                            '이 날은 일정이 없어요',
+                            style: TextStyle(
+                              color: AppColors.textSub,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      for (var i = 0; i < dayEvents.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 8),
+                        EventRow(
+                          event: dayEvents[i],
+                          // 종 버튼은 바로 켜고 끄지 않고 알림 설정 창을 연다
+                          // (사용자 결정, 2026-11-13).
+                          onReminderToggled: (_) =>
+                              _openReminderSettings(dayEvents[i]),
+                          onTap: () => _openEventDetail(dayEvents[i]),
+                        ),
+                      ],
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 스크롤 화면 맨 위 앱바 제목.
+  Widget _scrollAppBar() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
+      child: Text(
+        '캘린더',
+        style: TextStyle(
+          color: AppColors.textStrong,
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.6,
+        ),
+      ),
+    );
+  }
+
+  /// 스크롤 화면의 달 이동 줄(시안: 네모 없이 화살표만).
+  Widget _scrollMonthNav() {
+    Widget arrow(IconData icon, VoidCallback onTap) => Pressable.icon(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Icon(icon, size: 26, color: AppColors.textStrong),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: Row(
+        children: [
+          arrow(Icons.chevron_left_rounded, _goToPreviousMonth),
+          Expanded(
+            child: Text(
+              '${_focusedMonth.year}년 ${_focusedMonth.month}월',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textStrong,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          arrow(Icons.chevron_right_rounded, _goToNextMonth),
+        ],
       ),
     );
   }
