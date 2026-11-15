@@ -559,11 +559,13 @@ class _FilterDropdownChip<T> extends StatelessWidget {
     return PopupMenuButton<T>(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: onSelected,
+      // "전체"는 값이 null이라, 메뉴가 돌려주는 값으로 받으면 "그냥 닫음"과
+      // 구분이 안 돼 눌러도 아무 일이 없었다(사용자 지적, 2026-11-16). 그래서
+      // 항목을 누를 때 바로 알린다.
       itemBuilder: (context) => [
         for (final option in options)
           PopupMenuItem<T>(
-            value: option.value,
+            onTap: () => onSelected(option.value),
             child: Text(
               option.label,
               style: const TextStyle(color: TimetableColors.textPrimary),

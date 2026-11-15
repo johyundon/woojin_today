@@ -6,7 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:daejin_app/screens/timetable/course_filters.dart';
 import 'package:daejin_app/screens/timetable/widgets/search_panel.dart';
 
-Widget _bar(CourseFilters filters, {bool panelOpen = false}) => MaterialApp(
+Widget _bar(
+  CourseFilters filters, {
+  bool panelOpen = false,
+  VoidCallback? onFiltersChanged,
+}) => MaterialApp(
   home: Scaffold(
     body: SearchFilterBar(
       controller: TextEditingController(),
@@ -14,7 +18,7 @@ Widget _bar(CourseFilters filters, {bool panelOpen = false}) => MaterialApp(
       filters: filters,
       filterPanelOpen: panelOpen,
       onToggleFilterPanel: () {},
-      onFiltersChanged: () {},
+      onFiltersChanged: onFiltersChanged ?? () {},
       availableGrades: const ['1', '2', '3'],
       availableCourseTypes: const [],
       availableCredits: const [],
@@ -40,5 +44,19 @@ void main() {
   testWidgets('필터를 접으면 무엇이 걸려 있는지 아래 칩으로 보인다', (tester) async {
     await tester.pumpWidget(_bar(CourseFilters(grade: '2')));
     expect(find.text('2학년'), findsOneWidget);
+  });
+
+  testWidgets('학년 메뉴에서 "전체"를 고르면 학년 필터가 풀린다', (tester) async {
+    final filters = CourseFilters(grade: '2');
+    var changed = 0;
+    await tester.pumpWidget(
+      _bar(filters, panelOpen: true, onFiltersChanged: () => changed++),
+    );
+    await tester.tap(find.text('2학년'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('전체').last);
+    await tester.pumpAndSettle();
+    expect(filters.grade, isNull);
+    expect(changed, 1);
   });
 }
