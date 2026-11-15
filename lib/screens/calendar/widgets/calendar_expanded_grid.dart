@@ -49,7 +49,7 @@ class CalendarExpandedGrid extends StatelessWidget {
 
   static const double _numberHeight = 28;
   // 막대: 시안(Figma 2242-14759)처럼 낮은 알약 모양을 거의 붙여 쌓는다(2026-11-15).
-  static const double _barHeight = 14;
+  static const double _barHeight = 16;
   static const double _barGap = 1;
   static const double _moreHeight = 14;
 
@@ -370,12 +370,15 @@ class _EventBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 양끝이 완전히 둥근 알약 모양(시안). 앞뒤 주로 이어지는 쪽만 각지게 붙인다.
-    const radius = Radius.circular(7);
+    const radius = Radius.circular(8);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
-        color: segment.event.color,
+        // 막대는 일정 색을 흰색에 섞은 파스텔 톤으로 칠하고, 글자는 같은 색을
+        // 진하게 해서 읽히게 한다(사용자 요청, 2026-11-15). 일정 카드 띠·점은
+        // 원래 색 그대로라 같은 일정끼리 색 계열이 맞는다.
+        color: Color.lerp(segment.event.color, Colors.white, 0.6),
         borderRadius: BorderRadius.horizontal(
           left: segment.continuesBefore ? Radius.zero : radius,
           right: segment.continuesAfter ? Radius.zero : radius,
@@ -386,8 +389,8 @@ class _EventBar extends StatelessWidget {
         maxLines: 1,
         softWrap: false,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Color.lerp(segment.event.color, Colors.black, 0.45),
           fontSize: 10,
           height: 1.2,
           fontWeight: FontWeight.w500,
