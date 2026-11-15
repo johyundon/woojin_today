@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
@@ -63,6 +65,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   KakaoMapController? _mapController;
   CampusBuilding? _origin;
   CampusBuilding? _destination;
+
+  /// 출발점·도착점이 건물 대신 "내 위치"인지. true면 그 칸의 건물은 null이다.
+  bool _originIsMe = false;
+  bool _destinationIsMe = false;
   CampusBuilding? _selectedBuilding;
   CampusRoute? _route;
   _PickerTarget _pickerTarget = _PickerTarget.none;
@@ -83,7 +89,24 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   RouteClasses? _routeClasses;
 
   /// 출발지·도착지를 고르는 길안내 화면(시안 3번)이면 true.
-  bool get _isRouteMode => _origin != null || _destination != null;
+  bool get _isRouteMode =>
+      _origin != null ||
+      _destination != null ||
+      _originIsMe ||
+      _destinationIsMe;
+
+  /// 출발점·도착점의 좌표. "내 위치"인데 위치를 아직 모르면 null.
+  GeoPoint? get _originPoint => _originIsMe ? _myLocation : _pointOf(_origin);
+  GeoPoint? get _destinationPoint =>
+      _destinationIsMe ? _myLocation : _pointOf(_destination);
+
+  GeoPoint? _pointOf(CampusBuilding? b) =>
+      b == null ? null : GeoPoint(lat: b.lat, lng: b.lng);
+
+  /// 카드·시트에 쓸 출발점·도착점 이름.
+  String? get _originLabel => _originIsMe ? '내 위치' : _origin?.name;
+  String? get _destinationLabel =>
+      _destinationIsMe ? '내 위치' : _destination?.name;
 
   // 뒤로가기 버튼 + 출발지/목적지 검색바(헤더)의 실제 렌더 높이를 측정해,
   // 경로 배너/건물 선택 패널이 기기(노치 유무 등)에 상관없이 늘 헤더
@@ -141,6 +164,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       return;
     }
     setState(() => _myLocation = location);
+    // 출발·도착이 "내 위치"인데 위치를 몰라 길을 못 그렸으면 이제 그린다.
+    if ((_originIsMe || _destinationIsMe) && _route == null) {
+      await _fetchRoute();
+    }
     if (moveCamera) {
       await _mapController?.panTo(LatLng(location.lat, location.lng));
     }
@@ -173,23 +200,45 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   }
 
   Future<void> _fetchRoute() async {
-    final origin = _origin;
-    final destination = _destination;
+    final origin = _originPoint;
+    final destination = _destinationPoint;
     if (origin == null || destination == null) {
       setState(() => _route = null);
       return;
     }
 
     final route = await _routeService.findRoute(
-      origin: GeoPoint(lat: origin.lat, lng: origin.lng),
-      destination: GeoPoint(lat: destination.lat, lng: destination.lng),
+      origin: origin,
+      destination: destination,
     );
     if (!mounted) return;
     setState(() => _route = route);
+    await _fitRoute(route);
+  }
 
-    await _mapController?.fitBounds(
-      route.path.map((g) => LatLng(g.lat, g.lng)).toList(),
-      padding: 80,
+  /// 길 전체가 위쪽 출발·도착 카드와 아래 시트 사이 빈 곳에 보이도록 지도를
+  /// 맞춘다(위·아래 여백을 따로 줘야 카드·시트에 길 끝이 가리지 않는다).
+  Future<void> _fitRoute(CampusRoute route) async {
+    if (route.path.isEmpty) return;
+    var minLat = route.path.first.lat, maxLat = minLat;
+    var minLng = route.path.first.lng, maxLng = minLng;
+    for (final p in route.path) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+    final insets = MediaQuery.paddingOf(context);
+    // 화면이 막 바뀐 직후엔 헤더 높이 실측값이 기본 화면 것일 수 있어, 출발·
+    // 도착 카드 높이(약 160) 이상은 늘 비워 둔다.
+    final topInset = math.max(_headerHeight, insets.top + 160);
+    await _mapController?.setBounds(
+      LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng)),
+      (topInset + 40).round(),
+      48,
+      // 아래 시트(약 300) + 현재 위치 버튼 + 홈 바.
+      (insets.bottom + 380).round(),
+      48,
     );
   }
 
@@ -211,13 +260,33 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     setState(() {
       if (target == _PickerTarget.origin) {
         _origin = building;
+        _originIsMe = false;
       } else if (target == _PickerTarget.destination) {
         _destination = building;
+        _destinationIsMe = false;
       }
       _pickerTarget = _PickerTarget.none;
       _selectedBuilding = null;
       _routeClasses = null;
     });
+    await _fetchRoute();
+  }
+
+  /// 건물 고르기 목록에서 "내 위치"를 골랐을 때.
+  Future<void> _onMyLocationPicked() async {
+    final target = _pickerTarget;
+    setState(() {
+      if (target == _PickerTarget.origin) {
+        _origin = null;
+        _originIsMe = true;
+      } else if (target == _PickerTarget.destination) {
+        _destination = null;
+        _destinationIsMe = true;
+      }
+      _pickerTarget = _PickerTarget.none;
+      _routeClasses = null;
+    });
+    if (_myLocation == null) await _loadMyLocation(moveCamera: true);
     await _fetchRoute();
   }
 
@@ -227,6 +296,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       final origin = _origin;
       _origin = _destination;
       _destination = origin;
+      final originIsMe = _originIsMe;
+      _originIsMe = _destinationIsMe;
+      _destinationIsMe = originIsMe;
       _routeClasses = null;
     });
     await _fetchRoute();
@@ -235,12 +307,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   /// "안내 시작" — 출발할 자리(현재 위치, 없으면 출발점)로 지도를 크게 당긴다.
   /// 걸음마다 알려 주는 안내는 아직 없다.
   Future<void> _startGuidance() async {
-    final start =
-        _myLocation ??
-        switch (_origin) {
-          final b? => GeoPoint(lat: b.lat, lng: b.lng),
-          null => null,
-        };
+    final start = _myLocation ?? _originPoint;
     if (start == null) return;
     await _mapController?.setLevel(2);
     await _mapController?.panTo(LatLng(start.lat, start.lng));
@@ -279,6 +346,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     setState(() {
       _origin = origin;
       _destination = result.destination;
+      _originIsMe = false;
+      _destinationIsMe = false;
       _routeClasses = result.classes;
       _selectedBuilding = null;
     });
@@ -299,25 +368,22 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     _updateWalkToSelected();
   }
 
-  /// "길 알려줘" — 현재 위치에서 고른 건물까지 길을 지도에 그린다.
+  /// "길 알려줘" — 길안내 화면으로 넘어간다. 출발점은 내 위치, 도착점은
+  /// 고른 건물. 위치를 모르면 출발점을 비워 두고 바로 고르게 한다.
   Future<void> _showDirections() async {
-    if (_myLocation == null) {
-      showTopBanner(
-        context,
-        title: '현재 위치를 알 수 없어요',
-        message: '위치 권한을 켜면 지금 있는 곳에서 가는 길을 그려 드려요.',
-        icon: Icons.location_off_rounded,
-      );
-      return;
-    }
-    if (_walkToSelected == null) await _updateWalkToSelected();
-    final route = _walkToSelected;
-    if (!mounted || route == null) return;
-    setState(() => _route = route);
-    await _mapController?.fitBounds(
-      route.path.map((g) => LatLng(g.lat, g.lng)).toList(),
-      padding: 80,
-    );
+    final building = _selectedBuilding;
+    if (building == null) return;
+    final knowsLocation = _myLocation != null;
+    setState(() {
+      _origin = null;
+      _originIsMe = knowsLocation;
+      _destination = building;
+      _destinationIsMe = false;
+      _selectedBuilding = null;
+      _routeClasses = null;
+      _pickerTarget = knowsLocation ? _PickerTarget.none : _PickerTarget.origin;
+    });
+    await _fetchRoute();
   }
 
   void _showFloorGuidePending() {
@@ -384,6 +450,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     setState(() {
       _origin = null;
       _destination = null;
+      _originIsMe = false;
+      _destinationIsMe = false;
       _route = null;
       _selectedBuilding = null;
       _routeClasses = null;
@@ -426,8 +494,42 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   /// 현재 위치 파란 점(옅은 원 위에 흰 테두리 점).
   List<CustomOverlay>? get _customOverlays {
     final location = _myLocation;
-    if (location == null) return null;
+    // 길안내 중이면 건물인 출발점엔 흰 테두리 원, 도착점엔 핀을 그린다
+    // ("내 위치"인 칸은 아래 파란 점이 대신한다).
+    final start = _isRouteMode && !_originIsMe ? _originPoint : null;
+    final end = _isRouteMode && !_destinationIsMe ? _destinationPoint : null;
+    final marks = [
+      if (start != null)
+        CustomOverlay(
+          customOverlayId: 'route_start',
+          latLng: LatLng(start.lat, start.lng),
+          yAnchor: 0.5,
+          zIndex: 9,
+          content:
+              '<div style="width:14px;height:14px;border-radius:50%;'
+              'background:#fff;border:5px solid #0A78E6;'
+              'box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>',
+        ),
+      if (end != null)
+        CustomOverlay(
+          customOverlayId: 'route_end',
+          latLng: LatLng(end.lat, end.lng),
+          yAnchor: 1,
+          zIndex: 9,
+          content:
+              '<div style="padding-bottom:4px;">'
+              '<div style="width:28px;height:28px;'
+              'border-radius:50% 50% 50% 0;background:#0A78E6;'
+              'transform:rotate(-45deg);border:3px solid #fff;'
+              'box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;'
+              'align-items:center;justify-content:center;">'
+              '<div style="width:9px;height:9px;border-radius:50%;'
+              'background:#fff;"></div></div></div>',
+        ),
+    ];
+    if (location == null) return marks.isEmpty ? null : marks;
     return [
+      ...marks,
       CustomOverlay(
         customOverlayId: 'my_location',
         latLng: LatLng(location.lat, location.lng),
@@ -526,10 +628,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                   child: RouteEndpointsCard(
                                     originTitle:
                                         _routeClasses?.fromTitle ??
-                                        _origin?.name,
+                                        _originLabel,
                                     destinationTitle:
                                         _routeClasses?.toTitle ??
-                                        _destination?.name,
+                                        _destinationLabel,
                                     originTime: _routeClasses?.fromTime,
                                     destinationTime: _routeClasses?.toTime,
                                     onTapOrigin: _openOriginPicker,
@@ -559,11 +661,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                         loading: _locating,
                         onTap: () => _loadMyLocation(moveCamera: true),
                       ),
-                      if (route != null && _destination != null) ...[
+                      if (route != null && _destinationLabel != null) ...[
                         const SizedBox(height: 20),
                         RouteSheet(
                           destinationName:
-                              _routeClasses?.toRoom ?? _destination!.name,
+                              _routeClasses?.toRoom ?? _destinationLabel!,
                           walkMinutes: route.walkMinutes,
                           distanceMeters: route.distanceMeters,
                           arrivalTime: hhmm(
@@ -642,7 +744,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                 left: 16,
                 right: 16,
                 child: KakaoMapPointerInterceptor(
-                  child: BuildingPickerPanel(onSelected: _onBuildingPicked),
+                  child: BuildingPickerPanel(
+                    onSelected: _onBuildingPicked,
+                    onSelectMyLocation: _onMyLocationPicked,
+                  ),
                 ),
               ),
             ],
