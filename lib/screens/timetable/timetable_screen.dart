@@ -30,6 +30,7 @@ import 'saved_timetables_screen.dart';
 import 'timetable_colors.dart';
 import 'widgets/course_add_panel.dart';
 import 'widgets/course_detail_dialog.dart';
+import 'widgets/course_remove_dialog.dart';
 import 'widgets/course_result_card.dart';
 import 'widgets/course_result_tile.dart';
 import 'widgets/my_timetable_status_bar.dart';
@@ -271,7 +272,7 @@ class _TimetableScreenState extends State<TimetableScreen>
           today: Weekday.values[now.weekday - 1],
           viewportHeight: viewportHeight,
           showHourLines: !empty,
-          onCourseRemove: _editMode ? _removeCourse : null,
+          onCourseRemove: _editMode ? _confirmRemoveCourse : null,
         ),
         if (empty)
           Positioned.fill(child: Center(child: _emptyTimetablePrompt())),
@@ -402,6 +403,12 @@ class _TimetableScreenState extends State<TimetableScreen>
         },
       ),
     );
+  }
+
+  /// 블록의 "×"를 누르면 "삭제하시겠습니까?"를 묻고, 삭제를 누를 때만 뺀다.
+  Future<void> _confirmRemoveCourse(PlannedCourse course) async {
+    final ok = await showCourseRemoveDialog(context);
+    if (ok && mounted) _removeCourse(course);
   }
 
   /// 시간표에 담긴 과목은 정원·담은 인원·학년이 없을 수 있어서(학교의 내
@@ -774,14 +781,20 @@ class _TimetableScreenState extends State<TimetableScreen>
       // 새 화면에서는 손잡이로 시트 높이를 최소~최대 사이로 바꾼다(닫기는 뒤로가기).
       onHandleDragUpdate: _useFigmaTopBar ? _onSheetDragUpdate : null,
       onHandleDragEnd: _useFigmaTopBar ? _onSheetDragEnd : null,
+      headerScrollable: _filterPanelOpen,
       searchFilterBar: SearchFilterBar(
         controller: _searchController,
         focusNode: _searchFocusNode,
         onQueryChanged: (q) => setState(() => _query = q),
         filters: _filters,
         filterPanelOpen: _filterPanelOpen,
-        onToggleFilterPanel: () =>
-            setState(() => _filterPanelOpen = !_filterPanelOpen),
+        onToggleFilterPanel: () => setState(() {
+          _filterPanelOpen = !_filterPanelOpen;
+          // 필터를 열면 고를 칸이 많아서 시트를 최대로 올린다.
+          if (_filterPanelOpen && _useFigmaTopBar) {
+            _sheetFraction = _sheetMaxFraction;
+          }
+        }),
         onFiltersChanged: () => setState(() {}),
         availableGrades: grades,
         availableCourseTypes: courseTypes,

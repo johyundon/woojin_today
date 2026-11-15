@@ -6,7 +6,6 @@ import 'package:daejin_app/screens/timetable/services/saved_timetable_storage.da
 import 'package:daejin_app/screens/timetable/timetable_screen.dart';
 import 'package:daejin_app/screens/timetable/widgets/course_block.dart';
 import 'package:daejin_app/screens/timetable/widgets/course_result_tile.dart';
-import 'package:daejin_app/screens/timetable/widgets/timetable_grid.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:flutter/material.dart';
@@ -96,19 +95,10 @@ void main() {
     expect(find.text('담음'), findsOneWidget); // 담은 과목은 다시 못 담는다.
     expect(tester.takeException(), isNull);
 
-    // 시간표 격자의 그 과목을 눌러도 팝업 대신 아래 시트에 펼쳐진다.
-    final tile = tester.widget<CourseResultTile>(
-      find.byType(CourseResultTile).first,
-    );
-    await tester.tap(
-      find
-          .descendant(
-            of: find.byType(TimetableGrid),
-            matching: find.text(tile.course.courseName),
-          )
-          .first,
-      warnIfMissed: false,
-    );
+    // 시간표 격자의 그 과목을 눌러도 팝업 대신 아래 시트에 펼쳐진다. 오른쪽 위
+    // ×(삭제)를 피해 블록 왼쪽 아래를 누른다.
+    final block = find.byType(CourseBlock).first;
+    await tester.tapAt(tester.getBottomLeft(block) + const Offset(8, -8));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
     expect(find.text('강의계획서'), findsOneWidget);
@@ -184,7 +174,18 @@ void main() {
     expect(remove, findsWidgets);
     expect(tester.getSize(remove.first), const Size(44, 44));
 
+    // ×를 누르면 확인창이 뜨고, 취소하면 그대로다.
     await tester.tap(remove.first);
+    await tester.pumpAndSettle();
+    expect(find.text('삭제하시겠습니까?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('course-remove-cancel')));
+    await tester.pumpAndSettle();
+    expect(remove, findsWidgets);
+
+    // 삭제를 누르면 빠진다.
+    await tester.tap(remove.first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('course-remove-confirm')));
     await tester.pumpAndSettle();
     expect(remove, findsNothing);
     expect(find.text('담기'), findsOneWidget); // 빠졌으니 다시 담을 수 있다.

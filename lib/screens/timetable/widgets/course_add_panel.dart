@@ -15,6 +15,7 @@ class CourseAddPanel extends StatelessWidget {
     required this.onClose,
     this.onHandleDragUpdate,
     this.onHandleDragEnd,
+    this.headerScrollable = false,
   });
 
   final Widget searchFilterBar;
@@ -27,6 +28,11 @@ class CourseAddPanel extends StatelessWidget {
 
   /// 손잡이 끌기를 놓았을 때의 세로 속도(아래가 +).
   final ValueChanged<double>? onHandleDragEnd;
+
+  /// 필터를 펼쳐 [searchFilterBar]가 길어졌을 때 true. 그때만 그 부분을 스크롤되는
+  /// 칸에 담아, 시트가 낮아도 넘치지 않고 밀어서 볼 수 있게 한다(평소엔 목록이
+  /// 남는 높이를 다 쓴다).
+  final bool headerScrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -73,10 +79,22 @@ class CourseAddPanel extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: searchFilterBar,
-          ),
+          if (headerScrollable)
+            // 필터를 펼치면 이 부분이 길어진다. 시트가 낮을 때도 넘치지 않고 밀어서
+            // 볼 수 있게 스크롤되는 칸에 담는다(사용자 지적, 2026-11-16).
+            Flexible(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: searchFilterBar,
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: searchFilterBar,
+            ),
           const SizedBox(height: 12),
           Expanded(child: results),
         ],
