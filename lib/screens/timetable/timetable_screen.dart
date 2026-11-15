@@ -390,23 +390,7 @@ class _TimetableScreenState extends State<TimetableScreen>
   }
 
   Future<void> _showCourseDetail(CourseCatalogItem item) async {
-    // 시간표에 담긴 과목은 정원·담은 인원·학년이 없을 수 있어서(학교의 내
-    // 시간표 응답에는 없다), 지금 학기 개설과목 목록에 같은 과목·분반이 있으면
-    // 그 값으로 채운다.
-    if (item.capacity == 0 || item.targetGrade.trim().isEmpty) {
-      for (final c in _catalog) {
-        if (c.courseCode == item.courseCode && c.section == item.section) {
-          item = item.withEnrollment(
-            capacity: item.capacity == 0 ? c.capacity : item.capacity,
-            enrolled: item.capacity == 0 ? c.waitlistCount : item.waitlistCount,
-            targetGrade: item.targetGrade.trim().isEmpty
-                ? c.targetGrade
-                : item.targetGrade,
-          );
-          break;
-        }
-      }
-    }
+    item = _withCatalogEnrollment(item);
     await showDialog<void>(
       context: context,
       barrierColor: TimetableColors.barrier,
@@ -418,6 +402,25 @@ class _TimetableScreenState extends State<TimetableScreen>
         },
       ),
     );
+  }
+
+  /// 시간표에 담긴 과목은 정원·담은 인원·학년이 없을 수 있어서(학교의 내
+  /// 시간표 응답에는 없다), 지금 학기 개설과목 목록에 같은 과목·분반이 있으면
+  /// 그 값으로 채운다(개설학과 등 나머지는 그대로).
+  CourseCatalogItem _withCatalogEnrollment(CourseCatalogItem item) {
+    if (item.capacity != 0 && item.targetGrade.trim().isNotEmpty) return item;
+    for (final c in _catalog) {
+      if (c.courseCode == item.courseCode && c.section == item.section) {
+        return item.withEnrollment(
+          capacity: item.capacity == 0 ? c.capacity : item.capacity,
+          enrolled: item.capacity == 0 ? c.waitlistCount : item.waitlistCount,
+          targetGrade: item.targetGrade.trim().isEmpty
+              ? c.targetGrade
+              : item.targetGrade,
+        );
+      }
+    }
+    return item;
   }
 
   void _openSyllabus(CourseCatalogItem item) {
@@ -449,12 +452,16 @@ class _TimetableScreenState extends State<TimetableScreen>
     (c) => c.courseCode == item.courseCode && c.section == item.section,
   );
 
-  /// 시간표 격자의 과목을 눌렀을 때. 편집 화면에서는 팝업 대신 시트에 띄운다.
+  /// 시간표 격자의 과목을 눌렀을 때. 팝업 대신 "시간표 만들기"(편집 화면)를
+  /// 열고 아래 시트 맨 위에 그 과목을 펼쳐 보여 준다(일반 화면에서 눌러도 같음,
+  /// 사용자 요청 2026-11-16). 예전 화면([_useFigmaTopBar]가 false)은 팝업 그대로.
   void _onGridCourseTap(CourseCatalogItem item) {
-    if (!_editMode) {
+    if (!_useFigmaTopBar) {
       _showCourseDetail(item);
       return;
     }
+    item = _withCatalogEnrollment(item);
+    if (!_addPanelOpen) _setAddPanelOpen(true);
     setState(() {
       _pinnedCourse = item;
       _expandedCourseKey = _courseKey(item);

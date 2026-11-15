@@ -427,12 +427,11 @@ void main() {
       ]),
     );
 
+    // 블록을 누르면 팝업 대신 "시간표 만들기" 시트 맨 위에 펼쳐진다(2026-11-16).
     await tester.tap(find.text('자료구조').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('담은인원'), findsOneWidget);
-    expect(find.text('2/40명'), findsOneWidget);
-    expect(find.text('2학년'), findsOneWidget);
+    expect(find.text('담은인원 2/40명'), findsOneWidget);
   });
 
   test('학년은 "3학년"처럼, 모르면 "-"', () {
@@ -443,9 +442,10 @@ void main() {
 
   group('시간표 과목 → 상세보기 → 강의계획서', () {
     Future<void> openSyllabus(WidgetTester tester) async {
+      // 블록을 누르면 "시간표 만들기" 시트에 펼쳐지고, 거기서 강의계획서를 연다.
       await tester.tap(find.text('가상자료구조').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('강의계획서 보기'));
+      await tester.tap(find.text('강의계획서'));
       await tester.pumpAndSettle();
     }
 
@@ -476,11 +476,7 @@ void main() {
         syllabus: syllabus,
       );
 
-      await tester.tap(find.text('가상자료구조').first);
-      await tester.pumpAndSettle();
-      expect(find.text('컴퓨터공학전공'), findsOneWidget);
-      await tester.tap(find.text('강의계획서 보기'));
-      await tester.pumpAndSettle();
+      await openSyllabus(tester);
 
       expect(syllabus.requested.single.department, '컴퓨터공학전공');
       expect(find.text('가상 개요'), findsOneWidget);

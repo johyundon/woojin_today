@@ -4,6 +4,7 @@ import 'package:daejin_app/screens/home/widgets/home_bottom_nav.dart';
 import 'package:daejin_app/screens/timetable/models/saved_timetable.dart';
 import 'package:daejin_app/screens/timetable/services/saved_timetable_storage.dart';
 import 'package:daejin_app/screens/timetable/timetable_screen.dart';
+import 'package:daejin_app/screens/timetable/widgets/course_block.dart';
 import 'package:daejin_app/screens/timetable/widgets/course_result_tile.dart';
 import 'package:daejin_app/screens/timetable/widgets/timetable_grid.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
@@ -187,6 +188,47 @@ void main() {
     await tester.pumpAndSettle();
     expect(remove, findsNothing);
     expect(find.text('담기'), findsOneWidget); // 빠졌으니 다시 담을 수 있다.
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('일반 화면에서 과목 블록을 눌러도 팝업 없이 시간표 만들기가 열리고 그 과목이 펼쳐진다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    // 과목 하나를 담고 일반 화면으로 돌아온다.
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    final firstTile = find.byType(CourseResultTile).first;
+    final name = tester.widget<CourseResultTile>(firstTile).course.courseName;
+    await tester.tap(
+      find.descendant(of: firstTile, matching: find.byType(Text)).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('담기'));
+    await tester.pumpAndSettle();
+    await _tapAddCourse(tester); // 뒤로가기
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsNothing);
+
+    // 일반 화면의 블록을 누른다.
+    final block = find.descendant(
+      of: find.byType(CourseBlock),
+      matching: find.text(name),
+    );
+    expect(block, findsWidgets);
+    await tester.tap(block.first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsOneWidget);
+    expect(find.text('강의계획서'), findsOneWidget);
+    expect(find.text('담음'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -50,6 +50,12 @@ class CourseResultTile extends StatelessWidget {
       height: 1.4,
     );
     final competition = _competition;
+    // 개설과목 목록 값이 있으면 그걸, 없으면(내 시간표 과목) 담은 인원/정원으로.
+    final enrollment = course.enrollmentRatio.trim().isNotEmpty
+        ? course.enrollmentRatio
+        : course.capacity > 0
+        ? '${course.waitlistCount}/${course.capacity}명'
+        : null;
     return Container(
       decoration: highlighted
           ? BoxDecoration(
@@ -108,7 +114,8 @@ class CourseResultTile extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('담은인원 ${course.enrollmentRatio}', style: sub),
+                      if (enrollment != null)
+                        Text('담은인원 $enrollment', style: sub),
                       if (competition != null)
                         Text('경쟁률 $competition', style: sub),
                     ],
