@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
+import '../../services/class_schedule_parser.dart';
+import '../../services/session_cache.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
 import 'campus_map_colors.dart';
+import 'campus_map_search_screen.dart';
 import 'models/campus_building.dart';
 import 'models/geo_point.dart';
 import 'services/campus_route_service.dart';
@@ -40,8 +43,8 @@ class CampusMapScreen extends StatefulWidget {
 }
 
 /// 지금 "건물 선택" 패널이 어느 칸을 채우는 중인지. [none]이면 패널이
-/// 닫혀있다. [select]는 기본 화면 검색창에서 건물 하나를 고르는 중이다.
-enum _PickerTarget { none, origin, destination, select }
+/// 닫혀있다.
+enum _PickerTarget { none, origin, destination }
 
 /// 건물 핀을 지도에 그릴지. 사용자 요청으로 지금은 숨겨 두었다(핀 만드는
 /// 코드와 핀을 눌렀을 때 처리는 다시 켤 때를 위해 남겨 둔다).
@@ -66,10 +69,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
   /// 현재 위치 버튼을 눌러 위치를 읽는 중이면 true(버튼에 빙글이를 띄운다).
   bool _locating = false;
-
-  /// 사용자가 직접(검색·이전 화면) 건물을 골랐는지. false면 아래 시트에
-  /// 현재 위치에서 가장 가까운 건물을 대신 보여 준다.
-  bool _userPickedBuilding = false;
 
   /// 위쪽 카테고리 칩 중 고른 것.
   int? _selectedCategory;
@@ -101,15 +100,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     _origin = _findBuilding(widget.initialOriginBuilding);
     _destination = _findBuilding(widget.initialDestinationBuilding);
     _selectedBuilding = _findBuilding(widget.initialSelectedBuilding);
-    _userPickedBuilding = _selectedBuilding != null;
-    // 기본 화면은 아래 시트가 늘 보이도록, 고른 건물이 없으면 캠퍼스 가운데에서
-    // 가장 가까운 건물을 먼저 보여 준다(현재 위치를 읽으면 그 근처로 바꾼다).
-    if (!_isRouteMode && _selectedBuilding == null) {
-      final center = _defaultCenter;
-      _selectedBuilding = _nearestBuilding(
-        GeoPoint(lat: center.latitude, lng: center.longitude),
-      );
-    }
     if (_origin != null && _destination != null) {
       _fetchRoute();
     }
@@ -142,20 +132,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       }
       return;
     }
-    setState(() {
-      _myLocation = location;
-      // 학교 안(가장 가까운 건물이 1km 이내)에 있을 때만 그 건물로 바꾼다.
-      final nearest = _nearestBuilding(location);
-      final onCampus =
-          haversineMeters(
-            location,
-            GeoPoint(lat: nearest.lat, lng: nearest.lng),
-          ) <
-          1000;
-      if (!_isRouteMode && !_userPickedBuilding && onCampus) {
-        _selectedBuilding = nearest;
-      }
-    });
+    setState(() => _myLocation = location);
     if (moveCamera) {
       await _mapController?.panTo(LatLng(location.lat, location.lng));
     }
@@ -177,20 +154,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     // 기다리는 사이 다른 건물을 골랐으면 버린다.
     if (!mounted || _selectedBuilding != building) return;
     setState(() => _walkToSelected = route);
-  }
-
-  /// [point]에서 가장 가까운 건물.
-  CampusBuilding _nearestBuilding(GeoPoint point) {
-    var nearest = campusBuildings.first;
-    var nearestDistance = double.infinity;
-    for (final b in campusBuildings) {
-      final d = haversineMeters(point, GeoPoint(lat: b.lat, lng: b.lng));
-      if (d < nearestDistance) {
-        nearest = b;
-        nearestDistance = d;
-      }
-    }
-    return nearest;
   }
 
   CampusBuilding? _findBuilding(String? name) {
@@ -237,10 +200,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   Future<void> _onBuildingPicked(String name) async {
     final target = _pickerTarget;
     final building = _findBuilding(name);
-    if (target == _PickerTarget.select) {
-      _selectBuilding(building);
-      return;
-    }
     setState(() {
       if (target == _PickerTarget.origin) {
         _origin = building;
@@ -253,11 +212,37 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
+  /// 검색 화면(시안 2번)을 연다. 건물을 고르면 그 건물을 아래 시트에,
+  /// "오늘 수업 길찾기"를 고르면 출발지 → 도착지 길을 지도에 그린다.
+  Future<void> _openSearch() async {
+    final now = DateTime.now();
+    final courses = SessionCache.lastMyTimetable?.courses ?? const [];
+    final result = await Navigator.of(context).push<CampusSearchResult>(
+      MaterialPageRoute(
+        builder: (_) => CampusMapSearchScreen(
+          todayClasses: todayClasses(courses: courses, now: now),
+          now: now,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    final origin = result.origin;
+    if (origin == null) {
+      _selectBuilding(result.destination);
+      return;
+    }
+    setState(() {
+      _origin = origin;
+      _destination = result.destination;
+      _selectedBuilding = null;
+    });
+    await _fetchRoute();
+  }
+
   /// 기본 화면에서 건물을 고른다 — 지도를 그 건물로 옮기고, 그려 둔 길은
   /// 지우고, 걷는 거리를 다시 구한다.
   void _selectBuilding(CampusBuilding? building) {
     setState(() {
-      _userPickedBuilding = true;
       _pickerTarget = _PickerTarget.none;
       _selectedBuilding = building;
       _walkToSelected = null;
@@ -301,8 +286,33 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   void _onMarkerTap(String markerId) {
     final building = _findBuilding(markerId);
     if (building == null) return;
+    // 기본 화면(칩으로 띄운 핀)이면 아래 시트로 보여 준다.
+    if (!_isRouteMode) {
+      _selectBuilding(building);
+      return;
+    }
     setState(() => _selectedBuilding = building);
   }
+
+  /// 칩을 누르면 그 종류 장소만 핀으로 띄우고 다 보이게 지도를 맞춘다.
+  /// 같은 칩을 다시 누르면 끈다.
+  Future<void> _onCategoryTap(int index) async {
+    final selected = _selectedCategory == index ? null : index;
+    setState(() => _selectedCategory = selected);
+    if (selected == null) return;
+    final points = [
+      for (final b in _categoryPlaces(selected)) LatLng(b.lat, b.lng),
+    ];
+    if (points.length == 1) {
+      await _mapController?.panTo(points.first);
+    } else if (points.isNotEmpty) {
+      await _mapController?.fitBounds(points, padding: 80);
+    }
+  }
+
+  List<CampusBuilding> _categoryPlaces(int index) => [
+    for (final name in campusMapCategories[index].places) ?_findBuilding(name),
+  ];
 
   Future<void> _setOriginFromSelected() async {
     final building = _selectedBuilding;
@@ -350,11 +360,16 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     null => _defaultCenter,
   };
 
-  List<Marker>? get _markers => !_showBuildingPins
-      ? null
-      : campusBuildings
-            .map((b) => Marker(markerId: b.name, latLng: LatLng(b.lat, b.lng)))
-            .toList();
+  /// 칩을 골랐으면 그 종류 장소의 핀, 아니면(전체 핀은 숨김) 핀 없음.
+  List<Marker>? get _markers {
+    final category = _selectedCategory;
+    final places = category != null
+        ? _categoryPlaces(category)
+        : (_showBuildingPins ? campusBuildings : null);
+    return places
+        ?.map((b) => Marker(markerId: b.name, latLng: LatLng(b.lat, b.lng)))
+        .toList();
+  }
 
   /// 현재 위치 파란 점(옅은 원 위에 흰 테두리 점).
   List<CustomOverlay>? get _customOverlays {
@@ -435,15 +450,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                       child: !_isRouteMode
                           ? CampusMapTopBar(
                               onBack: () => Navigator.of(context).pop(),
-                              onTapSearch: () => setState(
-                                () => _pickerTarget = _PickerTarget.select,
-                              ),
+                              onTapSearch: _openSearch,
                               selectedCategory: _selectedCategory,
-                              onCategoryTap: (i) => setState(
-                                () => _selectedCategory = _selectedCategory == i
-                                    ? null
-                                    : i,
-                              ),
+                              onCategoryTap: _onCategoryTap,
                             )
                           // 뒤로가기 버튼과 출발지/목적지 검색바를 한 줄에 나란히 둔다.
                           : Row(
@@ -504,7 +513,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               Positioned(
                 left: 12,
                 right: 12,
-                bottom: 34,
+                // 홈 바(화면 아래 안전 영역) 위로 띄운다.
+                bottom: MediaQuery.paddingOf(context).bottom + 20,
                 child: KakaoMapPointerInterceptor(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,

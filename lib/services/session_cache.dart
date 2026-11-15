@@ -27,6 +27,10 @@ class SessionCache {
   /// 로그인 화면·자동 로그인(스플래시)에서 채우고 [clear]로 지운다.
   static String? homepageCookie;
 
+  /// 가장 최근에 받은 내 시간표. 로그인 정보가 없는 화면(캠퍼스 지도 검색의
+  /// "오늘 수업" 등)이 홈에서 이미 받아 둔 시간표를 다시 쓰려고 둔다.
+  static MyTimetableResponse? lastMyTimetable;
+
   /// 지금 로그인한 학생의 학번. 로그인 직후([postLoginScreen])에 채우고 [clear]로
   /// 지운다. 학번별로 나눠 저장하는 기기 데이터(캘린더 일정)가 쓴다.
   static String? userId;
@@ -113,6 +117,7 @@ class SessionCache {
       userId2: userId2,
     );
     _myTimetableCache[key] = result;
+    lastMyTimetable = result;
     return result;
   }
 
@@ -122,6 +127,7 @@ class SessionCache {
     _studentInfoCache.clear();
     _courseCatalogCache.clear();
     _myTimetableCache.clear();
+    lastMyTimetable = null;
     homepageCookie = null;
     userId = null;
   }

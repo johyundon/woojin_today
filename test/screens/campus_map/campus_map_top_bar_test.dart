@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:daejin_app/screens/campus_map/widgets/campus_map_top_bar.dart';
 
 void main() {
-  testWidgets('검색창과 칩 4개가 보이고, 누르면 알려 준다', (tester) async {
+  testWidgets('검색창과 칩 3개가 보이고, 누르면 알려 준다', (tester) async {
     var searchTaps = 0;
     int? tappedChip;
     await tester.pumpWidget(
@@ -32,6 +32,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(searchTaps, 1);
-    expect(tappedChip, 2);
+    expect(tappedChip, 1);
   });
 }

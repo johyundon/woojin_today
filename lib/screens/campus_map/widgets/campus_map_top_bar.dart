@@ -4,20 +4,40 @@ import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 import '../campus_map_colors.dart';
 
-/// 지도 위쪽 카테고리 칩 하나(이름 + 아이콘).
+/// 지도 위쪽 카테고리 칩 하나(이름 + 아이콘 + 누르면 핀으로 띄울 장소).
 class CampusMapCategory {
-  const CampusMapCategory(this.label, this.icon);
+  const CampusMapCategory(this.label, this.icon, this.places);
 
   final String label;
   final IconData icon;
+
+  /// [campusBuildings]의 건물 이름들.
+  final List<String> places;
 }
 
-/// 시안의 칩 4개. 지금은 지도에 핀을 그리지 않아서 눌러도 고른 모양만 바뀐다.
+/// 칩 3개. 누르면 지도에 그 종류 장소만 핀으로 띄운다.
+///
+/// *** 미검증 *** 식당은 학식이 있는 학생회관과 에그2000만 넣었다. 기숙사
+/// 식당 등 건물 목록에 없는 곳은 빠져 있다.
 const List<CampusMapCategory> campusMapCategories = [
-  CampusMapCategory('강의동', Icons.school_rounded),
-  CampusMapCategory('편의시설', Icons.local_cafe_rounded),
-  CampusMapCategory('식당', Icons.restaurant_rounded),
-  CampusMapCategory('정류장', Icons.directions_bus_rounded),
+  CampusMapCategory('편의시설', Icons.local_cafe_rounded, [
+    '학생회관 CU',
+    '여자기숙사 CU',
+    '남자기숙사 CU',
+    '학생회관 그라찌에',
+    '중앙도서관 그라찌에',
+    '공차 대진대점',
+    '행복베이커리',
+    '학생회관 서점',
+    '학생회관 안경점',
+    '구내안경원',
+    '국민은행 대진대점',
+  ]),
+  CampusMapCategory('식당', Icons.restaurant_rounded, ['학생회관', '학생회관 에그2000']),
+  CampusMapCategory('정류장', Icons.directions_bus_rounded, [
+    '학생회관(교내순환)',
+    '정문(교내순환)',
+  ]),
 ];
 
 /// 지도 기본 화면의 위쪽 흰 카드 — 뒤로가기, "어디 가?" 검색창, 카테고리 칩.
@@ -46,6 +66,7 @@ class CampusMapTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
