@@ -181,32 +181,34 @@ class _TimetableScreenState extends State<TimetableScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // 시안 크기(안내 12, 버튼 약 94x30)에 맞춤(사용자 요청, 2026-11-16:
+        // 처음 넣은 버튼이 너무 컸다).
         const Text(
           '시간표를 만들어 주세요',
           style: TextStyle(
             color: AppColors.textSub,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         Pressable(
           key: const ValueKey('timetable-create'),
           onTap: () => _setAddPanelOpen(true),
           child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            height: 30,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.blue,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: const Text(
               '시간표 만들기',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

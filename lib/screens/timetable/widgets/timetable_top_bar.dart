@@ -4,7 +4,7 @@ import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 
 /// 시간표 상단 한 줄(Figma 2152-1429 "05 시간표", 2026-11-16).
-/// 왼쪽 "시간표" 제목과 연한 파란 학기 칩, 오른쪽 연필(과목 추가)과 ⋮ 메뉴.
+/// 왼쪽 "시간표" 제목과 연한 파란 학기 칩, 오른쪽 연필(과목 추가)과 햄버거 메뉴.
 /// 예전 [TimetableHeader](뒤로가기·"내 시간표" 제목·마스코트·버튼 줄)를
 /// 대신한다.
 class TimetableTopBar extends StatelessWidget {
@@ -81,11 +81,21 @@ class TimetableTopBar extends StatelessWidget {
             Pressable.icon(
               key: const ValueKey('timetable-edit'),
               onTap: onEdit,
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(
-                  Icons.edit_square,
-                  size: 22,
+              // 테두리(아웃라인) 있는 둥근 버튼 안의 연필(사용자 요청,
+              // 2026-11-16).
+              child: Container(
+                width: 36,
+                height: 36,
+                margin: const EdgeInsets.only(right: 6),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.checkLine),
+                ),
+                child: const Icon(
+                  Icons.edit_outlined,
+                  size: 19,
                   color: AppColors.textStrong,
                 ),
               ),
@@ -95,9 +105,10 @@ class TimetableTopBar extends StatelessWidget {
             onTap: onMoreTap,
             child: const Padding(
               padding: EdgeInsets.all(8),
+              // ⋮ 대신 햄버거(줄 세 개) 아이콘(사용자 요청, 2026-11-16).
               child: Icon(
-                Icons.more_vert_rounded,
-                size: 22,
+                Icons.menu_rounded,
+                size: 24,
                 color: AppColors.textStrong,
               ),
             ),
@@ -182,7 +193,7 @@ Future<TimetableMoreAction?> showTimetableMoreSheet(
             item(
               sheetContext,
               TimetableMoreAction.savedList,
-              Icons.menu_rounded,
+              Icons.folder_open_rounded,
               savedCount > 0 ? '저장한 시간표 ($savedCount)' : '저장한 시간표',
             ),
           ],
