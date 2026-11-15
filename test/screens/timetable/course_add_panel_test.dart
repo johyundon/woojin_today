@@ -4,6 +4,8 @@ import 'package:daejin_app/screens/home/widgets/home_bottom_nav.dart';
 import 'package:daejin_app/screens/timetable/models/saved_timetable.dart';
 import 'package:daejin_app/screens/timetable/services/saved_timetable_storage.dart';
 import 'package:daejin_app/screens/timetable/timetable_screen.dart';
+import 'package:daejin_app/screens/timetable/widgets/course_result_tile.dart';
+import 'package:daejin_app/screens/timetable/widgets/timetable_grid.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
 import 'package:flutter/material.dart';
@@ -75,12 +77,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsOneWidget);
-    expect(find.text('담기'), findsWidgets);
+    // 담기·강의계획서는 줄을 눌러 펼쳐야 보인다(팝업 대신, 2026-11-16).
+    expect(find.text('담기'), findsNothing);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('담기').first);
+    final firstTile = find.byType(CourseResultTile).first;
+    await tester.tap(
+      find.descendant(of: firstTile, matching: find.byType(Text)).first,
+    );
     await tester.pumpAndSettle();
+    expect(find.text('담기'), findsOneWidget);
+    expect(find.text('강의계획서'), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing); // 팝업은 뜨지 않는다.
+
+    await tester.tap(find.text('담기'));
+    await tester.pumpAndSettle();
+    expect(find.text('담음'), findsOneWidget); // 담은 과목은 다시 못 담는다.
     expect(tester.takeException(), isNull);
+
+    // 시간표 격자의 그 과목을 눌러도 팝업 대신 아래 시트에 펼쳐진다.
+    final tile = tester.widget<CourseResultTile>(
+      find.byType(CourseResultTile).first,
+    );
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(TimetableGrid),
+            matching: find.text(tile.course.courseName),
+          )
+          .first,
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.text('강의계획서'), findsOneWidget);
 
     await _tapAddCourse(tester);
     await tester.pumpAndSettle();
@@ -100,6 +130,7 @@ void main() {
     expect(find.byKey(const ValueKey('timetable-edit-back')), findsOneWidget);
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
+    expect(find.text('내 시간표 불러오기'), findsOneWidget);
 
     final search = find.text('과목코드, 교수명, 과목명 검색');
     final minTop = tester.getTopLeft(search).dy;

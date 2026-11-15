@@ -31,6 +31,7 @@ import 'timetable_colors.dart';
 import 'widgets/course_add_panel.dart';
 import 'widgets/course_detail_dialog.dart';
 import 'widgets/course_result_card.dart';
+import 'widgets/course_result_tile.dart';
 import 'widgets/my_timetable_status_bar.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/save_timetable_dialog.dart';
@@ -266,7 +267,7 @@ class _TimetableScreenState extends State<TimetableScreen>
           courses: _confirmedCourses,
           pendingSlot: _pendingSlot,
           onEmptyCellTap: _readOnlyNote != null ? (_, _) {} : _onEmptyCellTap,
-          onCourseTap: (course) => _showCourseDetail(course.toCatalogItem()),
+          onCourseTap: (course) => _onGridCourseTap(course.toCatalogItem()),
           today: Weekday.values[now.weekday - 1],
           viewportHeight: viewportHeight,
           showHourLines: !empty,
@@ -344,6 +345,10 @@ class _TimetableScreenState extends State<TimetableScreen>
     setState(() {
       _addPanelOpen = open;
       if (open) _sheetFraction = _sheetMinFraction;
+      if (!open) {
+        _pinnedCourse = null;
+        _expandedCourseKey = null;
+      }
     });
     open ? _addPanelController.forward() : _addPanelController.reverse();
   }
@@ -379,6 +384,7 @@ class _TimetableScreenState extends State<TimetableScreen>
     _searchController.dispose();
     _searchFocusNode.dispose();
     _addPanelController.dispose();
+    _resultsScroll.dispose();
     super.dispose();
   }
 
@@ -407,22 +413,57 @@ class _TimetableScreenState extends State<TimetableScreen>
         course: item,
         onViewSyllabus: () {
           Navigator.of(context).pop();
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => SyllabusScreen(
-                course: item,
-                year: _year,
-                semester: _semester,
-                jsessionId: widget.jsessionId,
-                wmonid: widget.wmonid,
-                userId2: widget.userId2,
-                syllabusService: widget.syllabusService,
-              ),
-            ),
-          );
+          _openSyllabus(item);
         },
       ),
     );
+  }
+
+  void _openSyllabus(CourseCatalogItem item) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SyllabusScreen(
+          course: item,
+          year: _year,
+          semester: _semester,
+          jsessionId: widget.jsessionId,
+          wmonid: widget.wmonid,
+          userId2: widget.userId2,
+          syllabusService: widget.syllabusService,
+        ),
+      ),
+    );
+  }
+
+  /// "시간표 만들기" 시트에서 펼쳐 둔 과목(과목코드+분반). 시간표 격자의 과목을
+  /// 누르면 그 과목이 시트 맨 위에 펼쳐진 채 나온다(팝업 대신, 2026-11-16).
+  String? _expandedCourseKey;
+  CourseCatalogItem? _pinnedCourse;
+  final _resultsScroll = ScrollController();
+
+  String _courseKey(CourseCatalogItem item) =>
+      '${item.courseCode}-${item.section}';
+
+  bool _isAdded(CourseCatalogItem item) => _confirmedCourses.any(
+    (c) => c.courseCode == item.courseCode && c.section == item.section,
+  );
+
+  /// 시간표 격자의 과목을 눌렀을 때. 편집 화면에서는 팝업 대신 시트에 띄운다.
+  void _onGridCourseTap(CourseCatalogItem item) {
+    if (!_editMode) {
+      _showCourseDetail(item);
+      return;
+    }
+    setState(() {
+      _pinnedCourse = item;
+      _expandedCourseKey = _courseKey(item);
+      // 시트는 최소 높이로 두고(사용자 요청, 2026-11-16), 목록을 맨 위로 올려
+      // 고른 과목이 바로 보이게 한다.
+      _sheetFraction = _sheetMinFraction;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_resultsScroll.hasClients) _resultsScroll.jumpTo(0);
+    });
   }
 
   bool _matchesQuery(CourseCatalogItem item) {
@@ -541,7 +582,9 @@ class _TimetableScreenState extends State<TimetableScreen>
                                   0,
                                 ),
                                 child: TimetableEditActions(
-                                  showLoadMine: !_catalogNotReady,
+                                  // 시안처럼 "자동 생성" 옆에 늘 둔다(사용자 요청,
+                                  // 2026-11-16: 개설과목이 아직 없는 학기라고 빼지 않음).
+                                  showLoadMine: true,
                                   loading: _myTimetableLoading,
                                   onLoadMine: () =>
                                       _loadMyTimetable(announce: true),
@@ -791,6 +834,37 @@ class _TimetableScreenState extends State<TimetableScreen>
           '검색 결과가 없어요',
           style: TextStyle(color: TimetableColors.textSecondary),
         ),
+      );
+    }
+
+    if (_useFigmaTopBar) {
+      // 격자에서 고른 과목은 (목록 아래쪽에 있어도) 맨 위로 올려 펼쳐 둔다.
+      final pinned = _pinnedCourse;
+      final pinnedKey = pinned == null ? null : _courseKey(pinned);
+      final items = [
+        ?pinned,
+        ...results.where((r) => _courseKey(r) != pinnedKey),
+      ];
+      return ListView.builder(
+        controller: _resultsScroll,
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 20),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          final key = _courseKey(item);
+          return CourseResultTile(
+            key: ValueKey('course-tile-$key'),
+            course: item,
+            expanded: _expandedCourseKey == key,
+            alreadyAdded: _isAdded(item),
+            highlighted: pinnedKey == key,
+            onTap: () => setState(
+              () => _expandedCourseKey = _expandedCourseKey == key ? null : key,
+            ),
+            onAdd: () => _addCourse(item),
+            onViewSyllabus: () => _openSyllabus(item),
+          );
+        },
       );
     }
 
