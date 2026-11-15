@@ -70,17 +70,20 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
 
   int get _nowMinutes => widget.now.hour * 60 + widget.now.minute;
 
-  /// 지금 듣는(또는 방금 끝난) 수업과 바로 다음 수업. 둘 다 건물을 찾을 수
-  /// 있을 때만 돌려준다.
+  /// "오늘 수업 길찾기"에 쓸 수업 두 개. 방금 끝난(또는 듣는 중인) 수업이
+  /// 있으면 그 수업 → 다음 수업, 아직 첫 수업 전이면 첫 수업 → 둘째 수업.
+  /// 남은 수업이 없거나 강의실 건물을 못 찾으면 null(카드를 숨긴다).
   ({TodayClass from, TodayClass to, CampusBuilding a, CampusBuilding b})?
   get _nextHop {
     final classes = widget.todayClasses;
     final nextIndex = classes.indexWhere(
       (c) => c.slot.startMinutes > _nowMinutes,
     );
-    if (nextIndex <= 0) return null;
-    final from = classes[nextIndex - 1];
-    final to = classes[nextIndex];
+    if (nextIndex < 0) return null;
+    final fromIndex = nextIndex == 0 ? 0 : nextIndex - 1;
+    if (fromIndex + 1 >= classes.length) return null;
+    final from = classes[fromIndex];
+    final to = classes[fromIndex + 1];
     final a = buildingForRoom(roomForSlot(from));
     final b = buildingForRoom(roomForSlot(to));
     if (a == null || b == null) return null;

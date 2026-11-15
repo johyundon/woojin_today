@@ -33,6 +33,7 @@ final _now = DateTime(2026, 11, 18, 12, 20);
 Future<CampusSearchResult?> _open(
   WidgetTester tester, {
   List<TodayClass> classes = const [],
+  DateTime? now,
 }) async {
   CampusSearchResult? result;
   await tester.pumpWidget(
@@ -43,8 +44,10 @@ Future<CampusSearchResult?> _open(
             onPressed: () async {
               result = await Navigator.of(context).push<CampusSearchResult>(
                 MaterialPageRoute(
-                  builder: (_) =>
-                      CampusMapSearchScreen(todayClasses: classes, now: _now),
+                  builder: (_) => CampusMapSearchScreen(
+                    todayClasses: classes,
+                    now: now ?? _now,
+                  ),
                 ),
               );
             },
@@ -77,6 +80,21 @@ void main() {
     expect(find.text('인문학관302 → 공대가동105 · 여유 15분'), findsOneWidget);
     expect(find.text('진로설계 · 12:15 끝'), findsOneWidget);
     expect(find.text('컴퓨터개론 · 12:30 시작'), findsOneWidget);
+  });
+
+  testWidgets('첫 수업 전이면 첫 수업 → 둘째 수업을 보여 준다', (tester) async {
+    final early = DateTime(2026, 11, 18, 9, 0);
+    final classes = todayClasses(
+      courses: [
+        _course('진로설계', '수10:30-12:15', '공다A 407'),
+        _course('컴퓨터개론', '수12:30-14:00', '인문관302'),
+      ],
+      now: early,
+    );
+    await _open(tester, classes: classes, now: early);
+
+    expect(find.text('진로설계 → 컴퓨터개론'), findsOneWidget);
+    expect(find.text('공다A 407 → 인문관302 · 여유 15분'), findsOneWidget);
   });
 
   testWidgets('검색해서 고르면 최근 검색에 남고 지울 수 있다', (tester) async {
