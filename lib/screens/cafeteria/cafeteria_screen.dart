@@ -12,7 +12,7 @@ import 'widgets/cafeteria_week_row.dart';
 import 'widgets/small_menu_card.dart';
 
 /// "오늘 뭐 먹지?" 화면(디자인 "07 학식"). 위쪽에서 요일(월~금 한 주)과 식당 탭
-/// (전체/학생식당/교직원식당/카페)을 고르면, 메뉴가 같은 크기의 카드로 두 칸씩
+/// (전체/학생식당/생활관식당/교직원식당)을 고르면, 메뉴가 같은 크기의 카드로 두 칸씩
 /// 나온다. 아침/점심/저녁은 위쪽 파란 배지를 눌러 바꾼다.
 ///
 /// 메뉴는 학교 사이트에서 받아 오며([CafeteriaMenuService]), 날짜가 바뀌면 그 날의
@@ -126,6 +126,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
       case CafeteriaVenue.student:
         final time = _meal == CafeteriaMeal.lunch ? ' 11:30 - 13:30' : '';
         return '학생회관 1층 · ${_meal.label}$time';
+      case CafeteriaVenue.dorm:
       case CafeteriaVenue.staff:
       case CafeteriaVenue.cafe:
         return '${_venue!.label} · ${_meal.label}';

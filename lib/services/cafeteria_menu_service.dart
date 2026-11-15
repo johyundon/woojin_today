@@ -28,7 +28,9 @@ abstract class CafeteriaMenuServiceBase {
   Future<DailyCafeteriaMenu> fetchMenu(DateTime date);
 }
 
-/// `POST /diet/daejin/2/view.do`로 한 주치 학식을 받아 날짜별 메뉴로 바꾼다.
+/// `POST /diet/daejin/{게시판 번호}/view.do`로 한 식당의 한 주치 학식을 받아
+/// 날짜별 메뉴로 바꾼다. 기본은 학생회관(2번)이고, [CafeteriaMenuService.dormitory]는
+/// 생활관(6번)이다. 두 식당 모두 표 구조가 같아 읽는 규칙을 함께 쓴다.
 /// 로그인/쿠키는 필요 없다.
 ///
 /// 서버는 요청한 날짜가 속한 주(월~일) 전체를 한 번에 주므로, 주 단위로 메모리와
@@ -43,27 +45,61 @@ abstract class CafeteriaMenuServiceBase {
 /// 않았다.**
 class CafeteriaMenuService implements CafeteriaMenuServiceBase {
   CafeteriaMenuService({http.Client? client, DateTime Function()? now})
-    : _client = client ?? http.Client(),
-      _now = now ?? DateTime.now;
+    : this._(
+        '학생회관',
+        CafeteriaVenue.student,
+        'cafeteria_week_',
+        client: client,
+        now: now,
+        boardNo: 2,
+      );
 
-  static const _endpoint = 'https://www.daejin.ac.kr/diet/daejin/2/view.do';
+  /// 생활관식당(행복기숙사). 2026-11-15 실제 응답 확인: 조식간편식·중식·석식이
+  /// 주말까지 있고, 칸에 코너 표시(`[..]`)가 없다.
+  CafeteriaMenuService.dormitory({
+    http.Client? client,
+    DateTime Function()? now,
+  }) : this._(
+         '생활관식당',
+         CafeteriaVenue.dorm,
+         'cafeteria_dorm_week_',
+         client: client,
+         now: now,
+         boardNo: 6,
+       );
+
+  CafeteriaMenuService._(
+    this._defaultCorner,
+    this._venue,
+    this._prefsKeyPrefix, {
+    required http.Client? client,
+    required DateTime Function()? now,
+    required int boardNo,
+  }) : _client = client ?? http.Client(),
+       _now = now ?? DateTime.now,
+       _endpoint = 'https://www.daejin.ac.kr/diet/daejin/$boardNo/view.do';
+
+  final String _endpoint;
   static const _userAgent =
       'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
 
   /// 명세: 코너 이름이 없으면 쓰는 기본값.
-  static const _defaultCorner = '학생회관';
+  final String _defaultCorner;
+
+  /// 이 식당 메뉴가 들어갈 탭.
+  final CafeteriaVenue _venue;
 
   static final _datePattern = RegExp(r'\d{4}\.\d{2}\.\d{2}');
   static final _cornerPattern = RegExp(r'^\[(.+?)]');
   static final _starCornerPattern = RegExp(r'^★(.+?)★');
   static final _pricePattern = RegExp(r'가격\s*:\s*(.+?)]');
 
-  /// 월요일 날짜(yyyy-MM-dd) → 그 주의 (날짜(yyyy-MM-dd) → 하루 메뉴).
+  /// (식당 저장 키 + 월요일 날짜) → 그 주의 (날짜(yyyy-MM-dd) → 하루 메뉴).
   static final Map<String, _CachedWeek> _weekCache = {};
 
-  /// 기기에 저장하는 키 앞부분. 뒤에 월요일 날짜가 붙는다.
-  static const _prefsKeyPrefix = 'cafeteria_week_';
+  /// 기기에 저장하는 키 앞부분. 뒤에 월요일 날짜가 붙는다. 식당마다 다르다.
+  final String _prefsKeyPrefix;
 
   /// 주 단위 캐시를 몇 시에 "새 주 메뉴가 확정됐다"고 볼지(월요일 이 시각 기준).
   static const _refreshHour = 6;
@@ -94,7 +130,8 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
     bool isFresh(_CachedWeek cached) =>
         !cached.savedAt.isBefore(threshold) || _now().isBefore(threshold);
 
-    var cached = _weekCache[mondayKey];
+    final memoryKey = '$_prefsKeyPrefix$mondayKey';
+    var cached = _weekCache[memoryKey];
     if (cached == null || !isFresh(cached)) {
       final stored = await _readStored(mondayKey);
       cached = stored != null && isFresh(stored) ? stored : null;
@@ -103,7 +140,7 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
       cached = _CachedWeek(_now(), await _fetchWeek(monday));
       await _writeStored(mondayKey, cached);
     }
-    _weekCache[mondayKey] = cached;
+    _weekCache[memoryKey] = cached;
     final week = cached.days;
     return week[_dashKey(date)] ?? const DailyCafeteriaMenu();
   }
@@ -113,7 +150,10 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('$_prefsKeyPrefix$mondayKey');
       if (raw == null) return null;
-      return _CachedWeek.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      return _CachedWeek.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+        _venue,
+      );
     } catch (e) {
       // 저장된 값을 못 읽어도 서버에서 새로 받으면 되므로 조회를 막지 않는다.
       debugPrint('[Cafeteria] 저장된 학식 읽기 실패: $e');
@@ -261,7 +301,12 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
       if (digits != null && digits.isNotEmpty) price = int.parse(digits);
     }
 
-    return CafeteriaMenuItem(restaurant: corner, dishes: dishes, price: price);
+    return CafeteriaMenuItem(
+      restaurant: corner,
+      dishes: dishes,
+      price: price,
+      venue: _venue,
+    );
   }
 
   static String _dashKey(DateTime d) =>
@@ -280,13 +325,18 @@ class _CachedWeek {
   /// 날짜(yyyy-MM-dd) → 그 날 메뉴.
   final Map<String, DailyCafeteriaMenu> days;
 
-  factory _CachedWeek.fromJson(Map<String, dynamic> json) {
+  /// 저장할 때 식당은 넣지 않으므로(저장 키가 식당마다 다름) 읽을 때 [venue]로 채운다.
+  factory _CachedWeek.fromJson(
+    Map<String, dynamic> json,
+    CafeteriaVenue venue,
+  ) {
     List<CafeteriaMenuItem> items(Object? list) => [
       for (final item in list as List<dynamic>)
         CafeteriaMenuItem(
           restaurant: item['restaurant'] as String,
           dishes: (item['dishes'] as List<dynamic>).cast<String>(),
           price: item['price'] as int?,
+          venue: venue,
         ),
     ];
     return _CachedWeek(DateTime.parse(json['savedAt'] as String), {
@@ -319,5 +369,40 @@ class _CachedWeek {
           },
       },
     };
+  }
+}
+
+/// 여러 식당([CafeteriaMenuService])의 같은 날 메뉴를 끼니별로 이어 붙인다.
+/// 순서는 [services] 순서를 따른다(학생식당 먼저 — 홈 카드는 점심 첫 메뉴를 쓴다).
+///
+/// 한 식당이 실패해도 나머지 식당 메뉴는 보여준다. 모두 실패했을 때만 첫 번째
+/// 오류를 그대로 던진다.
+class CombinedCafeteriaMenuService implements CafeteriaMenuServiceBase {
+  CombinedCafeteriaMenuService(this._services);
+
+  final List<CafeteriaMenuServiceBase> _services;
+
+  @override
+  Future<DailyCafeteriaMenu> fetchMenu(DateTime date) async {
+    Object? firstError;
+    final results = await Future.wait([
+      for (final service in _services)
+        () async {
+          try {
+            return await service.fetchMenu(date);
+          } catch (e) {
+            debugPrint('[Cafeteria] 식당 하나 조회 실패: $e');
+            firstError ??= e;
+            return null;
+          }
+        }(),
+    ]);
+    final menus = results.whereType<DailyCafeteriaMenu>().toList();
+    if (menus.isEmpty && firstError != null) throw firstError!;
+    return DailyCafeteriaMenu(
+      breakfast: [for (final m in menus) ...m.breakfast],
+      lunch: [for (final m in menus) ...m.lunch],
+      dinner: [for (final m in menus) ...m.dinner],
+    );
   }
 }

@@ -35,10 +35,11 @@ void main() {
     for (final label in ['월', '화', '수', '목', '금']) {
       expect(find.text(label), findsOneWidget);
     }
-    for (final label in ['전체', '학생식당', '교직원식당', '카페']) {
+    for (final label in ['전체', '학생식당', '생활관식당', '교직원식당']) {
       // 교직원식당은 전체 탭 메뉴 배지에도 나온다.
       expect(find.text(label), findsWidgets);
     }
+    expect(find.text('카페'), findsNothing); // 데이터가 없어 숨긴 탭
     expect(find.text('학생회관 1층 · 점심 11:30 - 13:30'), findsOneWidget);
 
     // 큰 대표 카드 없이 첫 메뉴도 같은 카드로 나온다.
@@ -89,9 +90,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('식당 탭을 바꾸면 그 식당의 메뉴만 보이고, 카페는 메뉴가 없다', (tester) async {
+  testWidgets('식당 탭을 바꾸면 그 식당의 메뉴만 보이고, 메뉴 없는 식당은 안내가 나온다', (tester) async {
     await _pump(tester);
 
+    // 탭 줄은 옆으로 밀어 보는 구조라, 화면 밖 탭은 먼저 보이게 한다.
+    await tester.ensureVisible(find.text('교직원식당').first);
     await tester.tap(find.text('교직원식당').first); // 탭(배지보다 위)
     await tester.pumpAndSettle();
     expect(find.text('소불고기\n미역국'), findsOneWidget);
@@ -99,7 +102,9 @@ void main() {
     expect(find.text('제육볶음\n된장찌개'), findsNothing);
     expect(find.text('교직원식당 · 점심'), findsOneWidget);
 
-    await tester.tap(find.text('카페'));
+    // 가짜 데이터에는 생활관식당 메뉴가 없다.
+    await tester.ensureVisible(find.text('생활관식당'));
+    await tester.tap(find.text('생활관식당'));
     await tester.pumpAndSettle();
     expect(find.text('등록된 메뉴가 없어요'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -198,6 +203,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
+    // 탭 줄은 옆으로 밀어 보는 구조라, 화면 밖 탭은 먼저 보이게 한다.
+    await tester.ensureVisible(find.text('교직원식당').first);
     await tester.tap(find.text('교직원식당').first); // 탭(배지보다 위)
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
