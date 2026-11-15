@@ -389,7 +389,7 @@ void main() {
       expect(MileageService.rosterContains(decimal, '1111000'), isFalse);
     });
 
-    test('인원수는 학번 모양 칸만, 같은 학번은 한 번만 센다', () {
+    test('명단은 학번 모양 칸만, 같은 학번은 한 번만 담는다', () {
       final roster = _xlsx(
         '<c r="A1" t="s"><v>0</v></c>'
         '<c r="B1"><v>11110001</v></c>'
@@ -400,7 +400,7 @@ void main() {
       );
       final r = MileageService.readRoster(roster, '11110002');
       expect(r.found, isTrue);
-      expect(r.count, 2);
+      expect(r.ids, ['11110001', '11110002'], reason: '파일 순서, 중복 없이');
     });
   });
 }

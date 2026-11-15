@@ -47,6 +47,7 @@ class _MileageScholarshipTabState extends State<MileageScholarshipTab> {
         detailPath: notice.detailPath!,
         studentId: widget.studentId,
       ),
+      myId: widget.studentId,
       onOpenNotice: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => NoticeDetailScreen(notice: notice),

@@ -82,7 +82,10 @@ class _FakeMileage implements MileageServiceBase {
     required String studentId,
   }) async {
     checked.add((detailPath: detailPath, studentId: studentId));
-    return MileageTargetCheck(targetResult, rosterCount: 1200);
+    return MileageTargetCheck(
+      targetResult,
+      rosterIds: ['11110001', for (var i = 0; i < 1199; i++) '${22220000 + i}'],
+    );
   }
 }
 
@@ -186,7 +189,7 @@ void main() {
     expect(service.calls.map((c) => c.forceRefresh), [false, true]);
   });
 
-  testWidgets('장학 대상자 → 공지 목록 → 대상자 확인 결과만 보여준다', (tester) async {
+  testWidgets('장학 대상자 → 공지 목록 → 대상자 확인 → 명단 보기 · 공지 원문', (tester) async {
     final service = _FakeMileage();
     await tester.pumpWidget(_app(service));
     await tester.pumpAndSettle();
@@ -213,7 +216,25 @@ void main() {
     await tester.tap(find.text('대상자 확인').last);
     await tester.pumpAndSettle();
     expect(find.text('아쉽게도 대상자 명단에 없어요..'), findsOneWidget);
-    expect(find.text('명단보기'), findsNothing, reason: '다른 학생 명단은 보여주지 않는다');
+
+    // "명단 보기"는 실제 명단 학번을 검색과 함께 보여준다.
+    await tester.tap(find.text('명단 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('명단 (1200명)'), findsOneWidget);
+    expect(find.text('11110001'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '22220005');
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(GridView),
+        matching: find.text('22220005'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('11110001'), findsNothing);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+    expect(find.text('아쉽게도 대상자 명단에 없어요..'), findsOneWidget);
 
     // "공지 원문 보기"는 결과 창을 닫고 학교 공지 상세 화면으로 간다(목록 조회는
     // 이 테스트의 관심사가 아니라 화면 전환만 짧게 기다린다).

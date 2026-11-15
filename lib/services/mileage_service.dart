@@ -127,15 +127,19 @@ enum MileageTargetResult {
   noRoster,
 }
 
-/// 장학 대상자 확인 결과와 명단 인원수.
+/// 장학 대상자 확인 결과와 명단.
 class MileageTargetCheck {
-  const MileageTargetCheck(this.result, {this.rosterCount});
+  const MileageTargetCheck(this.result, {this.rosterIds});
 
   final MileageTargetResult result;
 
-  /// 명단에 있는 학번 개수(같은 학번은 한 번만 셈). 명단이 없으면 null.
-  /// 다른 학생 학번 자체는 넘기지 않고 개수만 알려준다.
-  final int? rosterCount;
+  /// 명단에 있는 학번(파일 순서, 같은 학번은 한 번만). 명단이 없으면 null.
+  /// 학교 공지에 공개된 첨부파일 그대로이며, 화면에 보여 주기만 하고 기기에
+  /// 저장하지 않는다.
+  final List<String>? rosterIds;
+
+  /// 명단 인원수. 명단이 없으면 null.
+  int? get rosterCount => rosterIds?.length;
 }
 
 /// [MileageService]의 공개 API. 화면은 이 타입으로 받아 테스트에서 가짜를 끼운다.
@@ -152,9 +156,8 @@ abstract class MileageServiceBase {
   /// 실패하면 [NoticeException].
   Future<List<NoticeItem>> fetchTargetNotices({bool forceRefresh = false});
 
-  /// [detailPath] 공지의 xlsx 명단에 [studentId]가 있는지와 명단 인원수. 명단은
-  /// 결과·개수만 보고 버리며 학번을 화면에 넘기거나 저장하지 않는다.
-  /// 실패하면 [NoticeException].
+  /// [detailPath] 공지의 xlsx 명단에 [studentId]가 있는지와 명단 학번 목록.
+  /// 명단은 기기에 저장하지 않는다. 실패하면 [NoticeException].
   Future<MileageTargetCheck> checkTarget({
     required String detailPath,
     required String studentId,
@@ -353,10 +356,10 @@ class MileageService implements MileageServiceBase {
       return const MileageTargetCheck(MileageTargetResult.noRoster);
     }
     final bytes = await _notices.downloadBytes(roster.url);
-    final (:found, :count) = readRoster(bytes, studentId);
+    final (:found, :ids) = readRoster(bytes, studentId);
     return MileageTargetCheck(
       found ? MileageTargetResult.target : MileageTargetResult.notTarget,
-      rosterCount: count,
+      rosterIds: ids,
     );
   }
 
@@ -369,13 +372,13 @@ class MileageService implements MileageServiceBase {
   static final _studentIdPattern = RegExp(r'^\d{8,10}$');
 
   /// xlsx 안의 모든 시트·셀 중 [studentId]와 같은 값이 있는지(명세 6번)와,
-  /// 학번 모양(숫자 8~10자리) 칸이 몇 개인지(같은 값은 한 번만 셈).
+  /// 학번 모양(숫자 8~10자리) 칸의 값 목록(파일 순서, 같은 값은 한 번만).
   ///
   /// 실제 명단(2026-10-31 확인)은 학번만 숫자 칸에 들어 있고, 공유 문자열 파일
   /// (`xl/sharedStrings.xml`)이 아예 없기도 하다. 서버가 주는 Content-Type은
   /// 믿지 않고 파일 앞 두 글자가 zip 표시 `PK`인지로 확인한다.
   @visibleForTesting
-  static ({bool found, int count}) readRoster(
+  static ({bool found, List<String> ids}) readRoster(
     Uint8List bytes,
     String studentId,
   ) {
@@ -437,7 +440,7 @@ class MileageService implements MileageServiceBase {
         if (_studentIdPattern.hasMatch(cellValue)) ids.add(cellValue);
       }
     }
-    return (found: found, count: ids.length);
+    return (found: found, ids: List.unmodifiable(ids));
   }
 
   /// 숫자 칸이 "20201234.0"이나 "2.0201234E7"로 저장된 경우도 정수 글자로 맞춘다.
