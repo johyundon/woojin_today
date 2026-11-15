@@ -1,30 +1,54 @@
-// 모아보기 화면 위쪽: "편집" 글자 대신 찾기(돋보기) 버튼이 있고, 누르면 통합
-// 검색 화면이 열린다.
+// 모아보기 화면(Figma "04 모아보기", node 2140:2): 찾기 버튼과 공지 배너 없이
+// "자주 찾는 메뉴" 카드와 "모든 메뉴" 목록만 보이고, 예전 "캠퍼스 · 도구" 칸의
+// 기능은 목록 아래쪽 줄로 들어가 있다.
 
 import 'package:daejin_app/screens/collection_screen.dart';
 import 'package:daejin_app/screens/home/widgets/home_top_icon_button.dart';
-import 'package:daejin_app/screens/search/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('모아보기 오른쪽 위 찾기 버튼을 누르면 검색 화면이 열린다', (tester) async {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('시안대로 구역 제목·버튼이 보이고 찾기 버튼은 숨겨져 있다', (tester) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: CollectionScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('편집'), findsNothing);
-    final search = find.bySemanticsLabel('검색');
-    expect(search, findsOneWidget);
-    expect(find.byType(HomeV7IconButton), findsOneWidget);
+    expect(find.text('자주 찾는 메뉴'), findsOneWidget);
+    expect(find.text('모든 메뉴'), findsOneWidget);
+    expect(find.text('바로가기'), findsNWidgets(3));
+    expect(find.byType(HomeV7IconButton), findsNothing);
+    expect(find.text('캠퍼스 · 도구'), findsNothing);
 
-    await tester.tap(find.byType(HomeV7IconButton));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(SearchScreen), findsOneWidget);
-    // 검색 화면이 공지를 불러오기 시작하므로 정리를 위해 화면을 닫는다.
-    await tester.pumpWidget(const SizedBox());
+    // 도구 4개는 목록 줄로 한 번씩만 나온다.
+    for (final label in ['날씨', '캠퍼스 지도', '파일공유', '상담 예약']) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('쌓은 점수와 내역'), findsOneWidget);
+  });
+
+  testWidgets('많이 연 기능이 자주 찾는 메뉴 카드 맨 앞에 온다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'feature_usage_counts': '{"마일리지": 5}',
+    });
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: CollectionScreen()));
+    await tester.pumpAndSettle();
+
+    // 카드 3장: 마일리지, 시간표, 학식(캘린더는 밀려남).
+    expect(find.text('바로가기'), findsNWidgets(3));
+    final cardX = [
+      for (final l in ['마일리지', '시간표', '학식'])
+        tester.getTopLeft(find.text(l).first).dx,
+    ];
+    expect(cardX[0] < cardX[1] && cardX[1] < cardX[2], isTrue);
+    // 캘린더는 카드에서 빠지고 하단 탭 글자로만 남는다.
+    expect(find.text('캘린더'), findsOneWidget);
   });
 }

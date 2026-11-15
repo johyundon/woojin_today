@@ -10,6 +10,7 @@ import '../home/rank/department_rank_screen.dart';
 import '../mileage/mileage_screen.dart';
 import '../notice/notice_screen.dart';
 import '../weather/weather_page.dart';
+import 'feature_usage_store.dart';
 
 /// 기능 화면을 열 때 필요한, 홈에서 받아 온 값.
 class FeatureLinks {
@@ -40,6 +41,12 @@ class AppFeature {
   final List<String> keywords;
 
   final void Function(BuildContext context, FeatureLinks links) open;
+
+  /// 연 횟수를 기록하고 [open]한다. 모아보기·검색 화면은 이걸로 연다.
+  void openAndRecord(BuildContext context, FeatureLinks links) {
+    const FeatureUsageStore().record(label);
+    open(context, links);
+  }
 
   /// 이름·설명·검색어 중 하나에 [query]가 들어 있는지(띄어쓰기·대소문자 무시).
   bool matches(String query) {
@@ -118,7 +125,7 @@ abstract final class AppFeatures {
 
   static final mileage = AppFeature(
     label: '마일리지',
-    description: '내 점수와 비교과 내역',
+    description: '쌓은 점수와 내역',
     icon: Icons.stars_rounded,
     keywords: const ['장학', '장학금', '포인트', '점수'],
     open: (context, links) => _push(context, const MileageScreen()),

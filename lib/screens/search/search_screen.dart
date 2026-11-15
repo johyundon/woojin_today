@@ -144,7 +144,8 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  void _openFeature(AppFeature feature) => feature.open(context, widget.links);
+  void _openFeature(AppFeature feature) =>
+      feature.openAndRecord(context, widget.links);
 
   @override
   Widget build(BuildContext context) {

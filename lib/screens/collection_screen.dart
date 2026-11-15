@@ -7,14 +7,16 @@ import 'home/widgets/home_notice_banner.dart';
 import 'home/widgets/home_top_icon_button.dart';
 import 'home_placeholder_screen.dart';
 import 'search/app_features.dart';
+import 'search/feature_usage_store.dart';
 import 'search/search_screen.dart';
 import '../widgets/pressable.dart';
 
-/// "모아보기" 화면 (v7 디자인 14·15).
+/// "모아보기" 화면 (Figma "04 모아보기", node 2140:2).
 ///
-/// 홈 화면의 "모아보기" 탭에서 진입한다. 위에서부터 "매일 쓰는 기능" 가로 카드
-/// 3장(시간표·학식·캘린더), "학교생활" 목록 카드, "캠퍼스 · 도구" 아이콘 4칸을
-/// 세로로 스크롤해서 보여준다. 구현되지 않은 항목이 생기면
+/// 홈 화면의 "모아보기" 탭에서 진입한다. 위에서부터 "자주 찾는 메뉴" 가로 카드
+/// 3장(모아보기·검색에서 많이 연 기능 순, 기록이 없으면 시간표·학식·캘린더)과 "모든 메뉴" 목록 카드를 세로로 스크롤해서 보여준다.
+/// 시안에 없는 찾기 버튼·공지 배너·"캠퍼스 · 도구" 아이콘 칸은 지우지 않고
+/// 숨겨 두었고, 도구 4개는 "모든 메뉴" 목록 아래쪽 줄로 옮겼다. 구현되지 않은 항목이 생기면
 /// [HomePlaceholderScreen]으로 이동한다.
 class CollectionScreen extends StatelessWidget {
   const CollectionScreen({this.userId2, this.onTabTap, super.key});
@@ -32,34 +34,52 @@ class CollectionScreen extends StatelessWidget {
   FeatureLinks get _links => FeatureLinks(userId2: userId2, onTabTap: onTabTap);
 
   void Function(BuildContext context) _opener(AppFeature feature) =>
-      (context) => feature.open(context, _links);
+      (context) => feature.openAndRecord(context, _links);
 
-  /// "매일 쓰는 기능" 가로 카드.
+  /// 시안에 없어 숨긴 요소. 다시 보이려면 true로 바꾼다.
+  static const _showSearchButton = false;
+  static const _showNoticeBanner = false;
+  static const _showToolGrid = false;
+
+  /// "자주 찾는 메뉴" 기본 카드(기록이 없을 때, 횟수가 같을 때 앞에 온다).
   List<_DailyItem> get _dailyItems => [
     _DailyItem(
       feature: AppFeatures.timetable,
-      button: '열어보기',
+      button: '바로가기',
       headerColor: _CollectionColors.blueHeader,
       iconColor: _CollectionColors.blueIcon,
       onTap: _opener(AppFeatures.timetable),
     ),
     _DailyItem(
       feature: AppFeatures.cafeteria,
-      button: '메뉴 보기',
+      button: '바로가기',
       headerColor: _CollectionColors.greenHeader,
       iconColor: _CollectionColors.greenIcon,
       onTap: _opener(AppFeatures.cafeteria),
     ),
     _DailyItem(
       feature: AppFeatures.calendar,
-      button: '일정 보기',
+      button: '바로가기',
       headerColor: _CollectionColors.orangeHeader,
       iconColor: _CollectionColors.orangeIcon,
       onTap: _opener(AppFeatures.calendar),
     ),
   ];
 
-  /// "학교생활" 목록.
+  /// "자주 찾는 메뉴" 후보: 기본 3장 + "모든 메뉴" 목록 기능을 카드 모양으로.
+  List<_DailyItem> get _frequentCandidates => [
+    ..._dailyItems,
+    for (final item in _schoolItems)
+      _DailyItem(
+        feature: item.feature,
+        button: '바로가기',
+        headerColor: _CollectionColors.headerFor(item.iconColor),
+        iconColor: item.iconColor,
+        onTap: item.onTap,
+      ),
+  ];
+
+  /// "모든 메뉴" 목록. 아래 네 줄은 예전 "캠퍼스 · 도구" 칸에서 옮겨 왔다.
   List<_ListItem> get _schoolItems => [
     _ListItem(
       feature: AppFeatures.notice,
@@ -91,9 +111,33 @@ class CollectionScreen extends StatelessWidget {
       iconColor: _CollectionColors.greenIcon,
       onTap: _opener(AppFeatures.consecutiveClasses),
     ),
+    _ListItem(
+      feature: AppFeatures.weather,
+      boxColor: _CollectionColors.orangeBox,
+      iconColor: _CollectionColors.orangeIcon,
+      onTap: _opener(AppFeatures.weather),
+    ),
+    _ListItem(
+      feature: AppFeatures.campusMap,
+      boxColor: _CollectionColors.greenBox,
+      iconColor: _CollectionColors.greenIcon,
+      onTap: _opener(AppFeatures.campusMap),
+    ),
+    _ListItem(
+      feature: AppFeatures.fileShare,
+      boxColor: _CollectionColors.blueBox,
+      iconColor: _CollectionColors.blueIcon,
+      onTap: _opener(AppFeatures.fileShare),
+    ),
+    _ListItem(
+      feature: AppFeatures.advisor,
+      boxColor: _CollectionColors.purpleBox,
+      iconColor: _CollectionColors.purpleIcon,
+      onTap: _opener(AppFeatures.advisor),
+    ),
   ];
 
-  /// "캠퍼스 · 도구" 아이콘 칸.
+  /// "캠퍼스 · 도구" 아이콘 칸(숨김, [_showToolGrid]).
   List<_ToolItem> get _toolItems => [
     _ToolItem(
       feature: AppFeatures.weather,
@@ -115,9 +159,8 @@ class CollectionScreen extends StatelessWidget {
 
   /// 통합 검색 화면. 홈의 돋보기와 같은 화면을 같은 값으로 연다.
   void _openSearch(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SearchScreen(links: _links)),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => SearchScreen(links: _links)));
   }
 
   void _openPlaceholder(BuildContext context) {
@@ -167,7 +210,7 @@ class CollectionScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 6, 22, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 22, 0),
                   child: Row(
                     children: [
                       const Expanded(
@@ -175,53 +218,44 @@ class CollectionScreen extends StatelessWidget {
                           '모아보기',
                           style: TextStyle(
                             color: AppColors.textStrong,
-                            fontSize: 26,
+                            fontSize: 17,
                             height: 1.4,
-                            letterSpacing: -0.91,
-                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.34,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                      // Figma "04 모아보기"의 찾기 버튼. 홈 위쪽 검색 버튼과 같다.
-                      HomeV7IconButton(
-                        asset: HomeV7IconButton.searchAsset,
-                        semanticLabel: '검색',
-                        onTap: () => _openSearch(context),
-                      ),
-                    ],
-                  ),
-                ),
-                HomeNoticeBanner(
-                  onOpenCalendar: () => _onTabTap(context, 3),
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 2),
-                ),
-                const SizedBox(height: 14),
-                const _SectionHeading(
-                  label: '매일 쓰는 기능',
-                  title: '오늘 필요한 걸 모았어요',
-                ),
-                const SizedBox(height: 14),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
-                  // 카드 그림자가 잘리지 않도록 위아래로 여유를 둔다.
-                  clipBehavior: Clip.none,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final (i, item) in _dailyItems.indexed) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        _DailyCard(
-                          item: item,
-                          onTap: _handler(context, item.onTap),
+                      // 예전 시안의 찾기 버튼. 홈 위쪽 검색 버튼과 같다(숨김).
+                      if (_showSearchButton)
+                        HomeV7IconButton(
+                          asset: HomeV7IconButton.searchAsset,
+                          semanticLabel: '검색',
+                          onTap: () => _openSearch(context),
                         ),
-                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 38),
-                const _SectionHeading(label: '학교생활', title: '자주 찾는 메뉴'),
-                const SizedBox(height: 14),
+                if (_showNoticeBanner)
+                  HomeNoticeBanner(
+                    onOpenCalendar: () => _onTabTap(context, 3),
+                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 2),
+                  ),
+                const SizedBox(height: 35),
+                const _SectionHeading(
+                  title: '자주 찾는 메뉴',
+                  padding: EdgeInsets.symmetric(horizontal: 22),
+                ),
+                const SizedBox(height: 22),
+                _FrequentCards(
+                  candidates: _frequentCandidates,
+                  onTapOf: (item) => _handler(context, item.onTap),
+                ),
+                const SizedBox(height: 32),
+                const _SectionHeading(
+                  title: '모든 메뉴',
+                  padding: EdgeInsets.symmetric(horizontal: 18),
+                ),
+                const SizedBox(height: 11),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 18),
                   padding: const EdgeInsets.symmetric(
@@ -244,30 +278,32 @@ class CollectionScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 38),
-                const _SectionHeading(label: '캠퍼스 · 도구', title: '필요할 때 바로'),
-                const SizedBox(height: 14),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 18),
-                  padding: const EdgeInsets.fromLTRB(8, 18, 8, 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: AppColors.cardShadow,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final item in _toolItems)
-                        Expanded(
-                          child: _ToolCell(
-                            item: item,
-                            onTap: _handler(context, item.onTap),
+                if (_showToolGrid) ...[
+                  const SizedBox(height: 38),
+                  const _SectionHeading(title: '캠퍼스 · 도구'),
+                  const SizedBox(height: 14),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 18),
+                    padding: const EdgeInsets.fromLTRB(8, 18, 8, 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: AppColors.cardShadow,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final item in _toolItems)
+                          Expanded(
+                            child: _ToolCell(
+                              item: item,
+                              onTap: _handler(context, item.onTap),
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -299,44 +335,99 @@ class _CollectionColors {
   static const Color purpleBox = Color(0xFFE8E8FF);
   static const Color orangeBox = Color(0xFFFFEED6);
 
+  /// 졸업학점·상담 예약이 "자주 찾는 메뉴" 카드로 올라올 때의 윗부분 색.
+  /// 시안에 보라 카드가 없어 보라 아이콘 색을 파랑·초록 카드와 같은 정도로
+  /// 밝게 맞춘 값이다.
+  static const Color purpleHeader = Color(0xFF7A6BDB);
+
+  /// 아이콘 색에 맞는 카드 윗부분 색.
+  static Color headerFor(Color iconColor) => switch (iconColor) {
+    greenIcon => greenHeader,
+    orangeIcon => orangeHeader,
+    purpleIcon => purpleHeader,
+    _ => blueHeader,
+  };
+
   /// 목록 줄 사이 구분선.
   static const Color divider = Color(0xFFE8EAEE);
 }
 
-/// 파란 작은 라벨 + 굵은 제목으로 된 구역 머리말.
+/// 남색 굵은 글자 한 줄로 된 구역 머리말.
 class _SectionHeading extends StatelessWidget {
-  const _SectionHeading({required this.label, required this.title});
+  const _SectionHeading({
+    required this.title,
+    this.padding = const EdgeInsets.symmetric(horizontal: 22),
+  });
 
-  final String label;
   final String title;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
+      padding: padding,
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.inkNavy,
+          fontSize: 17,
+          height: 1.4,
+          letterSpacing: -0.34,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+/// "자주 찾는 메뉴" 가로 카드 줄. 연 횟수 기록을 읽어 [candidates] 중 많이 연
+/// 3개를 보여 주고, 기록이 바뀌면([FeatureUsageStore.changes]) 다시 고른다.
+class _FrequentCards extends StatefulWidget {
+  const _FrequentCards({required this.candidates, required this.onTapOf});
+
+  final List<_DailyItem> candidates;
+  final VoidCallback Function(_DailyItem item) onTapOf;
+
+  @override
+  State<_FrequentCards> createState() => _FrequentCardsState();
+}
+
+class _FrequentCardsState extends State<_FrequentCards> {
+  Map<String, int> _counts = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    FeatureUsageStore.changes.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    FeatureUsageStore.changes.removeListener(_load);
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final counts = await const FeatureUsageStore().load();
+    if (mounted) setState(() => _counts = counts);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = pickFrequent(widget.candidates, (i) => i.label, _counts);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: Column(
+      // 카드 그림자가 잘리지 않도록 위아래로 여유를 둔다.
+      clipBehavior: Clip.none,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.blueText,
-              fontSize: 13,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.textStrong,
-              fontSize: 20,
-              height: 1.4,
-              letterSpacing: -0.6,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          for (final (i, item) in items.indexed) ...[
+            if (i > 0) const SizedBox(width: 12),
+            _DailyCard(item: item, onTap: widget.onTapOf(item)),
+          ],
         ],
       ),
     );
@@ -362,7 +453,7 @@ class _DailyItem {
   final void Function(BuildContext context)? onTap;
 }
 
-/// "매일 쓰는 기능" 카드 한 장(150x183). 색 띠 위에 흰 아이콘 상자가 걸쳐 있고,
+/// "자주 찾는 메뉴" 카드 한 장(150x183). 색 띠 위에 흰 아이콘 상자가 걸쳐 있고,
 /// 아래 흰 카드에 이름·설명·버튼 모양이 있다. 카드 전체가 눌린다.
 class _DailyCard extends StatelessWidget {
   const _DailyCard({required this.item, required this.onTap});
@@ -486,7 +577,7 @@ class _ListItem {
   final void Function(BuildContext context)? onTap;
 }
 
-/// "학교생활" 목록 한 줄: 색 아이콘 상자 + 이름·설명 + 오른쪽 화살표.
+/// "모든 메뉴" 목록 한 줄: 색 아이콘 상자 + 이름·설명 + 오른쪽 화살표.
 class _ListRow extends StatelessWidget {
   const _ListRow({
     required this.item,
