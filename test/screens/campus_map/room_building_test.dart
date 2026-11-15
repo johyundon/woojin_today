@@ -19,6 +19,13 @@ void main() {
       expect(buildingForRoom('사회관 105')?.name, '사회과학관');
     });
 
+    test('시간표의 "공다A 4…" 같은 공대 줄임말도 찾는다', () {
+      expect(buildingForRoom('공다A 407')?.name, '공대 다동');
+      expect(buildingForRoom('공다B408')?.name, '공대 다동');
+      expect(buildingForRoom('공가A 101')?.name, '공대 가동');
+      expect(buildingForRoom('공나 201')?.name, '공대 나동');
+    });
+
     test('모르는 건물이거나 비어 있으면 null', () {
       expect(buildingForRoom('공학관201'), isNull);
       expect(buildingForRoom(''), isNull);

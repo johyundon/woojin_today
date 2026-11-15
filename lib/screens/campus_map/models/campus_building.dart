@@ -1,3 +1,5 @@
+import 'geo_point.dart';
+
 /// 캠퍼스 건물 하나(이름 + 실측 위경도 좌표).
 class CampusBuilding {
   const CampusBuilding({
@@ -61,3 +63,30 @@ const List<CampusBuilding> campusBuildings = [
   CampusBuilding(name: '국제학관', lat: 37.8707321, lng: 127.1561071),
   CampusBuilding(name: '교수회관', lat: 37.8699074, lng: 127.1575756),
 ];
+
+/// 지도를 누른 자리 [point]에서 가장 가까운 건물. [maxMeters]보다 멀면
+/// 건물이 아닌 곳을 누른 것으로 보고 null.
+///
+/// 건물 안 가게·정류장("중앙도서관 그라찌에", "학생회관 CU"처럼 다른 건물
+/// 이름으로 시작하는 것)은 건너뛴다. 좌표가 건물과 거의 같아서, 안 그러면
+/// 건물을 눌러도 가게가 잡힌다.
+CampusBuilding? nearestCampusBuilding(
+  GeoPoint point, {
+  List<CampusBuilding> buildings = campusBuildings,
+  double maxMeters = 60,
+}) {
+  bool isInsideOther(CampusBuilding b) =>
+      buildings.any((a) => a.name != b.name && b.name.startsWith(a.name));
+
+  CampusBuilding? nearest;
+  var best = maxMeters;
+  for (final b in buildings) {
+    if (isInsideOther(b)) continue;
+    final d = haversineMeters(point, GeoPoint(lat: b.lat, lng: b.lng));
+    if (d < best || (nearest == null && d == best)) {
+      nearest = b;
+      best = d;
+    }
+  }
+  return nearest;
+}

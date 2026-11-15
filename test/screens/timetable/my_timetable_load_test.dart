@@ -18,6 +18,9 @@ class _FakeStorage implements SavedTimetableStorage {
   Future<List<SavedTimetable>> loadAll() async => [];
 
   @override
+  Future<void> save(SavedTimetable timetable) async {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -187,32 +190,19 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('이번 학기 등록된 시간표면 저장·자동 생성·과목 추가가 없고, 다른 학기로 바꾸면 보인다', (
-    tester,
-  ) async {
+  testWidgets('이번 학기 등록된 시간표에서도 저장·자동 생성·과목 추가가 보인다', (tester) async {
     await _pump(
       tester,
       _FakeService([
         const MyTimetableResponse(courses: [_course]),
-        const MyTimetableResponse(courses: []),
       ]),
     );
     // now는 2026년 10월이라 이번 학기는 2026년 2학기다.
     expect(find.text('2026년 2학기'), findsOneWidget);
-    expect(find.text('저장'), findsNothing);
-    expect(find.text('자동 생성'), findsNothing);
-    expect(find.text('과목 추가'), findsNothing);
-    expect(find.text('학교에 등록된 이번 학기 시간표예요'), findsOneWidget);
-
-    await tester.tap(find.text('2026년 2학기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('2027년 1학기').last);
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pumpAndSettle();
-
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
     expect(find.text('과목 추가'), findsOneWidget);
+    expect(find.text('학교에 등록된 이번 학기 시간표예요'), findsNothing);
   });
 
   testWidgets('이번 학기라도 수강 과목이 없으면 저장·자동 생성·과목 추가가 보인다', (tester) async {
@@ -222,6 +212,27 @@ void main() {
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
     expect(find.text('과목 추가'), findsOneWidget);
+  });
+
+  testWidgets('시간표를 저장하면 저장했다는 안내를 위에 띄운다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+      ]),
+    );
+
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('시간표를 저장했어요'), findsOneWidget);
+    expect(find.text('"시간표1" · 2026년 2학기 1과목'), findsOneWidget);
+
+    // 배너가 저절로 사라질 때까지 기다려 남은 타이머를 비운다.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('담은 과목이 없을 때 저장을 누르면 알림창을 띄우고 저장하지 않는다', (tester) async {
@@ -264,7 +275,7 @@ void main() {
     expect(service.calls, 1); // 처음 화면을 열 때(2026년 2학기) 한 번뿐
   });
 
-  testWidgets('지난 학기는 수강 과목이 없어도 저장·자동 생성·과목 추가가 없다', (tester) async {
+  testWidgets('지난 학기도 저장·자동 생성·과목 추가를 할 수 있다', (tester) async {
     await _pump(
       tester,
       _FakeService([
@@ -279,12 +290,12 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
-    expect(find.text('지난 학기 시간표예요'), findsOneWidget);
+    expect(find.text('지난 학기 시간표예요'), findsNothing);
     expect(find.text('지난 학기에 수강신청한 과목이 없어요.'), findsOneWidget);
     expect(find.text('이번 학기에 수강신청한 과목이 없어요.'), findsNothing);
-    expect(find.text('저장'), findsNothing);
-    expect(find.text('자동 생성'), findsNothing);
-    expect(find.text('과목 추가'), findsNothing);
+    expect(find.text('저장'), findsOneWidget);
+    expect(find.text('자동 생성'), findsOneWidget);
+    expect(find.text('과목 추가'), findsOneWidget);
   });
 
   testWidgets('개설과목이 있는 학기로 바꾸면 알림창이 뜨지 않는다', (tester) async {

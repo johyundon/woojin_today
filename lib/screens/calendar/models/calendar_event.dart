@@ -308,9 +308,12 @@ class CalendarEvent {
 /// Figma 노드(6:39 "캘린더")가 스크린샷 7장으로 평탄화돼 있어 실제 hex 값을
 /// 뽑을 수 없었다 — 스크린샷을 눈으로 보고 근사했다(파랑/보라/주황/초록/핑크).
 const List<Color> calendarEventPalette = [
-  Color(0xFF3D6CFF), // 파랑
-  Color(0xFF8B5CF6), // 보라
-  Color(0xFFFF7A29), // 주황 (accentOrange)
-  Color(0xFF34C759), // 초록
-  Color(0xFFE0558F), // 핑크
+  // 시안(Figma 2242-14759)의 부드러운 톤으로 맞춤(2026-11-15). 빨강·주황·초록은
+  // 시안에서 잰 대략값이고, 시안에 없는 파랑·보라는 같은 톤으로 맞춰 넣었다.
+  // 순서(뜻)는 그대로라 학사일정 색 규칙(수강=파랑, 시험=주황, 방학=초록)이 유지된다.
+  Color(0xFF5B8DEF), // 파랑
+  Color(0xFF9B7FE0), // 보라
+  Color(0xFFF2A06A), // 주황
+  Color(0xFF5DA845), // 초록
+  Color(0xFFEE6461), // 빨강(예전 핑크 자리)
 ];

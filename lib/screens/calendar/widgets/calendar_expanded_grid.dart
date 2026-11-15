@@ -48,8 +48,9 @@ class CalendarExpandedGrid extends StatelessWidget {
   static const int maxLanes = 3;
 
   static const double _numberHeight = 28;
-  static const double _barHeight = 17;
-  static const double _barGap = 2;
+  // 막대: 시안(Figma 2242-14759)처럼 낮은 알약 모양을 거의 붙여 쌓는다(2026-11-15).
+  static const double _barHeight = 16;
+  static const double _barGap = 1;
   static const double _moreHeight = 14;
 
   @override
@@ -74,7 +75,8 @@ class CalendarExpandedGrid extends StatelessWidget {
                   child: Text(
                     weekdayLabelsSunFirst[i],
                     style: TextStyle(
-                      color: i == 0 || i == 6
+                      // 시안: 일요일만 빨강, 토요일은 다른 요일처럼 회색.
+                      color: i == 0
                           ? CalendarColors.weekendRed
                           : AppColors.textSub,
                       fontSize: 12,
@@ -136,6 +138,11 @@ class CalendarExpandedGrid extends StatelessWidget {
                     child: _buildCell(
                       day: firstDay + col,
                       daysInMonth: daysInMonth,
+                      prevMonthDays: DateTime(
+                        focusedMonth.year,
+                        focusedMonth.month,
+                        0,
+                      ).day,
                       hidden: hiddenPerColumn[col],
                       moreTop: _numberHeight + lanes * (_barHeight + _barGap),
                     ),
@@ -180,10 +187,30 @@ class CalendarExpandedGrid extends StatelessWidget {
   Widget _buildCell({
     required int day,
     required int daysInMonth,
+    required int prevMonthDays,
     required int hidden,
     required double moreTop,
   }) {
-    if (day < 1 || day > daysInMonth) return const SizedBox.shrink();
+    // 앞뒤 달 날짜는 시안처럼 연한 회색 숫자만 보이고 누르지 않는다.
+    if (day < 1 || day > daysInMonth) {
+      final shown = day < 1 ? prevMonthDays + day : day - daysInMonth;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          height: 24,
+          margin: const EdgeInsets.only(top: 2),
+          alignment: Alignment.center,
+          child: Text(
+            '$shown',
+            style: TextStyle(
+              color: AppColors.textMuted.withValues(alpha: 0.55),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }
     final selected = day == selectedDay;
     final isToday =
         today.year == focusedMonth.year &&
@@ -216,11 +243,16 @@ class CalendarExpandedGrid extends StatelessWidget {
                   child: Text(
                     '$day',
                     style: TextStyle(
-                      color: selected ? Colors.white : AppColors.textStrong,
-                      fontSize: 13,
+                      // 시안: 날짜 숫자는 작은 회색 보통 굵기.
+                      color: selected
+                          ? Colors.white
+                          : isToday
+                          ? AppColors.blue
+                          : AppColors.textSub,
+                      fontSize: 12,
                       fontWeight: selected || isToday
                           ? FontWeight.w800
-                          : FontWeight.w600,
+                          : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -337,12 +369,16 @@ class _EventBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = Radius.circular(5);
+    // 양끝이 완전히 둥근 알약 모양(시안). 앞뒤 주로 이어지는 쪽만 각지게 붙인다.
+    const radius = Radius.circular(8);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
-        color: segment.event.color,
+        // 막대는 일정 색을 흰색에 섞은 파스텔 톤으로 칠하고, 글자는 같은 색을
+        // 진하게 해서 읽히게 한다(사용자 요청, 2026-11-15). 일정 카드 띠·점은
+        // 원래 색 그대로라 같은 일정끼리 색 계열이 맞는다.
+        color: Color.lerp(segment.event.color, Colors.white, 0.6),
         borderRadius: BorderRadius.horizontal(
           left: segment.continuesBefore ? Radius.zero : radius,
           right: segment.continuesAfter ? Radius.zero : radius,
@@ -353,11 +389,11 @@ class _EventBar extends StatelessWidget {
         maxLines: 1,
         softWrap: false,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
+        style: TextStyle(
+          color: Color.lerp(segment.event.color, Colors.black, 0.45),
+          fontSize: 10,
           height: 1.2,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w500,
           letterSpacing: -0.3,
         ),
       ),

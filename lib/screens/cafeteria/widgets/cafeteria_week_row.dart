@@ -3,57 +3,77 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
 import '../../../widgets/pressable.dart';
+import '../cafeteria_colors.dart';
 
-/// 선택한 날짜가 속한 주의 월~금 요일 칩 다섯 개. 선택한 날은 연한 파랑, 오늘에는
-/// 숫자 아래에 점을 찍는다. 좌우로 밀면 이전/다음 주로 넘어간다([onWeekChanged]).
-class CafeteriaWeekRow extends StatelessWidget {
-  const CafeteriaWeekRow({
+/// 가로로 넘기는 날짜 칩 줄(디자인 "07 학식"). 주말까지 포함해 오늘 [daysBefore]일
+/// 전부터 [daysAfter]일 뒤까지 보여주고, 처음에는 오늘이 왼쪽 끝에 오게 놓는다. 양쪽
+/// 칩이 화면 끝에서 잘려 보이도록 화면 가장자리까지 그린다(넘길 수 있다는 표시).
+class CafeteriaDateStrip extends StatefulWidget {
+  const CafeteriaDateStrip({
     required this.selectedDate,
     required this.today,
     required this.onDaySelected,
-    required this.onWeekChanged,
+    this.daysBefore = 7,
+    this.daysAfter = 13,
     super.key,
   });
 
   final DateTime selectedDate;
   final DateTime today;
   final ValueChanged<DateTime> onDaySelected;
+  final int daysBefore;
+  final int daysAfter;
 
-  /// 좌우로 밀었을 때. -1이면 이전 주, 1이면 다음 주.
-  final ValueChanged<int> onWeekChanged;
+  /// 칩 너비와 칩 사이 간격, 줄 왼쪽 여백(디자인 64 / 8 / 16).
+  static const double chipWidth = 64;
+  static const double gap = 8;
+  static const double sidePadding = 16;
 
-  /// [date]가 속한 주의 월요일(주말이면 그 주 월요일 — 지난 월~금이 보인다).
-  static DateTime mondayOf(DateTime date) {
-    final d = DateTime(date.year, date.month, date.day);
-    return d.subtract(Duration(days: d.weekday - 1));
+  @override
+  State<CafeteriaDateStrip> createState() => _CafeteriaDateStripState();
+}
+
+class _CafeteriaDateStripState extends State<CafeteriaDateStrip> {
+  // 오늘 칩이 왼쪽 여백 바로 뒤에 오도록 처음 스크롤 위치를 잡는다.
+  late final ScrollController _controller = ScrollController(
+    initialScrollOffset:
+        widget.daysBefore *
+        (CafeteriaDateStrip.chipWidth + CafeteriaDateStrip.gap),
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final monday = mondayOf(selectedDate);
+    final first = widget.today.subtract(Duration(days: widget.daysBefore));
+    final count = widget.daysBefore + widget.daysAfter + 1;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-        if (v < -200) onWeekChanged(1); // 왼쪽으로 밀기 = 다음 주
-        if (v > 200) onWeekChanged(-1);
-      },
-      child: Row(
-        children: [
-          for (var i = 0; i < 5; i++) ...[
-            if (i > 0) const SizedBox(width: 6),
-            Expanded(
-              child: _DayChip(
-                label: weekdayLabelsWeekdaysOnly[i],
-                date: monday.add(Duration(days: i)),
-                selectedDate: selectedDate,
-                today: today,
-                onTap: onDaySelected,
-              ),
-            ),
-          ],
-        ],
+    return SizedBox(
+      // 칩 높이(54) + 그림자가 잘리지 않게 위아래 여유.
+      height: 62,
+      child: ListView.separated(
+        controller: _controller,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: CafeteriaDateStrip.sidePadding,
+          vertical: 4,
+        ),
+        itemCount: count,
+        separatorBuilder: (_, _) =>
+            const SizedBox(width: CafeteriaDateStrip.gap),
+        itemBuilder: (context, i) {
+          // DST 등으로 시각이 어긋나지 않게 날짜만으로 만든다.
+          final date = DateTime(first.year, first.month, first.day + i);
+          return _DayChip(
+            date: date,
+            selected: DateUtils.isSameDay(date, widget.selectedDate),
+            onTap: () => widget.onDaySelected(date),
+          );
+        },
       ),
     );
   }
@@ -61,68 +81,48 @@ class CafeteriaWeekRow extends StatelessWidget {
 
 class _DayChip extends StatelessWidget {
   const _DayChip({
-    required this.label,
     required this.date,
-    required this.selectedDate,
-    required this.today,
+    required this.selected,
     required this.onTap,
   });
 
-  final String label;
   final DateTime date;
-  final DateTime selectedDate;
-  final DateTime today;
-  final ValueChanged<DateTime> onTap;
-
-  bool _same(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final selected = _same(date, selectedDate);
-    final isToday = _same(date, today);
-    final foreground = selected ? AppColors.blue : AppColors.textStrong;
-
     return Pressable(
-      onTap: () => onTap(date),
+      onTap: onTap,
       pressedScale: 0.9,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(0, 7, 0, 6),
+        width: CafeteriaDateStrip.chipWidth,
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: selected ? AppColors.blueSoft : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: selected ? null : AppColors.cardShadow,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: selected ? null : CafeteriaColors.chipShadow,
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              label,
+              weekdayLabelsMonFirst[date.weekday - 1],
               style: TextStyle(
-                color: selected
-                    ? foreground
-                    : foreground.withValues(alpha: 0.75),
+                color: selected ? AppColors.blue : CafeteriaColors.gray700,
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
-                height: 1.4,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
-            const SizedBox(height: 1),
+            const SizedBox(height: 4),
             Text(
               '${date.day}',
               style: TextStyle(
-                color: foreground,
+                color: selected ? AppColors.blue : AppColors.textStrong,
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isToday ? AppColors.inkNavy : Colors.transparent,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
           ],

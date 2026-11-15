@@ -38,7 +38,7 @@ class TimetableHeader extends StatelessWidget {
   final VoidCallback onAutoFill;
   final VoidCallback onAddCourse;
 
-  /// 시간표를 보기만 하는 학기의 안내(예: "지난 학기 시간표예요"). 있으면
+  /// 시간표를 보기만 하는 학기의 안내(예: "학교에 등록된 이번 학기 시간표예요"). 있으면
   /// "저장"·"자동 생성"·"과목 추가" 버튼 대신 이 안내를 보여준다.
   final String? readOnlyNote;
 

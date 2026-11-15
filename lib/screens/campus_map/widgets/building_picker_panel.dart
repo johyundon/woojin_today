@@ -11,9 +11,16 @@ import '../models/campus_building.dart';
 /// 형태라 바텀시트 대신 [CampusMapScreen]의 Stack 안에 직접 올리는
 /// 오버레이로 바꿨다(건물을 고르거나 패널 바깥(지도)을 탭하면 닫힌다).
 class BuildingPickerPanel extends StatefulWidget {
-  const BuildingPickerPanel({super.key, required this.onSelected});
+  const BuildingPickerPanel({
+    super.key,
+    required this.onSelected,
+    this.onSelectMyLocation,
+  });
 
   final ValueChanged<String> onSelected;
+
+  /// 주면 검색어가 없을 때 목록 맨 위에 "내 위치" 줄을 보여 준다.
+  final VoidCallback? onSelectMyLocation;
 
   @override
   State<BuildingPickerPanel> createState() => _BuildingPickerPanelState();
@@ -107,6 +114,35 @@ class _BuildingPickerPanelState extends State<BuildingPickerPanel> {
               ),
             ),
           ),
+          if (widget.onSelectMyLocation != null && _query.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Pressable(
+                onTap: widget.onSelectMyLocation!,
+                pressedScale: 0.98,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.my_location_rounded,
+                        color: AppColors.blue,
+                        size: 18,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        '내 위치',
+                        style: TextStyle(
+                          color: AppColors.blueText,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Flexible(
             child: filtered.isEmpty
                 ? const Padding(

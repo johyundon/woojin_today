@@ -235,6 +235,35 @@ void _cacheTests() {
       expect(calls, hasLength(2));
     });
 
+    test('메뉴가 하나도 없던 주는 오래 믿지 않고, 10분이 지나면 다시 받는다', () async {
+      // 지난 일요일에 다음 주를 봤는데 학교가 아직 식단을 안 올린 경우.
+      final calls = <DateTime>[];
+      var html = '<html></html>';
+      var now = DateTime(2026, 10, 18, 12);
+      CafeteriaMenuService service() => CafeteriaMenuService(
+        now: () => now,
+        client: MockClient((_) async {
+          calls.add(now);
+          return http.Response.bytes(utf8.encode(html), 200);
+        }),
+      );
+      final week = DateTime(2026, 9, 14); // _html에 메뉴가 있는 주
+      expect((await service().fetchMenu(week)).isEmpty, isTrue);
+
+      // 9분 뒤 — 요일만 바꿔 눌러도 다시 요청하지 않는다.
+      now = DateTime(2026, 10, 18, 12, 9);
+      await service().fetchMenu(week);
+      expect(calls, hasLength(1));
+
+      // 금요일에 학교가 식단을 올린 뒤 다시 열면(월요일 06:00 전이어도) 새로 받는다.
+      html = _html;
+      now = DateTime(2026, 10, 23, 18);
+      CafeteriaMenuService.clearMemoryCache();
+      final menu = await service().fetchMenu(week);
+      expect(calls, hasLength(2));
+      expect(menu.lunch.first.restaurant, '데일리밥');
+    });
+
     test('같은 앱 실행 중 요일만 바꿔 조회해도 다시 요청하지 않는다', () async {
       final calls = <DateTime>[];
       final service = serviceAt(DateTime(2026, 10, 23, 18), calls);

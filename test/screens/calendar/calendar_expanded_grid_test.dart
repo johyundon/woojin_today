@@ -50,9 +50,21 @@ void main() {
     // 3~5일(첫 주) + 6~8일(둘째 주) → 막대 두 개.
     expect(find.text('수강신청 변경'), findsNWidgets(2));
     final first = tester.getRect(find.text('수강신청 변경').first);
-    final day3 = tester.getRect(find.text('3'));
+    // 이번 달 3일(다음 달 3일도 회색으로 보여서 앞의 것).
+    final day3 = tester.getRect(find.text('3').first);
     expect(first.left, greaterThan(day3.left - 30));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('앞뒤 달 날짜는 회색으로 보이고 눌러도 날짜를 고르지 않는다', (tester) async {
+    int? tapped;
+    await _pump(tester, const [], onDaySelected: (d) => tapped = d);
+
+    // 2026년 9월은 화요일 시작: 앞에 8월 30·31일, 끝에 10월 1~3일이 보인다.
+    expect(find.text('31'), findsOneWidget);
+    await tester.tap(find.text('31'));
+    await tester.tap(find.text('2').last); // 10월 2일
+    expect(tapped, isNull);
   });
 
   testWidgets('한 날에 일정이 4개 이상이면 3개만 막대로, 나머지는 +N으로 보인다', (tester) async {

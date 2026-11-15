@@ -14,6 +14,7 @@ import 'package:daejin_app/screens/calendar/calendar_screen.dart';
 import 'package:daejin_app/screens/calendar/models/calendar_event.dart';
 import 'package:daejin_app/screens/calendar/services/calendar_event_storage.dart';
 import 'package:daejin_app/screens/calendar/widgets/calendar_expanded_grid.dart';
+import 'package:daejin_app/screens/calendar/widgets/event_row.dart';
 import 'package:daejin_app/screens/calendar/widgets/ringing_bell.dart';
 import 'package:daejin_app/services/academic_schedule_service.dart';
 
@@ -138,6 +139,11 @@ List<AcademicScheduleItem> _thisMonthSchedule() {
   ];
 }
 
+/// 아래 일정 영역의 카드 제목. 위쪽 막대 달력에도 같은 제목의 막대가 있어서
+/// 카드([EventRow]) 안의 글자만 찾는다.
+Finder _card(String title) =>
+    find.descendant(of: find.byType(EventRow), matching: find.text(title));
+
 Future<void> _pump(WidgetTester tester, {_FakeSchedule? schedule}) async {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
@@ -183,7 +189,7 @@ void main() {
     await tester.tap(find.text('14').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('왕방축제'), findsOneWidget);
+    expect(_card('왕방축제'), findsOneWidget);
     expect(find.text('일정 1개'), findsOneWidget);
     expect(find.text('학사일정'), findsOneWidget);
     // 시간이 없는 학사일정은 "종일" 글자 없이 보인다.
@@ -218,29 +224,33 @@ void main() {
     expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
   });
 
-  testWidgets('일정이 많아 스크롤해도 달력 격자와 날짜 줄은 제자리에 있다', (tester) async {
+  testWidgets('제목 "캘린더"와 막대 달력이 보이고, 날짜를 누르면 아래 일정 영역으로 내려간다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
-    final now = DateTime.now();
+    expect(find.text('캘린더'), findsWidgets);
+    // 위쪽 달력 칸 안에 일정 막대(제목)가 보인다.
+    expect(find.byType(CalendarExpandedGrid), findsOneWidget);
+    expect(find.text('왕방축제'), findsWidgets);
 
-    // 17~19일/20~23일 "수료생 재심사 등록" 등 여러 날짜에 걸친 일정이 있고,
-    // 21일에는 일정이 2개 겹친다.
+    final header = find.textContaining('월 21일');
     await tester.tap(find.text('21').first);
     await tester.pumpAndSettle();
 
-    final gridTop = tester.getTopLeft(
-      find.text('${now.year}년 ${now.month}월').first,
-    );
-    final headerFinder = find.textContaining('월 21일');
-    final headerBefore = tester.getTopLeft(headerFinder);
+    // 일정 영역 머리글이 화면 위쪽(앱바·달 이동 줄 아래)까지 올라와 있다.
+    expect(header, findsOneWidget);
+    expect(tester.getTopLeft(header).dy, lessThan(250));
+    expect(_card('수업평가 참여 기간'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
-    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+  testWidgets('스크롤로도 아래 일정 영역을 볼 수 있다', (tester) async {
+    await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
+    final header = find.textContaining('일정 ');
+    final before = tester.getTopLeft(header.first).dy;
+
+    await tester.drag(find.byType(CalendarExpandedGrid), const Offset(0, -400));
     await tester.pumpAndSettle();
 
-    expect(
-      tester.getTopLeft(find.text('${now.year}년 ${now.month}월').first),
-      gridTop,
-    );
-    expect(tester.getTopLeft(headerFinder), headerBefore);
+    expect(tester.getTopLeft(header.first).dy, lessThan(before - 300));
     expect(tester.takeException(), isNull);
   });
 
@@ -250,13 +260,13 @@ void main() {
     await tester.tap(find.text('12').first);
     await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsNothing);
-    expect(find.text('왕방축제'), findsNothing);
+    expect(_card('왕방축제'), findsNothing);
 
     await tester.drag(find.text('15').first, const Offset(0, 200));
     await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsOneWidget);
     // 14~15일이 주를 넘으면 막대가 두 줄로 나뉘므로 하나 이상.
-    expect(find.text('왕방축제'), findsWidgets);
+    expect(_card('왕방축제'), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // 펼친 달력에서 날짜를 누르면 접히고 그날 일정 목록이 나온다.
@@ -264,8 +274,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsNothing);
     expect(find.text('일정 1개'), findsOneWidget);
-    expect(find.text('왕방축제'), findsOneWidget); // 카드
-  });
+    expect(_card('왕방축제'), findsOneWidget); // 카드
+    // 시안대로 한 장 스크롤 화면으로 바꾸면서 끌어서 펼치기·손잡이·첫 안내는
+    // 숨겼다(코드는 남김, 2026-11-15). 다시 켜면 이 테스트도 다시 켠다.
+  }, skip: true);
 
   testWidgets('펼친 달력에서 일정 막대를 누르면 그 일정의 상세 팝업이 뜬다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
@@ -273,7 +285,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsOneWidget);
 
-    await tester.tap(find.text('왕방축제').first);
+    await tester.tap(_card('왕방축제').first);
     await tester.pumpAndSettle();
     expect(find.text('학교에서 등록한 일정은 수정, 삭제할 수 없어요'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -288,7 +300,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('expand-handle-up')));
     await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsNothing);
-  });
+    // 시안대로 한 장 스크롤 화면으로 바꾸면서 끌어서 펼치기·손잡이·첫 안내는
+    // 숨겼다(코드는 남김, 2026-11-15). 다시 켜면 이 테스트도 다시 켠다.
+  }, skip: true);
 
   testWidgets('처음 들어오면 "아래로 끌면…" 안내가 한 번 뜨고, 닫으면 다시 안 뜬다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
@@ -311,7 +325,9 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     expect(find.text('아래로 끌면 일정이 달력에 보여요'), findsNothing);
-  });
+    // 시안대로 한 장 스크롤 화면으로 바꾸면서 끌어서 펼치기·손잡이·첫 안내는
+    // 숨겼다(코드는 남김, 2026-11-15). 다시 켜면 이 테스트도 다시 켠다.
+  }, skip: true);
 
   testWidgets('펼친 달력을 위로 끌면 다시 접힌다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
@@ -322,14 +338,16 @@ void main() {
     await tester.drag(find.text('15').first, const Offset(0, -200));
     await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsNothing);
-  });
+    // 시안대로 한 장 스크롤 화면으로 바꾸면서 끌어서 펼치기·손잡이·첫 안내는
+    // 숨겼다(코드는 남김, 2026-11-15). 다시 켜면 이 테스트도 다시 켠다.
+  }, skip: true);
 
   testWidgets('학사일정 카드를 누르면 상세 팝업이 뜨고, 삭제/수정 버튼은 없다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
 
     await tester.tap(find.text('14').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('왕방축제'));
+    await tester.tap(_card('왕방축제'));
     await tester.pumpAndSettle();
 
     expect(find.text('날짜'), findsOneWidget);
@@ -350,16 +368,14 @@ void main() {
     double scale() => tester
         .widget<AnimatedScale>(
           find.ancestor(
-            of: find.text('왕방축제'),
+            of: _card('왕방축제'),
             matching: find.byType(AnimatedScale),
           ),
         )
         .scale;
     expect(scale(), 1);
 
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.text('왕방축제')),
-    );
+    final gesture = await tester.startGesture(tester.getCenter(_card('왕방축제')));
     await tester.pump(const Duration(milliseconds: 150));
     expect(scale(), lessThan(1));
 
@@ -451,7 +467,7 @@ void main() {
       expect(schedule.requested, ['${now.year}-${now.month}']);
       await tester.tap(find.text('12').first);
       await tester.pumpAndSettle();
-      expect(find.text('가짜 샘플 일정'), findsNothing);
+      expect(_card('가짜 샘플 일정'), findsNothing);
 
       final saved = await CalendarEventStorage().loadAll();
       expect(saved.any((e) => e.id.startsWith('sample-')), isFalse);
@@ -486,7 +502,7 @@ void main() {
       expect(find.textContaining('학사일정을 불러오지 못했어요'), findsOneWidget);
       await tester.tap(find.text('12').first);
       await tester.pumpAndSettle();
-      expect(find.text('저장된 학사일정'), findsOneWidget);
+      expect(_card('저장된 학사일정'), findsOneWidget);
     });
   });
 
@@ -569,7 +585,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // 상세 팝업에는 고른 날만 짧게 "시작일"로 보인다.
-        await tester.tap(find.text('수강신청 변경 기간'));
+        await tester.tap(_card('수강신청 변경 기간'));
         await tester.pumpAndSettle();
         expect(find.text('시작일'), findsOneWidget);
         expect(find.text('삭제하기'), findsNothing); // 학사일정은 알림만 된다
@@ -664,7 +680,7 @@ void main() {
       expect(find.text('15:00'), findsNothing);
       expect(find.text('도서관 3층'), findsOneWidget);
 
-      await tester.tap(find.text('팀플 회의'));
+      await tester.tap(_card('팀플 회의'));
       await tester.pumpAndSettle();
 
       expect(find.text('15:00'), findsOneWidget); // 팝업의 시간 줄
@@ -678,7 +694,7 @@ void main() {
     testWidgets('삭제하기 → 확인창에서 취소하면 그대로, 삭제하면 사라지고 저장도 지워진다', (tester) async {
       await pumpWithMyEvent(tester);
 
-      await tester.tap(find.text('팀플 회의'));
+      await tester.tap(_card('팀플 회의'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('삭제하기'));
       await tester.pumpAndSettle();
@@ -687,16 +703,16 @@ void main() {
 
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
-      expect(find.text('팀플 회의'), findsOneWidget);
+      expect(_card('팀플 회의'), findsOneWidget);
 
-      await tester.tap(find.text('팀플 회의'));
+      await tester.tap(_card('팀플 회의'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('삭제하기'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('삭제'));
       await tester.pumpAndSettle();
 
-      expect(find.text('팀플 회의'), findsNothing);
+      expect(_card('팀플 회의'), findsNothing);
       expect(find.text('이 날은 일정이 없어요'), findsOneWidget);
       final saved = await CalendarEventStorage().loadAll();
       expect(saved.any((e) => e.id == 'local-1'), isFalse);
@@ -769,7 +785,7 @@ void main() {
       if (DateTime.now().hour < 9) return;
       await pumpWithMyEvent(tester, start: const TimeOfDay(hour: 0, minute: 0));
 
-      await tester.tap(find.text('팀플 회의'));
+      await tester.tap(_card('팀플 회의'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('수정하기'));
       await tester.pumpAndSettle();
@@ -782,7 +798,7 @@ void main() {
       await tester.tap(find.text('확인'));
       await tester.pumpAndSettle();
 
-      expect(find.text('새벽 회의'), findsOneWidget);
+      expect(_card('새벽 회의'), findsOneWidget);
       final saved = await CalendarEventStorage().loadAll();
       expect(saved.single.title, '새벽 회의'); // 일정은 저장됐고
       expect(saved.single.hasReminder, isFalse); // 알림만 빠졌다
@@ -833,7 +849,7 @@ void main() {
           daysAhead: 1,
         );
 
-        await tester.tap(find.text('팀플 회의'));
+        await tester.tap(_card('팀플 회의'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('수정하기'));
         await tester.pumpAndSettle();
@@ -852,7 +868,7 @@ void main() {
         await tester.tap(find.text('저장하기'));
         await tester.pumpAndSettle();
 
-        expect(find.text('졸업 작품 회의'), findsOneWidget);
+        expect(_card('졸업 작품 회의'), findsOneWidget);
         final saved = await CalendarEventStorage().loadAll();
         expect(saved.single.title, '졸업 작품 회의');
         expect(saved.single.id, 'local-1'); // 새로 만들어진 게 아니라 고쳐진 것
@@ -867,7 +883,7 @@ void main() {
         // 날짜가 지나 알림이 꺼지지 않게 넉넉히 뒤 일정으로 한다.
         await pumpWithMyEvent(tester, days: const [7, 1], daysAhead: 20);
 
-        await tester.tap(find.text('팀플 회의'));
+        await tester.tap(_card('팀플 회의'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('수정하기'));
         await tester.pumpAndSettle();
@@ -973,7 +989,7 @@ void main() {
         expect(platform.active.length, 3); // 내일(19일 전), 2주 전, 당일
 
         // 상세 팝업에는 짧게 보이고, "설정"으로 같은 창이 열린다.
-        await tester.tap(find.text('팀플 회의'));
+        await tester.tap(_card('팀플 회의'));
         await tester.pumpAndSettle();
         expect(find.text('$todayLabel 외 2개'), findsOneWidget);
         await tester.tap(find.text('설정'));
@@ -1005,7 +1021,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(platform.active.length, 2);
 
-        await tester.tap(find.text('팀플 회의'));
+        await tester.tap(_card('팀플 회의'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('삭제하기'));
         await tester.pumpAndSettle();
@@ -1020,7 +1036,7 @@ void main() {
     testWidgets('X로 닫으면 아무것도 바뀌지 않는다', (tester) async {
       await pumpWithMyEvent(tester);
 
-      await tester.tap(find.text('팀플 회의'));
+      await tester.tap(_card('팀플 회의'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('수정하기'));
       await tester.pumpAndSettle();
@@ -1028,8 +1044,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.text('팀플 회의'), findsOneWidget);
-      expect(find.text('바꾼 제목'), findsNothing);
+      expect(_card('팀플 회의'), findsOneWidget);
+      expect(_card('바꾼 제목'), findsNothing);
     });
   });
 
@@ -1064,7 +1080,7 @@ void main() {
           await tester.pumpAndSettle();
         }
 
-        expect(find.text('스터디'), findsOneWidget);
+        expect(_card('스터디'), findsOneWidget);
         final saved = await CalendarEventStorage().loadAll();
         final added = saved.singleWhere((e) => e.title == '스터디');
         expect(added.isUserEvent, isTrue);
@@ -1119,7 +1135,7 @@ void main() {
 
       await tester.tap(find.text('14').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('왕방축제'));
+      await tester.tap(_card('왕방축제'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.tapAt(const Offset(10, 10)); // 팝업 닫기

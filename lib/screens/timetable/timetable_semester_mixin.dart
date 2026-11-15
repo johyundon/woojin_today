@@ -46,18 +46,10 @@ part of 'timetable_screen.dart';
 /// 학기 이동(헤더의 학기 드롭다운 메뉴) 책임.
 mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
   /// 시간표를 보기만 하는 학기면 그 이유 안내, 고칠 수 있으면 null.
-  /// - 지난 학기: 수강이 끝나 과목을 더할 수 없다(등록된 과목이 없어도).
-  /// - 이번 학기이고 학교에 등록된 과목이 있음: 이미 수강이 확정됐다.
-  /// 보기만 하는 학기는 과목 추가·자동 생성·저장 버튼을 숨기고 빈 칸 누르기도
-  /// 막는다.
-  String? get _readOnlyNote {
-    final word = _semesterWord;
-    if (word == '지난 학기') return '지난 학기 시간표예요';
-    if (word == '이번 학기' && _hasRegisteredCourses) {
-      return '학교에 등록된 이번 학기 시간표예요';
-    }
-    return null;
-  }
+  /// 지금은 모든 학기를 열어 둔다 — 지난 학기도, 학교에 등록된 이번 학기
+  /// 시간표도 과목을 더해 볼 수 있다(사용자 요청, 2026-11-15). 보기 전용
+  /// 안내를 보여 주는 장치(헤더의 readOnlyNote)는 다시 쓸 수 있게 남겨 둔다.
+  String? get _readOnlyNote => null;
 
   /// 보고 있는 학기가 지금 기준으로 "지난 학기"/"이번 학기"/"다음 학기" 중
   /// 무엇인지(안내 문구에 쓴다).
@@ -126,7 +118,6 @@ mixin TimetableSemesterMixin on TimetableDataLoadingMixin {
       // 학기를 바꾸면 이전 학기 데이터는 더 이상 유효하지 않다 — 그리드/검색
       // 결과를 비우고 새 학기 데이터를 다시 불러온다.
       _confirmedCourses = [];
-      _hasRegisteredCourses = false;
       _myTimetableStatus = MyTimetableStatus.idle;
       _catalog = [];
       _pendingSlot = null;
