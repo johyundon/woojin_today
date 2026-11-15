@@ -15,11 +15,19 @@ class CampusMapCategory {
   final List<String> places;
 }
 
-/// 칩 3개. 누르면 지도에 그 종류 장소만 핀으로 띄운다.
+/// 위쪽에 보이는 칩. 누르면 지도에 그 종류 장소만 핀으로 띄운다.
+const List<CampusMapCategory> campusMapCategories = [
+  // 정류장은 학교 안 정류장만. 정문(짭정문) 정류장은 학생회관에서 2km 넘게
+  // 떨어져 있어 뺐다.
+  CampusMapCategory('정류장', Icons.directions_bus_rounded, ['학생회관(교내순환)']),
+];
+
+/// 사용자 요청으로 지금은 숨겨 둔 칩. 다시 보이려면 [campusMapCategories]로
+/// 옮긴다.
 ///
 /// *** 미검증 *** 식당은 학식이 있는 학생회관과 에그2000만 넣었다. 기숙사
 /// 식당 등 건물 목록에 없는 곳은 빠져 있다.
-const List<CampusMapCategory> campusMapCategories = [
+const List<CampusMapCategory> hiddenCampusMapCategories = [
   CampusMapCategory('편의시설', Icons.local_cafe_rounded, [
     '학생회관 CU',
     '여자기숙사 CU',
@@ -34,9 +42,6 @@ const List<CampusMapCategory> campusMapCategories = [
     '국민은행 대진대점',
   ]),
   CampusMapCategory('식당', Icons.restaurant_rounded, ['학생회관', '학생회관 에그2000']),
-  // 정류장은 학교 안 정류장만. 정문(짭정문) 정류장은 학생회관에서 2km 넘게
-  // 떨어져 있어 뺐다.
-  CampusMapCategory('정류장', Icons.directions_bus_rounded, ['학생회관(교내순환)']),
 ];
 
 /// 지도 기본 화면의 위쪽 흰 카드 — 뒤로가기, "어디 가?" 검색창, 카테고리 칩.
