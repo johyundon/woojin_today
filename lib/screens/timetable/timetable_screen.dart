@@ -181,38 +181,63 @@ class _TimetableScreenState extends State<TimetableScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 시안 크기(안내 12, 버튼 약 94x30)에 맞춤(사용자 요청, 2026-11-16:
-        // 처음 넣은 버튼이 너무 컸다).
+        // 시안 캡처 크기(안내 약 13, 버튼 약 120x38)에 맞춤(2026-11-16).
         const Text(
           '시간표를 만들어 주세요',
           style: TextStyle(
             color: AppColors.textSub,
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Pressable(
           key: const ValueKey('timetable-create'),
           onTap: () => _setAddPanelOpen(true),
           child: Container(
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            width: 120,
+            height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.blue,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
               '시간표 만들기',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  /// 시간표 격자. 시간표가 비어 있으면(새 화면에서) 가로줄 없이 가운데에
+  /// "시간표를 만들어 주세요" 안내를 띄운다(시안).
+  Widget _gridWithEmptyPrompt(DateTime now, double viewportHeight) {
+    final empty =
+        _useFigmaTopBar &&
+        _confirmedCourses.isEmpty &&
+        _pendingSlot == null &&
+        !_myTimetableLoading &&
+        !_addPanelOpen;
+    return Stack(
+      children: [
+        TimetableGrid(
+          courses: _confirmedCourses,
+          pendingSlot: _pendingSlot,
+          onEmptyCellTap: _readOnlyNote != null ? (_, _) {} : _onEmptyCellTap,
+          onCourseTap: (course) => _showCourseDetail(course.toCatalogItem()),
+          today: Weekday.values[now.weekday - 1],
+          viewportHeight: viewportHeight,
+          showHourLines: !empty,
+        ),
+        if (empty)
+          Positioned.fill(child: Center(child: _emptyTimetablePrompt())),
       ],
     );
   }
@@ -469,55 +494,83 @@ class _TimetableScreenState extends State<TimetableScreen>
                             const SizedBox(height: 12),
                           ],
                         ),
-                        // 디자인 23처럼 그리드를 흰 카드(모서리 16, 옅은 그림자)에 담는다.
-                        Padding(
-                          key: _gridWrapperKey,
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          child: Container(
-                            padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                            decoration: BoxDecoration(
-                              color: TimetableColors.panelBackground,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: AppColors.cardShadow,
-                            ),
-                            child: Stack(
-                              children: [
-                                TimetableGrid(
-                                  courses: _confirmedCourses,
-                                  pendingSlot: _pendingSlot,
-                                  onEmptyCellTap: _readOnlyNote != null
-                                      ? (_, _) {}
-                                      : _onEmptyCellTap,
-                                  onCourseTap: (course) =>
-                                      _showCourseDetail(course.toCatalogItem()),
-                                  today: Weekday.values[now.weekday - 1],
-                                  viewportHeight: displayedGridHeight,
+                        if (_useFigmaTopBar)
+                          // 시안(2152-1429): 격자를 화면 폭 전체의 흰 판(위쪽만 크게
+                          // 둥글게)에 담고, 학점 줄도 그 판 안 아래쪽에 둔다.
+                          Expanded(
+                            child: Container(
+                              width: double.infinity,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(32),
                                 ),
-                                if (_useFigmaTopBar &&
-                                    _confirmedCourses.isEmpty &&
-                                    _pendingSlot == null &&
-                                    !_myTimetableLoading &&
-                                    !_addPanelOpen)
-                                  Positioned.fill(
-                                    child: Center(
-                                      child: _emptyTimetablePrompt(),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0x0F000000),
+                                    offset: Offset(0, -4),
+                                    blurRadius: 20,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Padding(
+                                    key: _gridWrapperKey,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      14,
+                                      20,
+                                      14,
+                                      0,
+                                    ),
+                                    child: _gridWithEmptyPrompt(
+                                      now,
+                                      displayedGridHeight,
                                     ),
                                   ),
-                              ],
+                                  Column(
+                                    key: _chromeBelowGridKey,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!_addPanelOpen) _creditSummaryBar(),
+                                      SizedBox(height: _addPanelOpen ? 0 : 100),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else ...[
+                          // 디자인 23처럼 그리드를 흰 카드(모서리 16, 옅은 그림자)에 담는다.
+                          Padding(
+                            key: _gridWrapperKey,
+                            padding: const EdgeInsets.symmetric(horizontal: 18),
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(
+                                10,
+                                12,
+                                10,
+                                10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: TimetableColors.panelBackground,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: AppColors.cardShadow,
+                              ),
+                              child: _gridWithEmptyPrompt(
+                                now,
+                                displayedGridHeight,
+                              ),
                             ),
                           ),
-                        ),
-                        // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
-                        // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
-                        Column(
-                          key: _chromeBelowGridKey,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_useFigmaTopBar && !_addPanelOpen)
-                              _creditSummaryBar(),
-                            SizedBox(height: _addPanelOpen ? 0 : 100),
-                          ],
-                        ),
+                          // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는
+                          // 여백. 그리드 최대 높이 계산을 위해 실측 키를 붙인다.
+                          SizedBox(
+                            key: _chromeBelowGridKey,
+                            height: _addPanelOpen ? 0 : 100,
+                          ),
+                        ],
                       ],
                     );
 

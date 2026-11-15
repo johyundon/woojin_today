@@ -32,6 +32,7 @@ class TimetableGrid extends StatelessWidget {
     required this.onCourseTap,
     this.today,
     this.viewportHeight = 320,
+    this.showHourLines = true,
   });
 
   final List<PlannedCourse> courses;
@@ -46,6 +47,10 @@ class TimetableGrid extends StatelessWidget {
   /// 그리드(8~22시 전체 896px)에서 실제로 보여줄 스크롤 뷰포트 높이. 핸들
   /// 드래그로 조절하는 값을 받는다 — 기본값 320은 기존 고정값과 동일.
   final double viewportHeight;
+
+  /// 시간 가로줄을 그릴지. 시안(2152-1429)의 빈 시간표에는 가로줄이 없어서,
+  /// 과목이 하나도 없을 때는 끈다.
+  final bool showHourLines;
 
   static const int _hourCount = gridEndHour - gridStartHour;
   static const double _gridHeight = _hourCount * gridHourRowHeight;
@@ -138,11 +143,13 @@ class TimetableGrid extends StatelessWidget {
                 ),
                 Expanded(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: TimetableColors.gridLine),
-                      ),
-                    ),
+                    decoration: showHourLines
+                        ? const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: TimetableColors.gridLine),
+                            ),
+                          )
+                        : null,
                   ),
                 ),
               ],
