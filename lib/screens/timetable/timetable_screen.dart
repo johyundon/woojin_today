@@ -825,13 +825,10 @@ class _TimetableScreenState extends State<TimetableScreen>
         onQueryChanged: (q) => setState(() => _query = q),
         filters: _filters,
         filterPanelOpen: _filterPanelOpen,
-        onToggleFilterPanel: () => setState(() {
-          _filterPanelOpen = !_filterPanelOpen;
-          // 필터를 열면 고를 칸이 많아서 시트를 최대로 올린다.
-          if (_filterPanelOpen && _useFigmaTopBar) {
-            _sheetFraction = _sheetMaxFraction;
-          }
-        }),
+        // 필터를 열어도 시트 높이는 그대로 둔다(예전엔 최대로 올렸는데 시트가
+        // 갑자기 튀어 올라 사용자 지적, 2026-11-16). 필터 칸은 시트 안에서 민다.
+        onToggleFilterPanel: () =>
+            setState(() => _filterPanelOpen = !_filterPanelOpen),
         onFiltersChanged: () => setState(() {}),
         availableGrades: grades,
         availableCourseTypes: courseTypes,

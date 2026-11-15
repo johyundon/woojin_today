@@ -308,6 +308,24 @@ void main() {
     expect(find.byKey(const ValueKey('timetable-edit-back')), findsNothing);
   });
 
+  testWidgets('필터를 열어도 시트가 위로 튀어 오르지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    final search = find.text('과목코드, 교수명, 과목명 검색');
+    final before = tester.getTopLeft(search).dy;
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(search).dy, before);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('패널은 미끄러져 올라오고, 다 내려간 뒤에 탭 바가 다시 보인다', (tester) async {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2;
