@@ -307,9 +307,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
-  /// "길 안내" — 출발할 자리(현재 위치, 없으면 출발점)로 지도를 크게 당긴다.
-  /// 걸음마다 알려 주는 안내는 아직 없다.
+  /// "길 안내" — 아래 시트를 접고, 출발할 자리(현재 위치, 없으면 출발점)로
+  /// 지도를 크게 당긴다. 걸음마다 알려 주는 안내는 아직 없다.
   Future<void> _startGuidance() async {
+    setState(() => _sheetHidden = true);
     final start = _myLocation ?? _originPoint;
     if (start == null) return;
     await _mapController?.setLevel(2);
