@@ -89,11 +89,11 @@ class TimetableTopBar extends StatelessWidget {
                 width: 40,
                 height: 40,
                 child: Center(
-                  // 글꼴 아이콘(Icons.edit_square)은 획이 두껍고 비율이 시안과 달라서
-                  // 시안 모양대로 직접 그린다(2026-11-16).
-                  child: CustomPaint(
-                    size: Size(22, 22),
-                    painter: _EditSquarePainter(AppColors.textBody),
+                  // 시안과 같은 Material "edit_square" 아이콘(사용자 요청, 2026-11-16).
+                  child: Icon(
+                    Icons.edit_square,
+                    size: 22,
+                    color: AppColors.textBody,
                   ),
                 ),
               ),
@@ -199,67 +199,4 @@ Future<TimetableMoreAction?> showTimetableMoreSheet(
       ),
     ),
   );
-}
-
-/// 시안(2152-1429 "만든 후 상태")의 작성 아이콘: 오른쪽 위가 열린 둥근 네모
-/// 테두리 위로, 꽉 찬 연필이 왼쪽 아래에서 오른쪽 위로 비스듬히 걸친 모양.
-/// 24×24 칸 기준 좌표를 크기에 맞춰 늘려 그린다.
-class _EditSquarePainter extends CustomPainter {
-  const _EditSquarePainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.scale(size.width / 24, size.height / 24);
-
-    // 네모 테두리: 왼쪽 위(4,5)에서 시작해 아래·오른쪽을 돌아 오른쪽 변 중간에서
-    // 끝난다. 오른쪽 위 모서리는 연필이 걸치는 자리라 비워 둔다.
-    final frame = Path()
-      ..moveTo(12, 4.5)
-      ..lineTo(6.5, 4.5)
-      ..arcToPoint(
-        const Offset(4.5, 6.5),
-        radius: const Radius.circular(2),
-        clockwise: false,
-      )
-      ..lineTo(4.5, 17.5)
-      ..arcToPoint(
-        const Offset(6.5, 19.5),
-        radius: const Radius.circular(2),
-        clockwise: false,
-      )
-      ..lineTo(17.5, 19.5)
-      ..arcToPoint(
-        const Offset(19.5, 17.5),
-        radius: const Radius.circular(2),
-        clockwise: false,
-      )
-      ..lineTo(19.5, 12);
-    canvas.drawPath(
-      frame,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.8
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // 연필: 끝이 왼쪽 아래(9,15)를 향하고, 몸통이 오른쪽 위로 뻗는다.
-    final pencil = Path()
-      ..moveTo(9, 15)
-      ..lineTo(9.6, 12.3) // 연필 끝 아래쪽 면
-      ..lineTo(17.6, 4.3)
-      ..arcToPoint(const Offset(19.2, 4.3), radius: const Radius.circular(1.1))
-      ..lineTo(19.7, 4.8)
-      ..arcToPoint(const Offset(19.7, 6.4), radius: const Radius.circular(1.1))
-      ..lineTo(11.7, 14.4)
-      ..close();
-    canvas.drawPath(pencil, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_EditSquarePainter oldDelegate) =>
-      oldDelegate.color != color;
 }
