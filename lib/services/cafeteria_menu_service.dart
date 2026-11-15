@@ -104,6 +104,11 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
   /// 주 단위 캐시를 몇 시에 "새 주 메뉴가 확정됐다"고 볼지(월요일 이 시각 기준).
   static const _refreshHour = 6;
 
+  /// 메뉴가 하나도 없는 주를 믿는 시간. 학교가 아직 식단을 안 올렸을 수 있어
+  /// 오래 두지 않고, 이 시간이 지나 다시 조회하면 새로 받는다. 요일을 연달아
+  /// 눌러도 매번 요청하지 않을 만큼만 둔다.
+  static const _emptyWeekTtl = Duration(minutes: 10);
+
   final http.Client _client;
   final DateTime Function() _now;
 
@@ -127,8 +132,13 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
       _refreshHour,
     );
     // 월요일 06:00 전에 받아 둔 값은, 06:00이 지나기 전까지만 믿는다.
-    bool isFresh(_CachedWeek cached) =>
-        !cached.savedAt.isBefore(threshold) || _now().isBefore(threshold);
+    // 메뉴가 하나도 없는 주는 식단이 아직 안 올라온 것일 수 있어 잠깐만 믿는다.
+    bool isFresh(_CachedWeek cached) {
+      if (cached.hasNoMenu) {
+        return _now().difference(cached.savedAt) < _emptyWeekTtl;
+      }
+      return !cached.savedAt.isBefore(threshold) || _now().isBefore(threshold);
+    }
 
     final memoryKey = '$_prefsKeyPrefix$mondayKey';
     var cached = _weekCache[memoryKey];
@@ -321,6 +331,9 @@ class _CachedWeek {
   const _CachedWeek(this.savedAt, this.days);
 
   final DateTime savedAt;
+
+  /// 이 주에 메뉴가 하나도 없는지(식단이 아직 안 올라왔거나 방학 등).
+  bool get hasNoMenu => days.values.every((day) => day.isEmpty);
 
   /// 날짜(yyyy-MM-dd) → 그 날 메뉴.
   final Map<String, DailyCafeteriaMenu> days;
