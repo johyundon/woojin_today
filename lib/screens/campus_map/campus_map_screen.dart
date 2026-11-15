@@ -18,7 +18,7 @@ import 'services/campus_route_service.dart';
 import 'services/current_location_service.dart';
 import 'widgets/building_detail_card.dart';
 import 'widgets/building_picker_panel.dart';
-import 'widgets/building_sheet.dart';
+import 'widgets/building_endpoint_sheet.dart';
 import 'widgets/campus_map_top_bar.dart';
 import 'widgets/route_endpoints_card.dart';
 import 'widgets/route_sheet.dart';
@@ -75,9 +75,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
   /// 기기의 현재 위치. 권한이 없거나 못 읽었으면 null(파란 점을 안 그린다).
   GeoPoint? _myLocation;
-
-  /// 현재 위치 → 고른 건물까지 걷는 경로(시트의 "걸어서 N분"에 쓴다).
-  CampusRoute? _walkToSelected;
 
   /// 현재 위치 버튼을 눌러 위치를 읽는 중이면 true(버튼에 빙글이를 띄운다).
   bool _locating = false;
@@ -171,24 +168,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     if (moveCamera) {
       await _mapController?.panTo(LatLng(location.lat, location.lng));
     }
-    await _updateWalkToSelected();
-  }
-
-  /// 현재 위치와 고른 건물이 둘 다 있으면 걷는 경로를 다시 구한다.
-  Future<void> _updateWalkToSelected() async {
-    final from = _myLocation;
-    final building = _selectedBuilding;
-    if (from == null || building == null) {
-      setState(() => _walkToSelected = null);
-      return;
-    }
-    final route = await _routeService.findRoute(
-      origin: from,
-      destination: GeoPoint(lat: building.lat, lng: building.lng),
-    );
-    // 기다리는 사이 다른 건물을 골랐으면 버린다.
-    if (!mounted || _selectedBuilding != building) return;
-    setState(() => _walkToSelected = route);
   }
 
   CampusBuilding? _findBuilding(String? name) {
@@ -354,18 +333,16 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
-  /// 기본 화면에서 건물을 고른다 — 지도를 그 건물로 옮기고, 그려 둔 길은
-  /// 지우고, 걷는 거리를 다시 구한다.
+  /// 기본 화면에서 건물을 고른다 — 지도를 그 건물로 옮기고(핀과 아래
+  /// 출발·도착 시트가 뜬다), 그려 둔 길은 지운다.
   void _selectBuilding(CampusBuilding? building) {
     setState(() {
       _pickerTarget = _PickerTarget.none;
       _selectedBuilding = building;
-      _walkToSelected = null;
       _route = null;
     });
     if (building == null) return;
     _mapController?.panTo(LatLng(building.lat, building.lng));
-    _updateWalkToSelected();
   }
 
   /// "길 알려줘" — 길안내 화면으로 넘어간다. 출발점은 내 위치, 도착점은
@@ -386,13 +363,21 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
-  void _showFloorGuidePending() {
-    showTopBanner(
-      context,
-      title: '층별 안내는 준비 중이에요',
-      message: '건물별 층 정보를 모으는 중이에요.',
-      icon: Icons.layers_rounded,
-    );
+  /// 시트의 "출발" — 고른 건물을 출발점으로 길안내 화면으로 넘어가고,
+  /// 도착할 건물을 바로 고르게 한다.
+  Future<void> _startFromSelected() async {
+    final building = _selectedBuilding;
+    if (building == null) return;
+    setState(() {
+      _origin = building;
+      _originIsMe = false;
+      _destination = null;
+      _destinationIsMe = false;
+      _selectedBuilding = null;
+      _routeClasses = null;
+      _pickerTarget = _PickerTarget.destination;
+    });
+    await _fetchRoute();
   }
 
   void _onMarkerTap(String markerId) {
@@ -498,7 +483,17 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     // ("내 위치"인 칸은 아래 파란 점이 대신한다).
     final start = _isRouteMode && !_originIsMe ? _originPoint : null;
     final end = _isRouteMode && !_destinationIsMe ? _destinationPoint : null;
+    // 기본 화면에서 고른 건물엔 파란 마름모 핀(학사모 아이콘)을 띄운다.
+    final picked = _isRouteMode ? null : _selectedBuilding;
     final marks = [
+      if (picked != null)
+        CustomOverlay(
+          customOverlayId: 'selected_building',
+          latLng: LatLng(picked.lat, picked.lng),
+          yAnchor: 1,
+          zIndex: 9,
+          content: _selectedPinHtml,
+        ),
       if (start != null)
         CustomOverlay(
           customOverlayId: 'route_start',
@@ -545,6 +540,20 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       ),
     ];
   }
+
+  /// 고른 건물 핀 — 둥근 모서리 파란 마름모 안에 흰 학사모. 마름모의 아래
+  /// 꼭짓점이 건물 자리를 가리킨다.
+  static const String _selectedPinHtml =
+      '<div style="width:44px;height:52px;display:flex;'
+      'align-items:flex-start;justify-content:center;">'
+      '<div style="width:32px;height:32px;margin-top:6px;'
+      'background:#0A78E6;border-radius:8px;transform:rotate(45deg);'
+      'box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;'
+      'align-items:center;justify-content:center;">'
+      '<svg width="20" height="20" viewBox="0 0 24 24" '
+      'style="transform:rotate(-45deg);" fill="#fff">'
+      '<path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 '
+      '9-4.91V17h2V9L12 3z"/></svg></div></div>';
 
   List<Polyline>? get _polylines {
     final route = _route;
@@ -679,21 +688,22 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
                 ),
               ),
+            // 건물을 고르면 아래 끝에 붙는 "출발 · 도착" 시트(시안 "해당 건물
+            // 선택 시"). 예전 "층별 안내 · 길 알려줘" 시트(BuildingSheet)는
+            // 사용자 요청으로 숨겨 두었다.
             if (!_isRouteMode &&
                 selected != null &&
                 _pickerTarget == _PickerTarget.none)
               Positioned(
-                left: 12,
-                right: 12,
-                // 홈 바(화면 아래 안전 영역) 위로 띄운다.
-                bottom: MediaQuery.paddingOf(context).bottom + 20,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: KakaoMapPointerInterceptor(
-                  child: BuildingSheet(
+                  child: BuildingEndpointSheet(
                     buildingName: selected.name,
-                    walkMinutes: _walkToSelected?.walkMinutes,
-                    distanceMeters: _walkToSelected?.distanceMeters,
-                    onFloorGuide: _showFloorGuidePending,
-                    onDirections: _showDirections,
+                    onClose: () => _selectBuilding(null),
+                    onSetOrigin: _startFromSelected,
+                    onSetDestination: _showDirections,
                   ),
                 ),
               ),
