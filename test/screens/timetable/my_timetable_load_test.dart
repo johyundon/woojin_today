@@ -152,6 +152,18 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+/// 새 상단의 ⋮ 메뉴를 연다("내 시간표 불러오기"·"자동 생성"·"저장"이 여기 있다).
+Future<void> _openMore(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('timetable-more')));
+  await tester.pumpAndSettle();
+}
+
+/// 열린 ⋮ 메뉴를 바깥을 눌러 닫는다.
+Future<void> _closeMore(WidgetTester tester) async {
+  await tester.tapAt(const Offset(10, 10));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(SessionCache.clear);
 
@@ -178,6 +190,7 @@ void main() {
     expect(find.text('내 시간표를 불러왔어요'), findsNothing);
 
     // 같은 로그인이라 저장된 결과를 다시 쓴다(학교에 다시 묻지 않음).
+    await _openMore(tester);
     await tester.tap(find.text('내 시간표 불러오기'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -199,9 +212,16 @@ void main() {
     );
     // now는 2026년 10월이라 이번 학기는 2026년 2학기다.
     expect(find.text('2026년 2학기'), findsOneWidget);
+    // 저장·자동 생성은 ⋮ 메뉴에, 과목 추가는 연필(빈 시간표면 "시간표 만들기")에 있다.
+    await _openMore(tester);
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
-    expect(find.text('과목 추가'), findsOneWidget);
+    await _closeMore(tester);
+    expect(
+      find.byKey(const ValueKey('timetable-edit')).evaluate().isNotEmpty ||
+          find.byKey(const ValueKey('timetable-create')).evaluate().isNotEmpty,
+      isTrue,
+    );
     expect(find.text('학교에 등록된 이번 학기 시간표예요'), findsNothing);
   });
 
@@ -209,9 +229,16 @@ void main() {
     await _pump(tester, _FakeService([const MyTimetableResponse(courses: [])]));
 
     expect(find.text('2026년 2학기'), findsOneWidget);
+    // 저장·자동 생성은 ⋮ 메뉴에, 과목 추가는 연필(빈 시간표면 "시간표 만들기")에 있다.
+    await _openMore(tester);
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
-    expect(find.text('과목 추가'), findsOneWidget);
+    await _closeMore(tester);
+    expect(
+      find.byKey(const ValueKey('timetable-edit')).evaluate().isNotEmpty ||
+          find.byKey(const ValueKey('timetable-create')).evaluate().isNotEmpty,
+      isTrue,
+    );
   });
 
   testWidgets('시간표를 저장하면 저장했다는 안내를 위에 띄운다', (tester) async {
@@ -222,6 +249,7 @@ void main() {
       ]),
     );
 
+    await _openMore(tester);
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('확인'));
@@ -238,6 +266,7 @@ void main() {
   testWidgets('담은 과목이 없을 때 저장을 누르면 알림창을 띄우고 저장하지 않는다', (tester) async {
     await _pump(tester, _FakeService([const MyTimetableResponse(courses: [])]));
 
+    await _openMore(tester);
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
 
@@ -270,8 +299,11 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     expect(find.text('아직 시간표가 나오지 않았어요'), findsNothing);
-    // 시간표가 안 나온 학기라 내 시간표 불러오기 버튼이 없고, 학교에도 묻지 않았다.
+    // 시간표가 안 나온 학기라 ⋮ 메뉴에 내 시간표 불러오기가 없고, 학교에도
+    // 묻지 않았다.
+    await _openMore(tester);
     expect(find.text('내 시간표 불러오기'), findsNothing);
+    await _closeMore(tester);
     expect(service.calls, 1); // 처음 화면을 열 때(2026년 2학기) 한 번뿐
   });
 
@@ -293,9 +325,16 @@ void main() {
     expect(find.text('지난 학기 시간표예요'), findsNothing);
     expect(find.text('지난 학기에 수강신청한 과목이 없어요.'), findsOneWidget);
     expect(find.text('이번 학기에 수강신청한 과목이 없어요.'), findsNothing);
+    // 저장·자동 생성은 ⋮ 메뉴에, 과목 추가는 연필(빈 시간표면 "시간표 만들기")에 있다.
+    await _openMore(tester);
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
-    expect(find.text('과목 추가'), findsOneWidget);
+    await _closeMore(tester);
+    expect(
+      find.byKey(const ValueKey('timetable-edit')).evaluate().isNotEmpty ||
+          find.byKey(const ValueKey('timetable-create')).evaluate().isNotEmpty,
+      isTrue,
+    );
   });
 
   testWidgets('개설과목이 있는 학기로 바꾸면 알림창이 뜨지 않는다', (tester) async {

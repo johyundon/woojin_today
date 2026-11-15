@@ -56,11 +56,14 @@ void main() {
     await _openHome(tester);
 
     await _tapTab(tester, '시간표');
-    expect(find.text('내 시간표'), findsOneWidget);
+    expect(find.byKey(const ValueKey('timetable-more')), findsOneWidget);
 
     await _tapTab(tester, '모아보기');
     expect(find.text('자주 찾는 메뉴'), findsOneWidget); // 모아보기 화면
-    expect(find.text('내 시간표'), findsNothing); // 시간표는 걷혀 있다
+    expect(
+      find.byKey(const ValueKey('timetable-more')),
+      findsNothing,
+    ); // 시간표는 걷혀 있다
     expect(tester.takeException(), isNull);
   });
 
@@ -78,7 +81,7 @@ void main() {
     expect(find.text('자주 찾는 메뉴'), findsOneWidget);
 
     await _tapTab(tester, '시간표');
-    expect(find.text('내 시간표'), findsOneWidget);
+    expect(find.byKey(const ValueKey('timetable-more')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -108,7 +111,7 @@ void main() {
 
     await _tapTab(tester, '시간표');
     await _tapTab(tester, '시간표');
-    expect(find.text('내 시간표'), findsOneWidget);
+    expect(find.byKey(const ValueKey('timetable-more')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -104,6 +104,12 @@ class _EmptyCatalog implements CourseCatalogServiceBase {
   }) async => [];
 }
 
+/// 새 상단의 ⋮ 메뉴를 연다("내 시간표 불러오기"·"자동 생성"·"저장"이 여기 있다).
+Future<void> _openMore(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('timetable-more')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -129,6 +135,7 @@ void main() {
     await tester.pumpAndSettle();
     tester.takeException(); // 첫 프레임(실측 전) 일시 오버플로우는 기존 동작.
 
+    await _openMore(tester);
     await tester.tap(find.text('자동 생성'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 4; i++) {
@@ -166,6 +173,7 @@ void main() {
     await tester.pumpAndSettle();
     tester.takeException(); // 첫 프레임(실측 전) 일시 오버플로우는 기존 동작.
 
+    await _openMore(tester);
     await tester.tap(find.text('자동 생성'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 4; i++) {
@@ -206,6 +214,7 @@ void main() {
     await tester.pumpAndSettle();
     tester.takeException(); // 첫 프레임(실측 전) 일시 오버플로우는 기존 동작.
 
+    await _openMore(tester);
     await tester.tap(find.text('자동 생성'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 3; i++) {

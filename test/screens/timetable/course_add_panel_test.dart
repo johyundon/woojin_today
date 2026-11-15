@@ -42,6 +42,17 @@ class _NoCoursesTimetable implements MyTimetableServiceBase {
   }) async => const MyTimetableResponse(courses: []);
 }
 
+/// 새 상단(2026-11-16): "과목 추가"는 연필 버튼(시간표가 비어 있으면 가운데
+/// "시간표 만들기" 버튼)이 대신한다. 열려 있으면 연필로 닫는다.
+Future<void> _tapAddCourse(WidgetTester tester) async {
+  final edit = find.byKey(const ValueKey('timetable-edit'));
+  await tester.tap(
+    edit.evaluate().isNotEmpty
+        ? edit
+        : find.byKey(const ValueKey('timetable-create')),
+  );
+}
+
 void main() {
   testWidgets('"과목 추가"를 누르면 검색 패널이 열리고 담기가 된다', (tester) async {
     tester.view.physicalSize = const Size(780, 1688);
@@ -56,7 +67,7 @@ void main() {
     expect(tester.takeException(), isNull, reason: 'before open');
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
 
-    await tester.tap(find.text('과목 추가'));
+    await _tapAddCourse(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsOneWidget);
@@ -67,7 +78,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('과목 추가'));
+    await _tapAddCourse(tester);
     await tester.pumpAndSettle();
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
   });
@@ -85,7 +96,7 @@ void main() {
     final search = find.text('과목코드, 교수명, 과목명 검색');
     double searchTop() => tester.getTopLeft(search).dy;
 
-    await tester.tap(find.text('과목 추가'));
+    await _tapAddCourse(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     final midway = searchTop();
@@ -93,7 +104,7 @@ void main() {
     expect(searchTop(), lessThan(midway), reason: '올라오는 중이었다');
     expect(find.byType(HomeBottomNav), findsNothing);
 
-    await tester.tap(find.text('과목 추가'));
+    await _tapAddCourse(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     // 내려가는 동안에는 패널이 남아 있고 탭 바는 아직 숨어 있다.

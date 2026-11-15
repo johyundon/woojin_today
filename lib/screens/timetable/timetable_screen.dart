@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../theme/app_colors.dart';
 import '../../services/class_schedule_parser.dart';
 import '../../services/course_catalog_service.dart';
+import '../../services/graduation_credit_service.dart';
 import '../../services/department_codes.dart';
 import '../../services/my_timetable_service.dart';
 import '../../services/notification_service.dart';
@@ -37,6 +38,7 @@ import 'widgets/search_panel.dart';
 import 'widgets/timetable_grid.dart';
 import 'widgets/timetable_header.dart';
 import 'widgets/timetable_notice_dialog.dart';
+import 'widgets/timetable_top_bar.dart';
 
 part 'timetable_session_mixin.dart';
 part 'timetable_data_loading_mixin.dart';
@@ -66,6 +68,7 @@ class TimetableScreen extends StatefulWidget {
     this.classReminderSettings,
     this.now,
     this.onTabTap,
+    this.graduationCreditService,
   });
 
   final String? jsessionId;
@@ -83,6 +86,9 @@ class TimetableScreen extends StatefulWidget {
   final NotificationService? notificationService;
   final ClassReminderSettings? classReminderSettings;
   final DateTime Function()? now;
+
+  /// 맨 아래 "전체 학점 52 / 128"을 읽을 때 쓴다(없으면 실제 서비스).
+  final GraduationCreditServiceBase? graduationCreditService;
 
   /// 하단 탭 바를 눌렀을 때 호출된다(홈이 그 탭 화면으로 바꿔 준다). 없으면 이전
   /// 화면으로 돌아가기만 한다.
@@ -123,6 +129,141 @@ class _TimetableScreenState extends State<TimetableScreen>
 
   bool get _addPanelShown => _addPanelOpen || !_addPanelController.isDismissed;
 
+  /// 상단을 시안(Figma 2152-1429)처럼 "시간표 [학기 칩] ✏️ ⋮" 한 줄로 쓸지
+  /// (사용자 결정 2026-11-16). false면 예전 [TimetableHeader]다(안 쓰지만
+  /// 지우지 않고 남겨 둔다).
+  static const bool _useFigmaTopBar = true;
+
+  /// 졸업학점 현황의 전체 이수 학점·졸업 기준 학점. 못 받으면 null이고, 맨 아래
+  /// 학점 줄에서 "전체 학점" 부분만 빠진다.
+  int? _earnedTotalCredits;
+  int? _requiredTotalCredits;
+
+  Future<void> _loadTotalCredits() async {
+    final userId2 = widget.userId2;
+    if (userId2 == null) return;
+    try {
+      final summary =
+          await (widget.graduationCreditService ?? GraduationCreditService())
+              .fetchSummary(userId2: userId2);
+      if (!mounted) return;
+      setState(() {
+        _earnedTotalCredits = summary.totalEarned;
+        _requiredTotalCredits = summary.totalRequired;
+      });
+    } catch (e) {
+      debugPrint('[Timetable] 전체 학점을 못 받았어요: $e');
+    }
+  }
+
+  /// ⋮ 메뉴를 열고 고른 일을 한다.
+  Future<void> _openMoreMenu() async {
+    final action = await showTimetableMoreSheet(
+      context,
+      showLoadMine: !_catalogNotReady,
+      savedCount: _savedCount,
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case TimetableMoreAction.loadMine:
+        await _loadMyTimetable(announce: true);
+      case TimetableMoreAction.autoFill:
+        _openAiRecommendWizard();
+      case TimetableMoreAction.save:
+        await _openSaveDialog();
+      case TimetableMoreAction.savedList:
+        await _openSavedList();
+    }
+  }
+
+  /// 시간표가 비어 있을 때 격자 가운데 뜨는 안내와 "시간표 만들기" 버튼(시안).
+  Widget _emptyTimetablePrompt() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          '시간표를 만들어 주세요',
+          style: TextStyle(
+            color: AppColors.textSub,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Pressable(
+          key: const ValueKey('timetable-create'),
+          onTap: () => _setAddPanelOpen(true),
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.blue,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '시간표 만들기',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 맨 아래 "이번 학기 15 학점 | 전체 학점 52 / 128" 줄(시안).
+  Widget _creditSummaryBar() {
+    final credits = _totalCredits;
+    final thisSemester = credits == credits.roundToDouble()
+        ? credits.toInt().toString()
+        : credits.toString();
+    const label = TextStyle(
+      color: AppColors.textSub,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    );
+    const value = TextStyle(
+      color: AppColors.textStrong,
+      fontSize: 15,
+      fontWeight: FontWeight.w800,
+    );
+    final earned = _earnedTotalCredits;
+    final required = _requiredTotalCredits;
+    return Container(
+      key: const ValueKey('timetable-credit-bar'),
+      height: 44,
+      margin: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+      decoration: BoxDecoration(
+        color: AppColors.fill,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          const Text('이번 학기 ', style: label),
+          Text('$thisSemester 학점', style: value),
+          if (earned != null) ...[
+            Container(
+              width: 1,
+              height: 12,
+              margin: const EdgeInsets.symmetric(horizontal: 14),
+              color: AppColors.checkLine,
+            ),
+            const Text('전체 학점 ', style: label),
+            Text('$earned', style: value),
+            if (required != null) Text(' / $required', style: label),
+          ],
+        ],
+      ),
+    );
+  }
+
   void _setAddPanelOpen(bool open) {
     setState(() => _addPanelOpen = open);
     open ? _addPanelController.forward() : _addPanelController.reverse();
@@ -145,6 +286,7 @@ class _TimetableScreenState extends State<TimetableScreen>
 
     _loadSavedCount();
     _loadReminderSetting();
+    if (_useFigmaTopBar) _loadTotalCredits();
     if (_hasSession) {
       _loadCatalog();
     }
@@ -249,19 +391,32 @@ class _TimetableScreenState extends State<TimetableScreen>
           bottom: false,
           child: Column(
             children: [
-              TimetableHeader(
-                semesterLabel: '$_year년 $_semester학기',
-                totalCredits: _totalCredits,
-                savedCount: _savedCount,
-                headerKey: _headerKey,
-                onBack: () => Navigator.of(context).pop(),
-                onSemesterTap: _openSemesterMenu,
-                onSave: _openSaveDialog,
-                readOnlyNote: _readOnlyNote,
-                onOpenSavedList: _openSavedList,
-                onAutoFill: _openAiRecommendWizard,
-                onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),
-              ),
+              if (_useFigmaTopBar)
+                TimetableTopBar(
+                  semesterLabel: '$_year년 $_semester학기',
+                  semesterKey: _headerKey,
+                  onSemesterTap: _openSemesterMenu,
+                  onMoreTap: _openMoreMenu,
+                  // 시안: 시간표가 비어 있으면 연필 대신 "시간표 만들기" 버튼.
+                  // 과목 추가 창이 열려 있으면 닫을 수 있게 연필을 둔다.
+                  onEditTap: _confirmedCourses.isEmpty && !_addPanelOpen
+                      ? null
+                      : () => _setAddPanelOpen(!_addPanelOpen),
+                )
+              else
+                TimetableHeader(
+                  semesterLabel: '$_year년 $_semester학기',
+                  totalCredits: _totalCredits,
+                  savedCount: _savedCount,
+                  headerKey: _headerKey,
+                  onBack: () => Navigator.of(context).pop(),
+                  onSemesterTap: _openSemesterMenu,
+                  onSave: _openSaveDialog,
+                  readOnlyNote: _readOnlyNote,
+                  onOpenSavedList: _openSavedList,
+                  onAutoFill: _openAiRecommendWizard,
+                  onAddCourse: () => _setAddPanelOpen(!_addPanelOpen),
+                ),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -289,7 +444,10 @@ class _TimetableScreenState extends State<TimetableScreen>
                                 loading: _myTimetableLoading,
                                 onLoadMyTimetable: () =>
                                     _loadMyTimetable(announce: true),
-                                showLoadButton: !_catalogNotReady,
+                                // 새 상단에서는 "내 시간표 불러오기"가 ⋮ 메뉴로
+                                // 옮겨 가서, 이 줄엔 알림 스위치만 남는다.
+                                showLoadButton:
+                                    !_useFigmaTopBar && !_catalogNotReady,
                                 showNotificationToggle:
                                     _isViewingCurrentSemester,
                                 notificationsEnabled: _notificationsEnabled,
@@ -320,24 +478,43 @@ class _TimetableScreenState extends State<TimetableScreen>
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: AppColors.cardShadow,
                             ),
-                            child: TimetableGrid(
-                              courses: _confirmedCourses,
-                              pendingSlot: _pendingSlot,
-                              onEmptyCellTap: _readOnlyNote != null
-                                  ? (_, _) {}
-                                  : _onEmptyCellTap,
-                              onCourseTap: (course) =>
-                                  _showCourseDetail(course.toCatalogItem()),
-                              today: Weekday.values[now.weekday - 1],
-                              viewportHeight: displayedGridHeight,
+                            child: Stack(
+                              children: [
+                                TimetableGrid(
+                                  courses: _confirmedCourses,
+                                  pendingSlot: _pendingSlot,
+                                  onEmptyCellTap: _readOnlyNote != null
+                                      ? (_, _) {}
+                                      : _onEmptyCellTap,
+                                  onCourseTap: (course) =>
+                                      _showCourseDetail(course.toCatalogItem()),
+                                  today: Weekday.values[now.weekday - 1],
+                                  viewportHeight: displayedGridHeight,
+                                ),
+                                if (_useFigmaTopBar &&
+                                    _confirmedCourses.isEmpty &&
+                                    _pendingSlot == null &&
+                                    !_myTimetableLoading &&
+                                    !_addPanelOpen)
+                                  Positioned.fill(
+                                    child: Center(
+                                      child: _emptyTimetablePrompt(),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
                         // 하단 탭 바(extendBody)에 그리드가 가려지지 않도록 남기는 여백.
                         // 그리드 최대 높이 계산을 위해 실측 키를 그대로 붙인다.
-                        SizedBox(
+                        Column(
                           key: _chromeBelowGridKey,
-                          height: _addPanelOpen ? 0 : 100,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_useFigmaTopBar && !_addPanelOpen)
+                              _creditSummaryBar(),
+                            SizedBox(height: _addPanelOpen ? 0 : 100),
+                          ],
                         ),
                       ],
                     );
