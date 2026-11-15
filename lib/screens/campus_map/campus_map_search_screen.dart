@@ -6,6 +6,7 @@ import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
 import 'campus_map_colors.dart';
 import 'models/campus_building.dart';
+import 'models/route_classes.dart';
 import 'models/room_building.dart';
 import 'services/recent_place_store.dart';
 import 'widgets/campus_map_top_bar.dart';
@@ -13,10 +14,17 @@ import 'widgets/campus_map_top_bar.dart';
 /// 검색 화면에서 고른 결과. [origin]이 있으면 "오늘 수업 길찾기"를 고른
 /// 것이라 지도는 출발지 → 도착지 길을 그린다.
 class CampusSearchResult {
-  const CampusSearchResult({required this.destination, this.origin});
+  const CampusSearchResult({
+    required this.destination,
+    this.origin,
+    this.classes,
+  });
 
   final CampusBuilding destination;
   final CampusBuilding? origin;
+
+  /// "오늘 수업 길찾기"로 고른 앞·뒤 수업.
+  final RouteClasses? classes;
 }
 
 /// 캠퍼스 지도 위쪽 "어디 가?"를 누르면 열리는 검색 화면(시안 2번).
@@ -79,11 +87,20 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
     return (from: from, to: to, a: a, b: b);
   }
 
-  Future<void> _pick(CampusBuilding building, {CampusBuilding? origin}) async {
+  Future<void> _pick(
+    CampusBuilding building, {
+    CampusBuilding? origin,
+    RouteClasses? classes,
+  }) async {
     if (origin == null) await widget.recentStore.add(building.name);
     if (!mounted) return;
-    Navigator.of(context)
-        .pop(CampusSearchResult(destination: building, origin: origin));
+    Navigator.of(context).pop(
+      CampusSearchResult(
+        destination: building,
+        origin: origin,
+        classes: classes,
+      ),
+    );
   }
 
   void _pickRoom(String room) {
@@ -213,7 +230,11 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
             subtitle:
                 '${roomForSlot(hop.from)} → ${roomForSlot(hop.to)} · 여유 '
                 '${hop.to.slot.startMinutes - hop.from.slot.endMinutes}분',
-            onTap: () => _pick(hop.b, origin: hop.a),
+            onTap: () => _pick(
+              hop.b,
+              origin: hop.a,
+              classes: RouteClasses(from: hop.from, to: hop.to),
+            ),
           ),
           const SizedBox(height: 12),
         ],
@@ -223,8 +244,8 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
             _PlaceRow(
               title: roomForSlot(c),
               subtitle: c.slot.endMinutes <= _nowMinutes
-                  ? '${c.course.courseName} · ${_hhmm(c.slot.endMinutes)} 끝'
-                  : '${c.course.courseName} · ${_hhmm(c.slot.startMinutes)} 시작',
+                  ? '${c.course.courseName} · ${hhmm(c.slot.endMinutes)} 끝'
+                  : '${c.course.courseName} · ${hhmm(c.slot.startMinutes)} 시작',
               trailing: const Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.textMuted,
@@ -303,9 +324,6 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
     );
   }
 }
-
-String _hhmm(int minutes) =>
-    '${minutes ~/ 60}:${(minutes % 60).toString().padLeft(2, '0')}';
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);

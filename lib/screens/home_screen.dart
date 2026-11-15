@@ -29,6 +29,7 @@ import 'home/widgets/next_class_card.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mascot_sticker.dart';
 import 'campus_map/campus_map_screen.dart';
+import 'campus_map/models/route_classes.dart';
 import 'campus_map/models/room_building.dart';
 import 'login_screen.dart';
 import 'notice/notice_screen.dart';
@@ -375,12 +376,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// 길찾기: 앞 수업 건물(있으면)에서 다음 수업 건물까지 채운 채 지도를 연다.
-  void _openCampusMap({String? origin, String? destination}) {
+  void _openCampusMap({
+    String? origin,
+    String? destination,
+    RouteClasses? classes,
+  }) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CampusMapScreen(
           initialOriginBuilding: origin,
           initialDestinationBuilding: destination,
+          initialRouteClasses: classes,
         ),
       ),
     );
@@ -670,6 +676,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         onDirectionsTap: () => _openCampusMap(
                           origin: walkOrigin?.name,
                           destination: walkDestination?.name,
+                          classes: walkOrigin != null && next != null
+                              ? RouteClasses(
+                                  from: _todayClasses[nextIndex - 1],
+                                  to: next,
+                                )
+                              : null,
                         ),
                         onTimetableTap: _openTimetable,
                       ),
