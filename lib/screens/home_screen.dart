@@ -95,12 +95,14 @@ class HomeScreen extends StatefulWidget {
 /// 현재 학기를 추정한다.
 ///
 /// *** 추정 규칙 *** API 명세에 학기 계산 규칙이 정의돼 있지 않아 간단한
-/// 달력 기준 추정을 쓴다: 3~8월이면 1학기, 9~12월이면 2학기, 1~2월이면
-/// 전년도 2학기로 본다.
+/// 달력 기준 추정을 쓴다: 2~7월이면 1학기, 8~12월이면 2학기, 1월이면
+/// 전년도 2학기로 본다. 수강신청(2월·8월)이 끝나면 다음 학기 시간표를 바로
+/// 볼 수 있게 개강보다 한 달 먼저 바꾼다(사용자 결정, 2026-11-15).
+/// 시간표 화면의 같은 이름 함수(timetable_semester_mixin.dart)와 규칙을 맞춘다.
 ({int year, int semester}) _estimateCurrentSemester(DateTime now) {
-  if (now.month >= 3 && now.month <= 8) {
+  if (now.month >= 2 && now.month <= 7) {
     return (year: now.year, semester: 1);
-  } else if (now.month >= 9 && now.month <= 12) {
+  } else if (now.month >= 8) {
     return (year: now.year, semester: 2);
   } else {
     return (year: now.year - 1, semester: 2);
