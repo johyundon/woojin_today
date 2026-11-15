@@ -187,32 +187,19 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('이번 학기 등록된 시간표면 저장·자동 생성·과목 추가가 없고, 다른 학기로 바꾸면 보인다', (
-    tester,
-  ) async {
+  testWidgets('이번 학기 등록된 시간표에서도 저장·자동 생성·과목 추가가 보인다', (tester) async {
     await _pump(
       tester,
       _FakeService([
         const MyTimetableResponse(courses: [_course]),
-        const MyTimetableResponse(courses: []),
       ]),
     );
     // now는 2026년 10월이라 이번 학기는 2026년 2학기다.
     expect(find.text('2026년 2학기'), findsOneWidget);
-    expect(find.text('저장'), findsNothing);
-    expect(find.text('자동 생성'), findsNothing);
-    expect(find.text('과목 추가'), findsNothing);
-    expect(find.text('학교에 등록된 이번 학기 시간표예요'), findsOneWidget);
-
-    await tester.tap(find.text('2026년 2학기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('2027년 1학기').last);
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pumpAndSettle();
-
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
     expect(find.text('과목 추가'), findsOneWidget);
+    expect(find.text('학교에 등록된 이번 학기 시간표예요'), findsNothing);
   });
 
   testWidgets('이번 학기라도 수강 과목이 없으면 저장·자동 생성·과목 추가가 보인다', (tester) async {

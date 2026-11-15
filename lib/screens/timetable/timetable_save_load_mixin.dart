@@ -43,7 +43,6 @@ mixin TimetableSaveLoadMixin on TimetableDataLoadingMixin {
       _year = selected.year;
       _semester = selected.semester;
       _confirmedCourses = selected.courses;
-      _hasRegisteredCourses = false;
       _catalog = [];
       _pendingSlot = null;
       _filters.clear();
