@@ -92,7 +92,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('날짜 칩을 누르면 그 날 메뉴로 바뀌고, 메뉴가 없는 날은 안내 문구가 나온다', (tester) async {
+  testWidgets('날짜 칩을 누르면 그 날 메뉴로 바뀌고, 메뉴가 없는 날은 "오늘은 학식이 없습니다!"가 나온다', (
+    tester,
+  ) async {
     await _pump(tester);
 
     // 내일 점심(목데이터 돈카츠락 치즈돈까스).
@@ -102,7 +104,7 @@ void main() {
     await _scrollTo(tester, find.text('치즈돈까스 · 쌀밥 · 우동국 · 양배추샐러드'));
     expect(find.text('치즈돈까스 · 쌀밥 · 우동국 · 양배추샐러드'), findsOneWidget);
 
-    // 어제는 목데이터가 없어 세 끼 모두 안내 문구.
+    // 어제는 목데이터가 없어 구역 없이 "오늘은 학식이 없습니다!"만 나온다.
     final yesterday = _today.subtract(const Duration(days: 1));
     await tester.drag(
       find.text('${tomorrow.day}'),
@@ -111,7 +113,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('${yesterday.day}'));
     await tester.pumpAndSettle();
-    expect(find.text('등록된 메뉴가 없어요'), findsNWidgets(3));
+    expect(find.text('오늘은 학식이 없습니다!'), findsOneWidget);
+    expect(find.text('조식'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -137,7 +140,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('식당 탭을 바꾸면 그 식당 메뉴만 보이고, 메뉴 없는 끼니는 안내가 나온다', (tester) async {
+  testWidgets('식당 탭을 바꾸면 그 식당 메뉴만 보이고, 메뉴 없는 끼니는 감추고 메뉴 없는 식당은 안내가 나온다', (
+    tester,
+  ) async {
     await _pump(tester);
 
     await tester.ensureVisible(find.text('교직원식당').first);
@@ -145,14 +150,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('6,500원'), findsOneWidget);
     expect(find.text('데일리밥'), findsNothing);
-    // 교직원식당은 점심만 있어 조식·석식은 안내 문구.
-    expect(find.text('등록된 메뉴가 없어요'), findsNWidgets(2));
+    // 교직원식당은 점심만 있어 조식·석식 구역은 아예 나오지 않는다.
+    expect(find.text('중식'), findsOneWidget);
+    expect(find.text('조식'), findsNothing);
+    expect(find.text('석식'), findsNothing);
 
     // 가짜 데이터에는 생활관식당 메뉴가 없다.
     await tester.ensureVisible(find.text('생활관식당'));
     await tester.tap(find.text('생활관식당'));
     await tester.pumpAndSettle();
-    expect(find.text('등록된 메뉴가 없어요'), findsNWidgets(3));
+    expect(find.text('오늘은 학식이 없습니다!'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('세부 메뉴가 길어도 자르지 않고 전부 보이고, 옆 카드와 높이가 같다', (tester) async {
+    // 좁은 화면이라 메뉴 구성이 여러 줄로 길어진다.
+    await _pump(tester, w: 320);
+
+    final dishes = find.text('콩나물국 · 쌀밥 · 계란말이 · 어묵볶음 · 배추김치');
+    expect(dishes, findsOneWidget);
+    final text = tester.widget<Text>(dishes);
+    expect(text.maxLines, isNull);
+    expect(text.overflow, isNot(TextOverflow.ellipsis));
+
+    // 중식 첫 줄(데일리밥·일품) 두 카드는 높이가 같다.
+    await _scrollTo(tester, find.text('일품'));
+    Finder card(String corner) => find
+        .ancestor(of: find.text(corner), matching: find.byType(Container))
+        .last;
+    expect(
+      tester.getSize(card('데일리밥')).height,
+      tester.getSize(card('일품')).height,
+    );
+    expect(tester.getSize(card('데일리밥')).height, greaterThanOrEqualTo(178));
     expect(tester.takeException(), isNull);
   });
 

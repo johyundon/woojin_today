@@ -31,8 +31,8 @@ class CafeteriaColors {
   /// 메뉴 카드 식당 태그의 (바탕, 글자) 색. 식당마다 다르게 — 학생식당 파랑,
   /// 생활관식당 주황, 교직원식당 초록(디자인 "Tag").
   static (Color, Color) tagColors(CafeteriaVenue venue) => switch (venue) {
-    CafeteriaVenue.dorm => (const Color(0xFFFFF1E6), const Color(0xFFF2700D)),
-    CafeteriaVenue.staff => (const Color(0xFFE6F8EF), const Color(0xFF14A363)),
+    CafeteriaVenue.dorm => (const Color(0xFFFFF3E6), const Color(0xFFF27900)),
+    CafeteriaVenue.staff => (const Color(0xFFDBF9EB), const Color(0xFF0DA68D)),
     CafeteriaVenue.student ||
     CafeteriaVenue.cafe => (AppColors.blueSoft, AppColors.blueText),
   };

@@ -189,7 +189,6 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
             const Text(
               '학식',
               style: TextStyle(
@@ -240,8 +239,26 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
       );
     }
 
-    // 조식·중식·석식을 위에서부터 차례로, 구역 사이에는 가는 선을 긋는다.
-    const meals = CafeteriaMeal.values;
+    // 메뉴가 있는 끼니만 구역으로 보여준다(디자인 "중식만 있을 경우"). 하나도
+    // 없으면 구역 없이 안내 문구만 가운데에 띄운다(디자인 "학식_데이터 없음").
+    final meals = [
+      for (final meal in CafeteriaMeal.values)
+        if (_itemsFor(meal).isNotEmpty) meal,
+    ];
+    if (meals.isEmpty) {
+      return const Center(
+        child: Text(
+          '오늘은 학식이 없습니다!',
+          style: TextStyle(
+            color: CafeteriaColors.tabText,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    // 조식·중식·석식 순서로, 구역 사이에는 가는 선을 긋는다.
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
@@ -257,18 +274,18 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
               ),
               const SizedBox(height: 24),
             ],
-            _buildMealSection(meals[i]),
+            _buildMealSection(meals[i], isLast: i == meals.length - 1),
           ],
         ],
       ),
     );
   }
 
-  /// 끼니 한 구역 — 제목(조식/중식/석식)과 메뉴 카드. 메뉴가 없으면 안내 문구.
-  Widget _buildMealSection(CafeteriaMeal meal) {
+  /// 끼니 한 구역 — 제목(조식/중식/석식)과 메뉴 카드.
+  Widget _buildMealSection(CafeteriaMeal meal, {required bool isLast}) {
     final items = _itemsFor(meal);
     return Padding(
-      padding: EdgeInsets.only(bottom: meal == CafeteriaMeal.dinner ? 0 : 8),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -284,20 +301,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              child: Text(
-                '등록된 메뉴가 없어요',
-                style: TextStyle(
-                  color: CafeteriaColors.gray700,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else
-            _buildCards(items),
+          _buildCards(items),
         ],
       ),
     );
@@ -309,22 +313,26 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     CafeteriaMeal.dinner: '석식',
   };
 
-  /// 메뉴 카드를 두 장씩 한 줄로 놓는다(한 장만 남으면 왼쪽 반 칸).
+  /// 메뉴 카드를 두 장씩 한 줄로 놓는다(한 장만 남으면 왼쪽 반 칸). 한 줄의
+  /// 두 카드는 더 긴 쪽에 높이를 맞춘다.
   Widget _buildCards(List<CafeteriaMenuItem> items) {
     return Column(
       children: [
         for (var i = 0; i < items.length; i += 2) ...[
           if (i > 0) const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(child: SmallMenuCard(item: items[i])),
-              const SizedBox(width: 10),
-              Expanded(
-                child: i + 1 < items.length
-                    ? SmallMenuCard(item: items[i + 1])
-                    : const SizedBox.shrink(),
-              ),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: SmallMenuCard(item: items[i])),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: i + 1 < items.length
+                      ? SmallMenuCard(item: items[i + 1])
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
         ],
       ],
