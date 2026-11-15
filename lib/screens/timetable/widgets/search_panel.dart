@@ -56,7 +56,10 @@ class SearchFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeChips = _buildActiveFilterChips();
+    // 필터를 펼쳐 둔 동안엔 고른 값이 위 필터 칩에 이미 보이므로, 아래에
+    // 같은 칩을 또 늘어놓지 않는다(사용자 요청, 2026-11-16). 격자에서 고른
+    // 빈 시간 칩만 남긴다. 접으면 무엇이 걸려 있는지 보이게 다시 나온다.
+    final activeChips = _buildActiveFilterChips(slotOnly: filterPanelOpen);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +151,7 @@ class SearchFilterBar extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildActiveFilterChips() {
+  List<Widget> _buildActiveFilterChips({bool slotOnly = false}) {
     final chips = <Widget>[];
 
     if (pendingSlot != null) {
@@ -165,6 +168,7 @@ class SearchFilterBar extends StatelessWidget {
         ),
       );
     }
+    if (slotOnly) return chips;
     if (filters.day != null) {
       final label =
           weekdayLabelsWeekdaysOnly[_weekdayChipValues.indexOf(filters.day!)];
