@@ -34,10 +34,9 @@ const List<CampusMapCategory> campusMapCategories = [
     '국민은행 대진대점',
   ]),
   CampusMapCategory('식당', Icons.restaurant_rounded, ['학생회관', '학생회관 에그2000']),
-  CampusMapCategory('정류장', Icons.directions_bus_rounded, [
-    '학생회관(교내순환)',
-    '정문(교내순환)',
-  ]),
+  // 정류장은 학교 안 정류장만. 정문(짭정문) 정류장은 학생회관에서 2km 넘게
+  // 떨어져 있어 뺐다.
+  CampusMapCategory('정류장', Icons.directions_bus_rounded, ['학생회관(교내순환)']),
 ];
 
 /// 지도 기본 화면의 위쪽 흰 카드 — 뒤로가기, "어디 가?" 검색창, 카테고리 칩.
