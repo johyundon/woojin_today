@@ -25,6 +25,14 @@ enum CafeteriaMeal {
   final String label;
 }
 
+/// [now] 시각에 맞는 끼니(오전 10시 전 아침, 오후 3시 전 점심, 그 뒤 저녁).
+/// 학식 화면의 기본 탭과 홈 학식 카드가 같은 기준을 쓴다.
+CafeteriaMeal mealAt(DateTime now) {
+  if (now.hour < 10) return CafeteriaMeal.breakfast;
+  if (now.hour < 15) return CafeteriaMeal.lunch;
+  return CafeteriaMeal.dinner;
+}
+
 /// 학식 메뉴 한 건 — 식당/코너 이름 + 메뉴 구성 + 가격.
 class CafeteriaMenuItem {
   const CafeteriaMenuItem({

@@ -85,11 +85,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
       DateTime(date.year, date.month, date.day);
 
   /// 지금 시각에 맞는 끼니(오전 10시 전 아침, 오후 3시 전 점심, 그 뒤 저녁).
-  CafeteriaMeal _defaultMeal() {
-    if (_now.hour < 10) return CafeteriaMeal.breakfast;
-    if (_now.hour < 15) return CafeteriaMeal.lunch;
-    return CafeteriaMeal.dinner;
-  }
+  CafeteriaMeal _defaultMeal() => mealAt(_now);
 
   void _selectDate(DateTime date) {
     setState(() => _selectedDate = _dateOnly(date));
