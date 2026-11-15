@@ -20,8 +20,7 @@ import 'widgets/building_detail_card.dart';
 import 'widgets/building_picker_panel.dart';
 import 'widgets/building_endpoint_sheet.dart';
 import 'widgets/campus_map_top_bar.dart';
-import 'widgets/route_endpoints_card.dart';
-import 'widgets/route_sheet.dart';
+import 'widgets/campus_route_header.dart';
 
 /// "연강 이동" 캠퍼스 지도 화면 (Figma 섹션 "연강", node 6:98~6:102).
 ///
@@ -78,6 +77,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
   /// 현재 위치 버튼을 눌러 위치를 읽는 중이면 true(버튼에 빙글이를 띄운다).
   bool _locating = false;
+
+  /// 지도 빈 곳을 눌러 아래 시트를 접었으면 true. 출발·도착이나 고른
+  /// 건물이 바뀌면 다시 편다.
+  bool _sheetHidden = false;
 
   /// 위쪽 카테고리 칩 중 고른 것.
   int? _selectedCategory;
@@ -181,6 +184,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   Future<void> _fetchRoute() async {
     final origin = _originPoint;
     final destination = _destinationPoint;
+    setState(() => _sheetHidden = false);
     if (origin == null || destination == null) {
       setState(() => _route = null);
       return;
@@ -215,8 +219,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng)),
       (topInset + 40).round(),
       48,
-      // 아래 시트(약 300) + 현재 위치 버튼 + 홈 바.
-      (insets.bottom + 380).round(),
+      // 아래 시트(약 190) + 홈 바.
+      (insets.bottom + 240).round(),
       48,
     );
   }
@@ -283,7 +287,27 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
-  /// "안내 시작" — 출발할 자리(현재 위치, 없으면 출발점)로 지도를 크게 당긴다.
+  /// 위 출발 칸 끝 X — 출발만 비운다(둘 다 비면 기본 화면으로 돌아간다).
+  Future<void> _clearOrigin() async {
+    setState(() {
+      _origin = null;
+      _originIsMe = false;
+      _routeClasses = null;
+    });
+    await _fetchRoute();
+  }
+
+  /// 위 도착 칸 끝 X — 도착만 비운다.
+  Future<void> _clearDestination() async {
+    setState(() {
+      _destination = null;
+      _destinationIsMe = false;
+      _routeClasses = null;
+    });
+    await _fetchRoute();
+  }
+
+  /// "길 안내" — 출발할 자리(현재 위치, 없으면 출발점)로 지도를 크게 당긴다.
   /// 걸음마다 알려 주는 안내는 아직 없다.
   Future<void> _startGuidance() async {
     final start = _myLocation ?? _originPoint;
@@ -339,14 +363,15 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     setState(() {
       _pickerTarget = _PickerTarget.none;
       _selectedBuilding = building;
+      _sheetHidden = false;
       _route = null;
     });
     if (building == null) return;
     _mapController?.panTo(LatLng(building.lat, building.lng));
   }
 
-  /// "길 알려줘" — 길안내 화면으로 넘어간다. 출발점은 내 위치, 도착점은
-  /// 고른 건물. 위치를 모르면 출발점을 비워 두고 바로 고르게 한다.
+  /// 시트의 "도착" — 길안내 화면으로 넘어간다. 출발점은 내 위치, 도착점은
+  /// 고른 건물. 위치를 모르면 출발 칸을 비워 둔다(팝업은 띄우지 않는다).
   Future<void> _showDirections() async {
     final building = _selectedBuilding;
     if (building == null) return;
@@ -358,13 +383,12 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       _destinationIsMe = false;
       _selectedBuilding = null;
       _routeClasses = null;
-      _pickerTarget = knowsLocation ? _PickerTarget.none : _PickerTarget.origin;
     });
     await _fetchRoute();
   }
 
-  /// 시트의 "출발" — 고른 건물을 출발점으로 길안내 화면으로 넘어가고,
-  /// 도착할 건물을 바로 고르게 한다.
+  /// 시트의 "출발" — 고른 건물을 출발점으로 길안내 화면으로 넘어간다.
+  /// 도착은 위 입력칸을 누르거나 지도에서 건물을 눌러 고른다.
   Future<void> _startFromSelected() async {
     final building = _selectedBuilding;
     if (building == null) return;
@@ -375,7 +399,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       _destinationIsMe = false;
       _selectedBuilding = null;
       _routeClasses = null;
-      _pickerTarget = _PickerTarget.destination;
     });
     await _fetchRoute();
   }
@@ -384,13 +407,17 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   /// - 출발이 비어 있으면(기본 화면 포함) 누른 건물이 출발.
   /// - 출발만 있으면 누른 건물이 도착, 바로 길을 그린다.
   /// - 둘 다 있으면 누른 건물을 새 출발로 다시 시작한다.
-  /// 건물에서 먼 곳을 누르면 무시한다.
+  /// 건물에서 먼 곳을 누르면 아래 시트만 접는다.
   Future<void> _onMapTap(LatLng latLng) async {
     if (_pickerTarget != _PickerTarget.none) return;
     final building = nearestCampusBuilding(
       GeoPoint(lat: latLng.latitude, lng: latLng.longitude),
     );
-    if (building == null) return;
+    if (building == null) {
+      // 건물이 아닌 곳을 누르면 아래 시트를 접어 지도를 넓게 보여 준다.
+      setState(() => _sheetHidden = true);
+      return;
+    }
     final hasOrigin = _origin != null || _originIsMe;
     final hasDestination = _destination != null || _destinationIsMe;
     // 출발 건물을 한 번 더 누른 것(두 번 톡톡 포함)은 도착으로 치지 않는다.
@@ -474,12 +501,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       _route = null;
       _selectedBuilding = null;
       _routeClasses = null;
+      _sheetHidden = false;
     });
-  }
-
-  int get _nowMinutes {
-    final now = DateTime.now();
-    return now.hour * 60 + now.minute;
   }
 
   /// 모든 건물 좌표의 평균 — 지도 초기 중심.
@@ -652,74 +675,49 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                               selectedCategory: _selectedCategory,
                               onCategoryTap: _onCategoryTap,
                             )
-                          : Row(
-                              children: [
-                                Pressable.icon(
-                                  onTap: _onRouteBack,
-                                  child: const SizedBox(
-                                    width: 32,
-                                    height: 52,
-                                    child: Icon(
-                                      Icons.arrow_back_ios_new_rounded,
-                                      color: AppColors.textStrong,
-                                      size: 18,
-                                      semanticLabel: '뒤로',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: RouteEndpointsCard(
-                                    originTitle:
-                                        _routeClasses?.fromTitle ??
-                                        _originLabel,
-                                    destinationTitle:
-                                        _routeClasses?.toTitle ??
-                                        _destinationLabel,
-                                    originTime: _routeClasses?.fromTime,
-                                    destinationTime: _routeClasses?.toTime,
-                                    onTapOrigin: _openOriginPicker,
-                                    onTapDestination: _openDestinationPicker,
-                                    onSwap: _swapEndpoints,
-                                  ),
-                                ),
-                              ],
+                          : CampusRouteHeader(
+                              onBack: _onRouteBack,
+                              originName:
+                                  _routeClasses?.fromTitle ?? _originLabel,
+                              destinationName:
+                                  _routeClasses?.toTitle ?? _destinationLabel,
+                              onTapOrigin: _openOriginPicker,
+                              onTapDestination: _openDestinationPicker,
+                              onClearOrigin: _clearOrigin,
+                              onClearDestination: _clearDestination,
+                              onSwap: _swapEndpoints,
                             ),
                     ),
                   ),
                 ),
               ),
             ),
-            // "건물 선택" 패널이 열려있는 동안엔 아래 시트를 숨긴다.
-            if (_isRouteMode && _pickerTarget == _PickerTarget.none)
+            // 길안내 화면 아래 시트. 도착까지 정해야 "걸어서 N분"과 길 안내가
+            // 나온다. 예전 "안내 시작" 시트(RouteSheet)는 숨겨 두었다. "건물
+            // 선택" 패널이 열려 있거나 지도 빈 곳을 눌렀으면 숨긴다.
+            if (_isRouteMode &&
+                !_sheetHidden &&
+                _pickerTarget == _PickerTarget.none)
               Positioned(
-                left: 12,
-                right: 12,
-                bottom: MediaQuery.paddingOf(context).bottom + 20,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: KakaoMapPointerInterceptor(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _MyLocationButton(
-                        loading: _locating,
-                        onTap: () => _loadMyLocation(moveCamera: true),
-                      ),
-                      if (route != null && _destinationLabel != null) ...[
-                        const SizedBox(height: 20),
-                        RouteSheet(
-                          destinationName:
-                              _routeClasses?.toRoom ?? _destinationLabel!,
-                          walkMinutes: route.walkMinutes,
-                          distanceMeters: route.distanceMeters,
-                          arrivalTime: hhmm(
-                            (_nowMinutes + route.walkMinutes) % (24 * 60),
-                          ),
-                          spareMinutes: _routeClasses?.spareMinutes,
-                          onStart: _startGuidance,
-                        ),
-                      ],
-                    ],
+                  child: RouteSummarySheet(
+                    title:
+                        _routeClasses?.toRoom ??
+                        _destinationLabel ??
+                        _originLabel ??
+                        '',
+                    walkMinutes: _destinationLabel == null
+                        ? null
+                        : route?.walkMinutes,
+                    distanceMeters: _destinationLabel == null
+                        ? null
+                        : route?.distanceMeters,
+                    onClose: () => setState(() => _sheetHidden = true),
+                    onReset: _reset,
+                    onStart: route == null ? null : _startGuidance,
                   ),
                 ),
               ),
@@ -728,6 +726,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
             // 사용자 요청으로 숨겨 두었다.
             if (!_isRouteMode &&
                 selected != null &&
+                !_sheetHidden &&
                 _pickerTarget == _PickerTarget.none)
               Positioned(
                 left: 0,
@@ -742,9 +741,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
                 ),
               ),
-            // 시안대로 기본 화면에선 현재 위치 버튼을 위쪽 흰 카드 바로 아래
-            // 오른쪽에 둔다.
-            if (!_isRouteMode && _pickerTarget == _PickerTarget.none)
+            // 시안대로 현재 위치 버튼은 위쪽 흰 카드 바로 아래 오른쪽에 둔다.
+            if (_pickerTarget == _PickerTarget.none)
               Positioned(
                 top: _headerHeight + 16,
                 right: 16,

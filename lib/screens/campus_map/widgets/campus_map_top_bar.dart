@@ -64,7 +64,7 @@ class CampusMapTopBar extends StatelessWidget {
   final int? selectedCategory;
   final ValueChanged<int> onCategoryTap;
 
-  static const String title = '캠퍼스 지도';
+  static const String title = CampusMapTitleRow.title;
   static const String searchHint = '어디를 가시나요? (예: 인문관 302호)';
 
   @override
@@ -73,42 +73,7 @@ class CampusMapTopBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 40,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              const Text(
-                title,
-                style: TextStyle(
-                  color: AppColors.textStrong,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Pressable.icon(
-                  onTap: onBack,
-                  child: const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.textStrong,
-                        size: 22,
-                        semanticLabel: '뒤로',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        CampusMapTitleRow(onBack: onBack),
         const SizedBox(height: 10),
         Pressable(
           onTap: onTapSearch,
@@ -160,6 +125,56 @@ class CampusMapTopBar extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// 위쪽 흰 카드 맨 윗줄 — 왼쪽 뒤로가기, 가운데 "캠퍼스 지도" 제목.
+/// 기본 화면과 길안내 화면이 같이 쓴다.
+class CampusMapTitleRow extends StatelessWidget {
+  const CampusMapTitleRow({super.key, required this.onBack});
+
+  final VoidCallback onBack;
+
+  static const String title = '캠퍼스 지도';
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Text(
+            title,
+            style: TextStyle(
+              color: AppColors.textStrong,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Pressable.icon(
+              onTap: onBack,
+              child: const SizedBox(
+                width: 40,
+                height: 40,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.textStrong,
+                    size: 22,
+                    semanticLabel: '뒤로',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
