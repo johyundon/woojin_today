@@ -2,6 +2,7 @@
 // 오류, 당겨서 새로고침, 장학 대상자 확인까지 이어지는지 확인한다.
 
 import 'package:daejin_app/screens/mileage/mileage_screen.dart';
+import 'package:daejin_app/screens/mileage/models/mileage_models.dart';
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
 import 'package:daejin_app/screens/notice/notice_detail_screen.dart';
 import 'package:daejin_app/services/mileage_service.dart';
@@ -96,7 +97,12 @@ Widget _app(
     userPwd: 'pw',
   ),
 }) => MaterialApp(
-  home: MileageScreen(service: service, readCredentials: () async => stored),
+  home: MileageScreen(
+    service: service,
+    readCredentials: () async => stored,
+    // 2026년 1학기(2월 1일 ~ 7월 31일) 안의 날짜로 고정.
+    now: () => DateTime(2026, 5, 10),
+  ),
 );
 
 void main() {
@@ -114,14 +120,14 @@ void main() {
     expect(find.text('학기마다 초기화돼요'), findsOneWidget);
     expect(find.text('이번 학기'), findsNothing);
 
-    expect(find.textContaining('적립 내역'), findsOneWidget);
-    expect(find.textContaining('2건'), findsOneWidget);
+    // 이번 학기(2026년 1학기) 것만 보이고 2021년 내역은 숨긴다.
+    expect(find.textContaining('2026년 1학기 적립 내역'), findsOneWidget);
+    expect(find.textContaining('1건'), findsOneWidget);
     expect(find.text('전공기초학력향상프로그램'), findsOneWidget);
     expect(find.text('2026.05.01 · 교수학습지원센터'), findsOneWidget);
     expect(find.text('+50'), findsOneWidget);
-    expect(find.text('대진웰컴스쿨'), findsOneWidget);
-    expect(find.text('2021.03.18 · 인성교육팀 · 미이수'), findsOneWidget);
-    expect(find.text('+7.5'), findsOneWidget);
+    expect(find.text('대진웰컴스쿨'), findsNothing);
+    expect(find.text('+7.5'), findsNothing);
 
     expect(find.textContaining('실버까지'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
@@ -253,5 +259,20 @@ void main() {
     await tester.pumpWidget(_app(_FakeMileage()));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  test('학기 기간: 2~7월은 1학기, 8월~다음 해 1월은 2학기', () {
+    final may = semesterRangeOf(DateTime(2026, 5, 10));
+    expect((may.year, may.semester), (2026, 1));
+    expect(may.start, DateTime(2026, 2));
+    expect(may.end, DateTime(2026, 8));
+
+    final nov = semesterRangeOf(DateTime(2026, 11, 15));
+    expect((nov.year, nov.semester), (2026, 2));
+    expect(nov.start, DateTime(2026, 8));
+    expect(nov.end, DateTime(2027, 2));
+
+    final jan = semesterRangeOf(DateTime(2027, 1, 20));
+    expect((jan.year, jan.semester), (2026, 2));
   });
 }

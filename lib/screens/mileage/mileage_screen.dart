@@ -29,11 +29,19 @@ typedef MileageCredentials = ({String userId, String userPwd});
 /// 학교 API에 없는 값(다음 등급·진행 바, "장학 기준 2,000P")은 숨겼다. 목데이터
 /// ([MileageMockData] 등)와 그 값을 그리는 코드는 남겨 두었다.
 class MileageScreen extends StatefulWidget {
-  const MileageScreen({this.service, this.readCredentials, super.key});
+  const MileageScreen({
+    this.service,
+    this.readCredentials,
+    this.now,
+    super.key,
+  });
 
   /// 테스트용 주입 지점들.
   final MileageServiceBase? service;
   final Future<MileageCredentials?> Function()? readCredentials;
+
+  /// 이번 학기를 정할 "지금"(테스트에서 날짜를 고정할 때).
+  final DateTime Function()? now;
 
   @override
   State<MileageScreen> createState() => _MileageScreenState();
@@ -277,6 +285,14 @@ class _MileageScreenState extends State<MileageScreen> {
     if (status == null) {
       return [_Message(text: _error ?? '마일리지 정보를 불러오지 못했어요.', onRetry: _load)];
     }
+    final semester = semesterRangeOf((widget.now ?? DateTime.now)());
+    // 운영시작일이 이번 학기 안인 것만. 날짜를 못 읽은 행은 뺀다.
+    final history = [
+      for (final e in status.history)
+        if (e.parsedDate case final d?
+            when !d.isBefore(semester.start) && d.isBefore(semester.end))
+          e,
+    ];
     return [
       MileageTotalCard(total: status.points),
       const SizedBox(height: 12),
@@ -294,11 +310,13 @@ class _MileageScreenState extends State<MileageScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Text.rich(
           TextSpan(
-            text: '적립 내역',
+            // 서버는 지금까지 이수한 비교과를 모두 주지만, 이번 학기 것만
+            // 보여 준다(사용자 요청, 2026-11-15).
+            text: '${semester.year}년 ${semester.semester}학기 적립 내역',
             children: [
-              if (status.history.isNotEmpty)
+              if (history.isNotEmpty)
                 TextSpan(
-                  text: '  ${status.history.length}건',
+                  text: '  ${history.length}건',
                   style: const TextStyle(color: AppColors.blue),
                 ),
             ],
@@ -311,9 +329,7 @@ class _MileageScreenState extends State<MileageScreen> {
         ),
       ),
       const SizedBox(height: 10),
-      MileageHistoryCard(
-        activities: [for (final e in status.history) _toActivity(e)],
-      ),
+      MileageHistoryCard(activities: [for (final e in history) _toActivity(e)]),
     ];
   }
 
