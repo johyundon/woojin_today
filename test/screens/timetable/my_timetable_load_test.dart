@@ -18,6 +18,9 @@ class _FakeStorage implements SavedTimetableStorage {
   Future<List<SavedTimetable>> loadAll() async => [];
 
   @override
+  Future<void> save(SavedTimetable timetable) async {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -209,6 +212,27 @@ void main() {
     expect(find.text('저장'), findsOneWidget);
     expect(find.text('자동 생성'), findsOneWidget);
     expect(find.text('과목 추가'), findsOneWidget);
+  });
+
+  testWidgets('시간표를 저장하면 저장했다는 안내를 위에 띄운다', (tester) async {
+    await _pump(
+      tester,
+      _FakeService([
+        const MyTimetableResponse(courses: [_course]),
+      ]),
+    );
+
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('시간표를 저장했어요'), findsOneWidget);
+    expect(find.text('"시간표1" · 2026년 2학기 1과목'), findsOneWidget);
+
+    // 배너가 저절로 사라질 때까지 기다려 남은 타이머를 비운다.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('담은 과목이 없을 때 저장을 누르면 알림창을 띄우고 저장하지 않는다', (tester) async {

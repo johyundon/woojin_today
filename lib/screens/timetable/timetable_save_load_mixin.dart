@@ -29,6 +29,13 @@ mixin TimetableSaveLoadMixin on TimetableDataLoadingMixin {
     );
     await _savedTimetableStorage.save(saved);
     await _loadSavedCount();
+    if (!mounted) return;
+    showTopBanner(
+      context,
+      title: '시간표를 저장했어요',
+      message: '"$name" · $_year년 $_semester학기 ${_confirmedCourses.length}과목',
+      icon: Icons.check_circle_rounded,
+    );
   }
 
   Future<void> _openSavedList() async {
