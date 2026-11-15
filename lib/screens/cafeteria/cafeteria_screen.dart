@@ -5,15 +5,16 @@ import '../../services/cafeteria_menu_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
+import 'cafeteria_colors.dart';
 import 'models/cafeteria_menu.dart';
 import 'widgets/cafeteria_date_picker_dialog.dart';
 import 'widgets/cafeteria_venue_tabs.dart';
 import 'widgets/cafeteria_week_row.dart';
 import 'widgets/small_menu_card.dart';
 
-/// "오늘 뭐 먹지?" 화면(디자인 "07 학식"). 위쪽에서 요일(월~금 한 주)과 식당 탭
-/// (전체/학생식당/생활관식당/교직원식당)을 고르면, 메뉴가 같은 크기의 카드로 두 칸씩
-/// 나온다. 아침/점심/저녁은 위쪽 파란 배지를 눌러 바꾼다.
+/// 학식 화면(디자인 "07 학식"). 위쪽에서 날짜(가로로 넘기는 칩, 오늘이 왼쪽 끝)와
+/// 식당 탭(전체/학생식당/생활관식당/교직원식당)을 고르면, 그 날의 조식·중식·석식이
+/// 구역별로 같은 크기의 카드로 두 칸씩 나온다.
 ///
 /// 메뉴는 학교 사이트에서 받아 오며([CafeteriaMenuService]), 날짜가 바뀌면 그 날의
 /// 메뉴를 다시 조회한다. 서버는 학생식당/교직원식당을 구분해 주지 않아 받은 메뉴는
@@ -95,9 +96,6 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     _loadMenu();
   }
 
-  void _moveWeek(int delta) =>
-      _selectDate(_selectedDate.add(Duration(days: 7 * delta)));
-
   Future<void> _openDatePicker() async {
     final picked = await showCafeteriaDatePickerDialog(
       context,
@@ -109,14 +107,6 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
   void _cycleMeal() {
     final values = CafeteriaMeal.values;
     setState(() => _meal = values[(_meal.index + 1) % values.length]);
-  }
-
-  /// 지금 탭/끼니에 보여줄 메뉴.
-  List<CafeteriaMenuItem> _itemsToShow(DailyCafeteriaMenu? menu) {
-    if (menu == null) return const [];
-    final items = menu.itemsFor(_meal);
-    if (_venue == null) return items;
-    return items.where((item) => item.venue == _venue).toList();
   }
 
   /// 위쪽 알약 문구 — 식당/끼니/시간. 전체 탭은 학생식당 기준으로 쓴다.
@@ -133,165 +123,44 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     }
   }
 
+  /// 예전 디자인의 윗부분(달력 버튼, 끼니 바꾸는 알약, "오늘 뭐 먹지?" 제목).
+  /// 새 디자인("07 학식")에는 없어 숨겨 두었다. true로 바꾸면 다시 보인다.
+  static const bool _showLegacyHeader = false;
+
+  /// 한 끼니에 보여줄 메뉴(식당 탭으로 거른다).
+  List<CafeteriaMenuItem> _itemsFor(CafeteriaMeal meal) {
+    final menu = _menu;
+    if (menu == null) return const [];
+    final items = menu.itemsFor(meal);
+    if (_venue == null) return items;
+    return items.where((item) => item.venue == _venue).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final items = _itemsToShow(_menu);
-
     // 밝은 바탕이라 상태 표시줄 글자를 어둡게 한다.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.canvas,
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 4, 22, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _squareButton(
-                          Icons.arrow_back_ios_new_rounded,
-                          15,
-                          '뒤로',
-                          () => Navigator.of(context).pop(),
-                        ),
-                        const Spacer(),
-                        _squareButton(
-                          Icons.calendar_month_rounded,
-                          19,
-                          '날짜 선택',
-                          _openDatePicker,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Pressable(
-                      onTap: _cycleMeal,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.blueSoft,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.restaurant_rounded,
-                              size: 13,
-                              color: AppColors.blue,
-                            ),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                _pillText,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.blue,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            // 누르면 끼니가 바뀐다는 표시(디자인에는 없음).
-                            const Icon(
-                              Icons.swap_horiz_rounded,
-                              size: 14,
-                              color: AppColors.blue,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      '오늘 뭐 먹지?',
-                      style: TextStyle(
-                        color: AppColors.textStrong,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        height: 1.4,
-                        letterSpacing: -1.04,
-                      ),
-                    ),
-                  ],
-                ),
+              _buildAppBar(),
+              if (_showLegacyHeader) _buildLegacyHeader(),
+              CafeteriaDateStrip(
+                selectedDate: _selectedDate,
+                today: _dateOnly(_now),
+                onDaySelected: _selectDate,
               ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: CafeteriaWeekRow(
-                  selectedDate: _selectedDate,
-                  today: _dateOnly(_now),
-                  onDaySelected: _selectDate,
-                  onWeekChanged: _moveWeek,
-                ),
+              const SizedBox(height: 16),
+              CafeteriaVenueTabs(
+                selected: _venue,
+                onChanged: (v) => setState(() => _venue = v),
               ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: CafeteriaVenueTabs(
-                  selected: _venue,
-                  onChanged: (v) => setState(() => _venue = v),
-                ),
-              ),
-              const SizedBox(height: 13),
-              Expanded(
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.blue),
-                      )
-                    : _loadFailed
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '학식을 불러오지 못했어요',
-                              style: TextStyle(
-                                color: AppColors.textSub,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Pressable.effect(
-                              child: TextButton(
-                                onPressed: _loadMenu,
-                                child: const Text(
-                                  '다시 시도',
-                                  style: TextStyle(
-                                    color: AppColors.blue,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : items.isEmpty
-                    ? const Center(
-                        child: Text(
-                          '등록된 메뉴가 없어요',
-                          style: TextStyle(
-                            color: AppColors.textSub,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      )
-                    : _buildMenus(items),
-              ),
+              const SizedBox(height: 20),
+              Expanded(child: _buildBody()),
             ],
           ),
         ),
@@ -299,35 +168,220 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     );
   }
 
-  /// 메뉴 카드를 두 장씩 한 줄로 놓는다. 한 줄 안의 두 카드는 높이를 같게 맞춘다.
-  Widget _buildMenus(List<CafeteriaMenuItem> items) {
-    // 전체 탭에서는 학생식당이 아닌 메뉴에 식당 이름 배지를 단다.
-    Widget card(CafeteriaMenuItem item) => SmallMenuCard(
-      item: item,
-      showVenue: _venue == null && item.venue != CafeteriaVenue.student,
-    );
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-      child: Column(
-        children: [
-          for (var i = 0; i < items.length; i += 2) ...[
-            if (i > 0) const SizedBox(height: 10),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: card(items[i])),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: i + 1 < items.length
-                        ? card(items[i + 1])
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+  /// 맨 위 줄 — 뒤로 꺾쇠와 "학식" 제목(디자인 높이 60, 좌우 여백 6).
+  Widget _buildAppBar() {
+    return SizedBox(
+      height: 60,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Row(
+          children: [
+            Pressable.icon(
+              onTap: () => Navigator.of(context).pop(),
+              child: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Icon(
+                  Icons.chevron_left_rounded,
+                  size: 28,
+                  color: CafeteriaColors.title,
+                  semanticLabel: '뒤로',
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              '학식',
+              style: TextStyle(
+                color: CafeteriaColors.title,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.blue),
+      );
+    }
+    if (_loadFailed) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '학식을 불러오지 못했어요',
+              style: TextStyle(
+                color: AppColors.textSub,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Pressable.effect(
+              child: TextButton(
+                onPressed: _loadMenu,
+                child: const Text(
+                  '다시 시도',
+                  style: TextStyle(
+                    color: AppColors.blue,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 조식·중식·석식을 위에서부터 차례로, 구역 사이에는 가는 선을 긋는다.
+    const meals = CafeteriaMeal.values;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < meals.length; i++) ...[
+            if (i > 0) ...[
+              const SizedBox(height: 24),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: CafeteriaColors.cardBorder,
+              ),
+              const SizedBox(height: 24),
+            ],
+            _buildMealSection(meals[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 끼니 한 구역 — 제목(조식/중식/석식)과 메뉴 카드. 메뉴가 없으면 안내 문구.
+  Widget _buildMealSection(CafeteriaMeal meal) {
+    final items = _itemsFor(meal);
+    return Padding(
+      padding: EdgeInsets.only(bottom: meal == CafeteriaMeal.dinner ? 0 : 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              _sectionTitles[meal]!,
+              style: const TextStyle(
+                color: CafeteriaColors.tabText,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Text(
+                '등록된 메뉴가 없어요',
+                style: TextStyle(
+                  color: CafeteriaColors.gray700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+          else
+            _buildCards(items),
+        ],
+      ),
+    );
+  }
+
+  static const _sectionTitles = {
+    CafeteriaMeal.breakfast: '조식',
+    CafeteriaMeal.lunch: '중식',
+    CafeteriaMeal.dinner: '석식',
+  };
+
+  /// 메뉴 카드를 두 장씩 한 줄로 놓는다(한 장만 남으면 왼쪽 반 칸).
+  Widget _buildCards(List<CafeteriaMenuItem> items) {
+    return Column(
+      children: [
+        for (var i = 0; i < items.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: SmallMenuCard(item: items[i])),
+              const SizedBox(width: 10),
+              Expanded(
+                child: i + 1 < items.length
+                    ? SmallMenuCard(item: items[i + 1])
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// 숨겨 둔 예전 윗부분([_showLegacyHeader]).
+  Widget _buildLegacyHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Spacer(),
+              _squareButton(
+                Icons.calendar_month_rounded,
+                19,
+                '날짜 선택',
+                _openDatePicker,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Pressable(
+            onTap: _cycleMeal,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _pillText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.blue,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '오늘 뭐 먹지?',
+            style: TextStyle(
+              color: AppColors.textStrong,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              height: 1.4,
+              letterSpacing: -1.04,
+            ),
+          ),
         ],
       ),
     );

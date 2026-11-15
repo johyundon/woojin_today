@@ -4,106 +4,80 @@ import '../../../theme/app_colors.dart';
 import '../cafeteria_colors.dart';
 import '../models/cafeteria_menu.dart';
 
-/// 코너별 메뉴 카드 — 코너/분류 배지와 아이콘, 메뉴 두 줄, 가격. 두 장씩 나란히
-/// 놓는다(디자인 "07 학식"의 메뉴 카드).
+/// 코너별 메뉴 카드(디자인 "07 학식") — 식당 이름 태그(식당마다 색이 다름), 코너 이름, 메뉴 구성,
+/// 가격. 두 장씩 나란히 놓고 높이는 178로 고정한다.
 class SmallMenuCard extends StatelessWidget {
-  const SmallMenuCard({required this.item, this.showVenue = false, super.key});
+  const SmallMenuCard({required this.item, super.key});
 
   final CafeteriaMenuItem item;
 
-  /// 배지에 코너 이름 대신 식당 이름("교직원식당")을 쓸지. 전체 탭에서 학생식당이
-  /// 아닌 메뉴를 구분하려고 쓴다.
-  final bool showVenue;
-
-  /// 분류에 맞는 아이콘(디자인: 한식 rice_bowl, 일품 ramen_dining, 분식
-  /// lunch_dining, 그 밖 restaurant).
-  static IconData _iconFor(String? category) {
-    final c = category ?? '';
-    if (c.contains('한식')) return Icons.rice_bowl_rounded;
-    if (c.contains('일품') || c.contains('일식') || c.contains('중식')) {
-      return Icons.ramen_dining_rounded;
-    }
-    if (c.contains('분식') || c.contains('양식')) {
-      return Icons.lunch_dining_rounded;
-    }
-    return Icons.restaurant_rounded;
-  }
+  static const double height = 178;
 
   @override
   Widget build(BuildContext context) {
+    final (tagBackground, tagText) = CafeteriaColors.tagColors(item.venue);
     return Container(
+      height: height,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: CafeteriaColors.cardBorder),
-        boxShadow: AppColors.cardShadow,
+        boxShadow: CafeteriaColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 28,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // 분류가 있으면 코너 이름 뒤에 함께 보여준다("파스타랩 · 양식").
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.blueSoft,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      showVenue
-                          ? item.venue.label
-                          : item.category == null
-                          ? item.restaurant
-                          : '${item.restaurant} · ${item.category}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.blueText,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  _iconFor(item.category),
-                  size: 22,
-                  color: AppColors.textSub,
-                ),
-              ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: tagBackground,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              item.venue.label,
+              style: TextStyle(
+                color: tagText,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                height: 1.2,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            item.dishes.take(2).join('\n'),
+            item.restaurant,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textStrong,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              height: 1.4,
-              letterSpacing: -0.51,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
             ),
           ),
-          const Spacer(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          // 남는 높이만큼만 보여주고 넘치면 말줄임표로 자른다.
+          Expanded(
+            child: Text(
+              item.dishesText,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: CafeteriaColors.gray700,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                height: 1.5,
+              ),
+            ),
+          ),
           Text(
             item.priceText,
             style: const TextStyle(
-              color: AppColors.blueText,
+              color: CafeteriaColors.gray700,
               fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 1.4,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
             ),
           ),
         ],
