@@ -83,22 +83,17 @@ class TimetableTopBar extends StatelessWidget {
             Pressable.icon(
               key: const ValueKey('timetable-edit'),
               onTap: onEdit,
-              // 테두리(아웃라인) 있는 둥근 버튼 안의 연필(사용자 요청,
-              // 2026-11-16).
-              child: Container(
-                width: 36,
-                height: 36,
-                margin: const EdgeInsets.only(right: 6),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.checkLine),
-                ),
-                child: const Icon(
-                  Icons.edit_outlined,
-                  size: 19,
-                  color: AppColors.textStrong,
+              // 시안(2152-1429 "만든 후 상태")의 연필: 테두리만 있는 둥근 네모 위에
+              // 꽉 찬 연필이 걸친 모양, 짙은 회색(2026-11-16). 누르는 범위는 40.
+              child: const SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(
+                  child: Icon(
+                    Icons.edit_square,
+                    size: 22,
+                    color: AppColors.textBody,
+                  ),
                 ),
               ),
             ),
