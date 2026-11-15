@@ -679,32 +679,34 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
                 ),
               ),
-            if (!_isRouteMode && _pickerTarget == _PickerTarget.none)
+            if (!_isRouteMode &&
+                selected != null &&
+                _pickerTarget == _PickerTarget.none)
               Positioned(
                 left: 12,
                 right: 12,
                 // 홈 바(화면 아래 안전 영역) 위로 띄운다.
                 bottom: MediaQuery.paddingOf(context).bottom + 20,
                 child: KakaoMapPointerInterceptor(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _MyLocationButton(
-                        loading: _locating,
-                        onTap: () => _loadMyLocation(moveCamera: true),
-                      ),
-                      if (selected != null) ...[
-                        const SizedBox(height: 20),
-                        BuildingSheet(
-                          buildingName: selected.name,
-                          walkMinutes: _walkToSelected?.walkMinutes,
-                          distanceMeters: _walkToSelected?.distanceMeters,
-                          onFloorGuide: _showFloorGuidePending,
-                          onDirections: _showDirections,
-                        ),
-                      ],
-                    ],
+                  child: BuildingSheet(
+                    buildingName: selected.name,
+                    walkMinutes: _walkToSelected?.walkMinutes,
+                    distanceMeters: _walkToSelected?.distanceMeters,
+                    onFloorGuide: _showFloorGuidePending,
+                    onDirections: _showDirections,
+                  ),
+                ),
+              ),
+            // 시안대로 기본 화면에선 현재 위치 버튼을 위쪽 흰 카드 바로 아래
+            // 오른쪽에 둔다.
+            if (!_isRouteMode && _pickerTarget == _PickerTarget.none)
+              Positioned(
+                top: _headerHeight + 16,
+                right: 16,
+                child: KakaoMapPointerInterceptor(
+                  child: _MyLocationButton(
+                    loading: _locating,
+                    onTap: () => _loadMyLocation(moveCamera: true),
                   ),
                 ),
               ),
@@ -772,25 +774,25 @@ class _MyLocationButton extends StatelessWidget {
     return Pressable.icon(
       onTap: onTap,
       child: Container(
-        width: 48,
-        height: 48,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: CampusMapColors.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: AppColors.cardShadow,
         ),
         child: loading
             ? const Padding(
-                padding: EdgeInsets.all(14),
+                padding: EdgeInsets.all(12),
                 child: CircularProgressIndicator(
                   strokeWidth: 2.4,
                   color: CampusMapColors.accent,
                 ),
               )
             : const Icon(
-                Icons.my_location_rounded,
-                color: CampusMapColors.accent,
-                size: 24,
+                Icons.gps_fixed_rounded,
+                color: CampusMapColors.textSecondary,
+                size: 22,
                 semanticLabel: '현재 위치로 이동',
               ),
       ),

@@ -1,4 +1,4 @@
-// 지도 기본 화면 위쪽 카드(검색창 + 카테고리 칩)가 누른 대로 알려 주는지 확인한다.
+// 지도 기본 화면 위쪽 카드(제목 + 검색창 + 카테고리 칩)가 누른 대로 알려 주는지 확인한다.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +21,7 @@ void main() {
       ),
     );
 
+    expect(find.text(CampusMapTopBar.title), findsOneWidget);
     expect(find.text(CampusMapTopBar.searchHint), findsOneWidget);
     for (final c in hiddenCampusMapCategories) {
       expect(find.text(c.label), findsNothing);

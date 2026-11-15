@@ -44,10 +44,10 @@ const List<CampusMapCategory> hiddenCampusMapCategories = [
   CampusMapCategory('식당', Icons.restaurant_rounded, ['학생회관', '학생회관 에그2000']),
 ];
 
-/// 지도 기본 화면의 위쪽 흰 카드 — 뒤로가기, "어디 가?" 검색창, 카테고리 칩.
+/// 지도 기본 화면의 위쪽 흰 카드 — 뒤로가기와 가운데 "캠퍼스 지도" 제목,
+/// 그 아래 검색창, 카테고리 칩(지금은 없음).
 ///
-/// 검색창은 글자를 직접 받지 않고, 누르면 [onTapSearch]로 건물 고르기 패널을
-/// 연다.
+/// 검색창은 글자를 직접 받지 않고, 누르면 [onTapSearch]로 검색 화면을 연다.
 class CampusMapTopBar extends StatelessWidget {
   const CampusMapTopBar({
     super.key,
@@ -64,7 +64,8 @@ class CampusMapTopBar extends StatelessWidget {
   final int? selectedCategory;
   final ValueChanged<int> onCategoryTap;
 
-  static const String searchHint = '어디 가? (예: 인문관 302호)';
+  static const String title = '캠퍼스 지도';
+  static const String searchHint = '어디를 가시나요? (예: 인문관 302호)';
 
   @override
   Widget build(BuildContext context) {
@@ -72,60 +73,73 @@ class CampusMapTopBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Pressable.icon(
-              onTap: onBack,
-              child: const SizedBox(
-                width: 36,
-                height: 52,
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
+        SizedBox(
+          height: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Text(
+                title,
+                style: TextStyle(
                   color: AppColors.textStrong,
-                  size: 18,
-                  semanticLabel: '뒤로',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Pressable(
-                onTap: onTapSearch,
-                pressedScale: 0.98,
-                child: Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.fill,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.search_rounded,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Pressable.icon(
+                  onTap: onBack,
+                  child: const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Icon(
+                        Icons.arrow_back_ios_new_rounded,
                         color: AppColors.textStrong,
                         size: 22,
+                        semanticLabel: '뒤로',
                       ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          searchHint,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.textSub,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Pressable(
+          onTap: onTapSearch,
+          pressedScale: 0.98,
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.only(left: 12, right: 10),
+            decoration: BoxDecoration(
+              color: AppColors.fill,
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
+            child: const Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    searchHint,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textSub,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(Icons.search_rounded, color: AppColors.textSub, size: 24),
+              ],
+            ),
+          ),
         ),
         if (campusMapCategories.isNotEmpty) ...[
           const SizedBox(height: 12),
