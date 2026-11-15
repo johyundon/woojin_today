@@ -126,6 +126,7 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
       case CafeteriaVenue.student:
         final time = _meal == CafeteriaMeal.lunch ? ' 11:30 - 13:30' : '';
         return '학생회관 1층 · ${_meal.label}$time';
+      case CafeteriaVenue.dorm:
       case CafeteriaVenue.staff:
       case CafeteriaVenue.cafe:
         return '${_venue!.label} · ${_meal.label}';

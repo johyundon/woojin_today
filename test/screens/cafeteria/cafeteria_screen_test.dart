@@ -92,6 +92,8 @@ void main() {
   testWidgets('식당 탭을 바꾸면 그 식당의 메뉴만 보이고, 카페는 메뉴가 없다', (tester) async {
     await _pump(tester);
 
+    // 탭 줄은 옆으로 밀어 보는 구조라, 화면 밖 탭은 먼저 보이게 한다.
+    await tester.ensureVisible(find.text('교직원식당').first);
     await tester.tap(find.text('교직원식당').first); // 탭(배지보다 위)
     await tester.pumpAndSettle();
     expect(find.text('소불고기\n미역국'), findsOneWidget);
@@ -99,6 +101,7 @@ void main() {
     expect(find.text('제육볶음\n된장찌개'), findsNothing);
     expect(find.text('교직원식당 · 점심'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('카페'));
     await tester.tap(find.text('카페'));
     await tester.pumpAndSettle();
     expect(find.text('등록된 메뉴가 없어요'), findsOneWidget);
@@ -198,6 +201,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
+    // 탭 줄은 옆으로 밀어 보는 구조라, 화면 밖 탭은 먼저 보이게 한다.
+    await tester.ensureVisible(find.text('교직원식당').first);
     await tester.tap(find.text('교직원식당').first); // 탭(배지보다 위)
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

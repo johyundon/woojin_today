@@ -5,7 +5,7 @@ import '../../../widgets/pressable.dart';
 import '../cafeteria_colors.dart';
 import '../models/cafeteria_menu.dart';
 
-/// 전체/학생식당/교직원식당/카페 탭. [selected]가 null이면 "전체"다. 선택한 탭은
+/// 전체/학생식당/생활관식당/교직원식당/카페 탭. [selected]가 null이면 "전체"다. 선택한 탭은
 /// 남색 바탕에 흰 글자, 나머지는 연한 회색.
 class CafeteriaVenueTabs extends StatelessWidget {
   const CafeteriaVenueTabs({
@@ -19,6 +19,7 @@ class CafeteriaVenueTabs extends StatelessWidget {
 
   static const _icons = {
     CafeteriaVenue.student: Icons.restaurant_rounded,
+    CafeteriaVenue.dorm: Icons.apartment_rounded,
     CafeteriaVenue.staff: Icons.badge_rounded,
     CafeteriaVenue.cafe: Icons.coffee_rounded,
   };
