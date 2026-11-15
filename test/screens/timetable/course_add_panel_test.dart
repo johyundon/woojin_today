@@ -152,6 +152,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('시간표 만들기 화면에서는 과목 블록 오른쪽 위 ×(누르는 범위 44)로 과목을 뺀다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(CourseResultTile).first,
+            matching: find.byType(Text),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('담기'));
+    await tester.pumpAndSettle();
+
+    final remove = find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith('course-remove-'),
+    );
+    // 주 2회 수업이면 블록마다 ×가 하나씩 붙는다.
+    expect(remove, findsWidgets);
+    expect(tester.getSize(remove.first), const Size(44, 44));
+
+    await tester.tap(remove.first);
+    await tester.pumpAndSettle();
+    expect(remove, findsNothing);
+    expect(find.text('담기'), findsOneWidget); // 빠졌으니 다시 담을 수 있다.
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('패널은 미끄러져 올라오고, 다 내려간 뒤에 탭 바가 다시 보인다', (tester) async {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2;

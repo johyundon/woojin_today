@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/class_schedule_parser.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/weekday_labels.dart';
+import '../../../widgets/pressable.dart';
 import '../grid_layout.dart';
 import '../models/planned_course.dart';
 import '../timetable_colors.dart';
@@ -33,6 +34,7 @@ class TimetableGrid extends StatelessWidget {
     this.today,
     this.viewportHeight = 320,
     this.showHourLines = true,
+    this.onCourseRemove,
   });
 
   final List<PlannedCourse> courses;
@@ -51,6 +53,10 @@ class TimetableGrid extends StatelessWidget {
   /// 시간 가로줄을 그릴지. 시안(2152-1429)의 빈 시간표에는 가로줄이 없어서,
   /// 과목이 하나도 없을 때는 끈다.
   final bool showHourLines;
+
+  /// 있으면 과목 블록 오른쪽 위에 딱 붙은 "×"를 그리고, 누르면 그 과목을
+  /// 뺀다("시간표 만들기" 편집 화면, 2026-11-16). 누르는 범위는 44×44.
+  final ValueChanged<PlannedCourse>? onCourseRemove;
 
   static const int _hourCount = gridEndHour - gridStartHour;
   static const double _gridHeight = _hourCount * gridHourRowHeight;
@@ -107,6 +113,9 @@ class TimetableGrid extends StatelessWidget {
                       ),
                       for (final layout in layouts)
                         _positionedBlock(layout, columnWidth),
+                      if (onCourseRemove != null)
+                        for (final layout in layouts)
+                          _positionedRemoveButton(layout, columnWidth),
                       if (pendingSlot != null)
                         _positionedPreview(pendingSlot!, columnWidth),
                     ],
@@ -171,6 +180,47 @@ class TimetableGrid extends StatelessWidget {
       child: CourseBlock(
         layout: layout,
         onTap: () => onCourseTap(layout.course),
+      ),
+    );
+  }
+
+  /// 블록 오른쪽 위 모서리에 붙은 18px "×". 블록 바깥으로 조금 나가더라도
+  /// 누르는 범위가 44×44가 되도록 격자 전체 위에 따로 놓는다(블록 안에 두면
+  /// 블록 밖 부분은 눌리지 않는다).
+  Widget _positionedRemoveButton(CourseBlockLayout layout, double columnWidth) {
+    const hitSize = 44.0;
+    const badgeSize = 18.0;
+    const inset = 4.0; // 블록 모서리(바깥 여백 2 포함)에서 띄우는 거리.
+    final columnIndex = gridColumnIndexOf(layout.day)!;
+    final blockLeft = _hourLabelColumnWidth + columnIndex * columnWidth;
+    final top = _minutesToY(layout.startMinutes);
+    final badgeCenterX = blockLeft + columnWidth - inset - badgeSize / 2;
+    final badgeCenterY = top + inset + badgeSize / 2;
+    return Positioned(
+      left: badgeCenterX - hitSize / 2,
+      top: badgeCenterY - hitSize / 2,
+      width: hitSize,
+      height: hitSize,
+      child: Pressable.icon(
+        key: ValueKey('course-remove-${layout.course.key}'),
+        onTap: () => onCourseRemove!(layout.course),
+        child: Container(
+          color: Colors.transparent,
+          alignment: Alignment.center,
+          child: Container(
+            width: badgeSize,
+            height: badgeSize,
+            decoration: const BoxDecoration(
+              color: Color(0x59000000),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.close_rounded,
+              size: 13,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }

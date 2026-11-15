@@ -24,6 +24,15 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
     });
   }
 
+  /// "시간표 만들기" 화면에서 블록의 "×"를 눌렀을 때 그 과목을 뺀다.
+  void _removeCourse(PlannedCourse course) {
+    setState(() {
+      _confirmedCourses = _confirmedCourses
+          .where((c) => c.key != course.key)
+          .toList();
+    });
+  }
+
   /// 그리드 위 반짝이(AI) 버튼 — 5단계 설문([AiRecommendWizardScreen])으로
   /// 이동한다. 실제 추천 생성은 [_onAiRecommendSubmit]에서 처리한다.
   void _openAiRecommendWizard() {

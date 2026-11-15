@@ -271,6 +271,7 @@ class _TimetableScreenState extends State<TimetableScreen>
           today: Weekday.values[now.weekday - 1],
           viewportHeight: viewportHeight,
           showHourLines: !empty,
+          onCourseRemove: _editMode ? _removeCourse : null,
         ),
         if (empty)
           Positioned.fill(child: Center(child: _emptyTimetablePrompt())),

@@ -181,7 +181,7 @@ class SearchFilterBar extends StatelessWidget {
     if (filters.grade != null) {
       chips.add(
         _ActiveChip(
-          label: filters.grade!,
+          label: _gradeLabel(filters.grade!),
           onClear: () {
             filters.grade = null;
             onFiltersChanged();
@@ -245,10 +245,13 @@ class SearchFilterBar extends StatelessWidget {
         children: [
           _FilterDropdownChip<String?>(
             label: '학년',
-            selectedLabel: filters.grade,
+            selectedLabel: filters.grade == null
+                ? null
+                : _gradeLabel(filters.grade!),
             options: [
               const _DropdownOption(null, '전체'),
-              for (final g in availableGrades) _DropdownOption(g, g),
+              for (final g in availableGrades)
+                _DropdownOption(g, _gradeLabel(g)),
             ],
             onSelected: (value) {
               filters.grade = value;
@@ -518,6 +521,13 @@ class _AreaFilterChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 학년 값("2")을 "2학년"으로 보여 준다(사용자 요청, 2026-11-16). 숫자가
+/// 아니면(예: 비어 있거나 "전학년") 그대로 둔다.
+String _gradeLabel(String grade) {
+  final g = grade.trim();
+  return int.tryParse(g) != null ? '$g학년' : g;
 }
 
 class _DropdownOption<T> {
