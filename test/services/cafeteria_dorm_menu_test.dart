@@ -13,6 +13,11 @@ final _dormBytes = File(
   'test/services/fixtures/cafeteria_dorm_diet_2026_11_16.html',
 ).readAsBytesSync();
 
+/// 2026-11-15에 학교 서버에서 실제로 받은 교직원식당 2026.11.16 주 응답.
+final _staffBytes = File(
+  'test/services/fixtures/cafeteria_staff_diet_2026_11_16.html',
+).readAsBytesSync();
+
 /// 고정된 메뉴를 돌려주는 가짜 식당. [error]가 있으면 던진다.
 class _FixedService implements CafeteriaMenuServiceBase {
   _FixedService(this.menu, {this.error});
@@ -81,6 +86,41 @@ void main() {
       final restored = await service.fetchMenu(DateTime(2026, 11, 17));
       expect(urls, hasLength(1));
       expect(restored.lunch.single.venue, CafeteriaVenue.dorm);
+    });
+  });
+
+  group('교직원식당 실제 응답(2026.11.16 주)', () {
+    final urls = <Uri>[];
+    late CafeteriaMenuService service;
+
+    setUp(() {
+      urls.clear();
+      service = CafeteriaMenuService.staff(
+        client: MockClient((request) async {
+          urls.add(request.url);
+          return http.Response.bytes(_staffBytes, 200);
+        }),
+      );
+    });
+
+    test('5번 게시판에 요청하고, 평일 점심을 교직원식당 메뉴로 읽는다', () async {
+      final mon = await service.fetchMenu(DateTime(2026, 11, 16));
+
+      expect(urls.single.path, '/diet/daejin/5/view.do');
+      expect(mon.breakfast, isEmpty);
+      expect(mon.dinner, isEmpty);
+      final lunch = mon.lunch.single;
+      expect(lunch.restaurant, '교직원식당'); // 칸에 코너 표시가 없다
+      expect(lunch.venue, CafeteriaVenue.staff);
+      expect(lunch.dishes.take(3), ['설렁탕', '쌀밥', '통등심육전']);
+      expect(lunch.price, 7000);
+    });
+
+    test('미운영인 금요일과 주말은 메뉴 없음이다', () async {
+      for (final day in [20, 21, 22]) {
+        final menu = await service.fetchMenu(DateTime(2026, 11, day));
+        expect(menu.isEmpty, isTrue, reason: '11/$day');
+      }
     });
   });
 

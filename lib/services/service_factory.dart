@@ -34,11 +34,12 @@ class ServiceFactory {
   static StudentInfoServiceBase studentInfo() => StudentInfoService();
 
   /// 학식은 로그인처럼 `kUseMockApi`와 상관없이 항상 실제 서버를 부른다.
-  /// 학생식당과 생활관식당 메뉴를 합쳐서 준다.
+  /// 학생식당·생활관식당·교직원식당 메뉴를 합쳐서 준다.
   static CafeteriaMenuServiceBase cafeteriaMenu() =>
       CombinedCafeteriaMenuService([
         CafeteriaMenuService(),
         CafeteriaMenuService.dormitory(),
+        CafeteriaMenuService.staff(),
       ]);
 
   /// 학과 등수용 T-WIN 성적 조회. 로그인한 본인의 실제 성적을 보여줘야 하므로

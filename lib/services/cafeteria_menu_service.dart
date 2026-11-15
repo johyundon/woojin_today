@@ -30,7 +30,8 @@ abstract class CafeteriaMenuServiceBase {
 
 /// `POST /diet/daejin/{게시판 번호}/view.do`로 한 식당의 한 주치 학식을 받아
 /// 날짜별 메뉴로 바꾼다. 기본은 학생회관(2번)이고, [CafeteriaMenuService.dormitory]는
-/// 생활관(6번)이다. 두 식당 모두 표 구조가 같아 읽는 규칙을 함께 쓴다.
+/// 생활관(6번), [CafeteriaMenuService.staff]는 교직원식당(5번)이다. 세 식당 모두 표
+/// 구조가 같아 읽는 규칙을 함께 쓴다.
 /// 로그인/쿠키는 필요 없다.
 ///
 /// 서버는 요청한 날짜가 속한 주(월~일) 전체를 한 번에 주므로, 주 단위로 메모리와
@@ -67,6 +68,18 @@ class CafeteriaMenuService implements CafeteriaMenuServiceBase {
          now: now,
          boardNo: 6,
        );
+
+  /// 교직원식당. 2026-11-15 실제 응답 확인: 평일 점심만 있고(7,000원), 칸에 코너
+  /// 표시(`[..]`)가 없다.
+  CafeteriaMenuService.staff({http.Client? client, DateTime Function()? now})
+    : this._(
+        '교직원식당',
+        CafeteriaVenue.staff,
+        'cafeteria_staff_week_',
+        client: client,
+        now: now,
+        boardNo: 5,
+      );
 
   CafeteriaMenuService._(
     this._defaultCorner,
