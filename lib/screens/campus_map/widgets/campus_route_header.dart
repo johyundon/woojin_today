@@ -63,7 +63,7 @@ class CampusRouteHeader extends StatelessWidget {
                 children: [
                   _EndpointField(
                     name: originName,
-                    dotColor: AppColors.blue,
+                    icon: const _OriginDot(),
                     clearLabel: '출발 지우기',
                     onTap: onTapOrigin,
                     onClear: onClearOrigin,
@@ -71,7 +71,11 @@ class CampusRouteHeader extends StatelessWidget {
                   const SizedBox(height: 8),
                   _EndpointField(
                     name: destinationName,
-                    dotColor: AppColors.blueDeep,
+                    icon: const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColors.blue,
+                      size: 22,
+                    ),
                     clearLabel: '도착 지우기',
                     onTap: onTapDestination,
                     onClear: onClearDestination,
@@ -89,7 +93,7 @@ class CampusRouteHeader extends StatelessWidget {
 class _EndpointField extends StatelessWidget {
   const _EndpointField({
     required this.name,
-    required this.dotColor,
+    required this.icon,
     required this.clearLabel,
     required this.onTap,
     required this.onClear,
@@ -97,8 +101,8 @@ class _EndpointField extends StatelessWidget {
 
   final String? name;
 
-  /// 골랐을 때 왼쪽 점 색. 안 골랐으면 회색 점.
-  final Color dotColor;
+  /// 왼쪽 아이콘(예전 출발·도착 카드와 같은 출발 점 · 도착 핀).
+  final Widget icon;
   final String clearLabel;
   final VoidCallback onTap;
   final VoidCallback onClear;
@@ -111,22 +115,15 @@ class _EndpointField extends StatelessWidget {
       pressedScale: 0.98,
       child: Container(
         height: 40,
-        padding: const EdgeInsets.only(left: 12),
+        padding: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           color: AppColors.fill,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: name == null ? AppColors.checkLine : dotColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 10),
+            SizedBox(width: 24, child: Center(child: icon)),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 name ?? CampusMapTopBar.searchHint,
@@ -159,6 +156,32 @@ class _EndpointField extends StatelessWidget {
             else
               const SizedBox(width: 12),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 출발 칸 아이콘: 옅은 원 안의 파란 점(예전 출발·도착 카드와 같다).
+class _OriginDot extends StatelessWidget {
+  const _OriginDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: const BoxDecoration(
+        color: AppColors.blueSoft,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: const BoxDecoration(
+          color: AppColors.blue,
+          shape: BoxShape.circle,
         ),
       ),
     );
