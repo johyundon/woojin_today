@@ -226,7 +226,7 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
                       key: ValueKey(origin),
                       controller: _controller,
                       autofocus: true,
-                      textInputAction: TextInputAction.search,
+                      textInputAction: TextInputAction.done,
                       onChanged: (v) => setState(() => _query = v.trim()),
                       style: const TextStyle(
                         color: AppColors.textStrong,
@@ -341,7 +341,7 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
             child: TextField(
               controller: _controller,
               autofocus: true,
-              textInputAction: TextInputAction.search,
+              textInputAction: TextInputAction.done,
               onChanged: (v) => setState(() => _query = v.trim()),
               style: const TextStyle(
                 color: AppColors.textStrong,
