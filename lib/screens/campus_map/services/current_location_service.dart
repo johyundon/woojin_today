@@ -25,12 +25,19 @@ class CurrentLocationService {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
+          timeLimit: Duration(seconds: 6),
         ),
       );
       return GeoPoint(lat: position.latitude, lng: position.longitude);
     } catch (_) {
-      return null;
+      // 새 위치를 제때 못 받으면 기기가 마지막으로 알던 위치라도 쓴다.
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last == null) return null;
+        return GeoPoint(lat: last.latitude, lng: last.longitude);
+      } catch (_) {
+        return null;
+      }
     }
   }
 }

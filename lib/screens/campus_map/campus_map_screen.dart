@@ -64,6 +64,13 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   /// 현재 위치 → 고른 건물까지 걷는 경로(시트의 "걸어서 N분"에 쓴다).
   CampusRoute? _walkToSelected;
 
+  /// 현재 위치 버튼을 눌러 위치를 읽는 중이면 true(버튼에 빙글이를 띄운다).
+  bool _locating = false;
+
+  /// 사용자가 직접(검색·이전 화면) 건물을 골랐는지. false면 아래 시트에
+  /// 현재 위치에서 가장 가까운 건물을 대신 보여 준다.
+  bool _userPickedBuilding = false;
+
   /// 위쪽 카테고리 칩 중 고른 것.
   int? _selectedCategory;
 
@@ -94,6 +101,15 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     _origin = _findBuilding(widget.initialOriginBuilding);
     _destination = _findBuilding(widget.initialDestinationBuilding);
     _selectedBuilding = _findBuilding(widget.initialSelectedBuilding);
+    _userPickedBuilding = _selectedBuilding != null;
+    // 기본 화면은 아래 시트가 늘 보이도록, 고른 건물이 없으면 캠퍼스 가운데에서
+    // 가장 가까운 건물을 먼저 보여 준다(현재 위치를 읽으면 그 근처로 바꾼다).
+    if (!_isRouteMode && _selectedBuilding == null) {
+      final center = _defaultCenter;
+      _selectedBuilding = _nearestBuilding(
+        GeoPoint(lat: center.latitude, lng: center.longitude),
+      );
+    }
     if (_origin != null && _destination != null) {
       _fetchRoute();
     }
@@ -103,8 +119,18 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   /// 현재 위치를 읽어 파란 점을 갱신한다. [moveCamera]면(현재 위치 버튼)
   /// 지도도 그 자리로 옮기고, 못 읽으면 안내 배너를 띄운다.
   Future<void> _loadMyLocation({bool moveCamera = false}) async {
+    if (moveCamera) {
+      if (_locating) return;
+      // 이미 아는 위치가 있으면 기다리지 않고 바로 옮긴 뒤, 새 위치로 고친다.
+      final known = _myLocation;
+      if (known != null) {
+        _mapController?.panTo(LatLng(known.lat, known.lng));
+      }
+      setState(() => _locating = true);
+    }
     final location = await _locationService.current();
     if (!mounted) return;
+    if (moveCamera) setState(() => _locating = false);
     if (location == null) {
       if (moveCamera) {
         showTopBanner(
@@ -116,7 +142,20 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       }
       return;
     }
-    setState(() => _myLocation = location);
+    setState(() {
+      _myLocation = location;
+      // 학교 안(가장 가까운 건물이 1km 이내)에 있을 때만 그 건물로 바꾼다.
+      final nearest = _nearestBuilding(location);
+      final onCampus =
+          haversineMeters(
+            location,
+            GeoPoint(lat: nearest.lat, lng: nearest.lng),
+          ) <
+          1000;
+      if (!_isRouteMode && !_userPickedBuilding && onCampus) {
+        _selectedBuilding = nearest;
+      }
+    });
     if (moveCamera) {
       await _mapController?.panTo(LatLng(location.lat, location.lng));
     }
@@ -138,6 +177,20 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     // 기다리는 사이 다른 건물을 골랐으면 버린다.
     if (!mounted || _selectedBuilding != building) return;
     setState(() => _walkToSelected = route);
+  }
+
+  /// [point]에서 가장 가까운 건물.
+  CampusBuilding _nearestBuilding(GeoPoint point) {
+    var nearest = campusBuildings.first;
+    var nearestDistance = double.infinity;
+    for (final b in campusBuildings) {
+      final d = haversineMeters(point, GeoPoint(lat: b.lat, lng: b.lng));
+      if (d < nearestDistance) {
+        nearest = b;
+        nearestDistance = d;
+      }
+    }
+    return nearest;
   }
 
   CampusBuilding? _findBuilding(String? name) {
@@ -204,6 +257,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   /// 지우고, 걷는 거리를 다시 구한다.
   void _selectBuilding(CampusBuilding? building) {
     setState(() {
+      _userPickedBuilding = true;
       _pickerTarget = _PickerTarget.none;
       _selectedBuilding = building;
       _walkToSelected = null;
@@ -450,17 +504,18 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               Positioned(
                 left: 12,
                 right: 12,
-                bottom: 22,
+                bottom: 34,
                 child: KakaoMapPointerInterceptor(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _MyLocationButton(
+                        loading: _locating,
                         onTap: () => _loadMyLocation(moveCamera: true),
                       ),
                       if (selected != null) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 20),
                         BuildingSheet(
                           buildingName: selected.name,
                           walkMinutes: _walkToSelected?.walkMinutes,
@@ -522,9 +577,12 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
 /// 지도 오른쪽의 현재 위치 버튼(흰 둥근 네모 + 조준 아이콘).
 class _MyLocationButton extends StatelessWidget {
-  const _MyLocationButton({required this.onTap});
+  const _MyLocationButton({required this.onTap, required this.loading});
 
   final VoidCallback onTap;
+
+  /// 위치를 읽는 중이면 아이콘 대신 빙글이를 보여 준다.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -538,12 +596,20 @@ class _MyLocationButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: AppColors.cardShadow,
         ),
-        child: const Icon(
-          Icons.my_location_rounded,
-          color: CampusMapColors.accent,
-          size: 24,
-          semanticLabel: '현재 위치로 이동',
-        ),
+        child: loading
+            ? const Padding(
+                padding: EdgeInsets.all(14),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: CampusMapColors.accent,
+                ),
+              )
+            : const Icon(
+                Icons.my_location_rounded,
+                color: CampusMapColors.accent,
+                size: 24,
+                semanticLabel: '현재 위치로 이동',
+              ),
       ),
     );
   }
