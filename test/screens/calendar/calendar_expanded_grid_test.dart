@@ -22,7 +22,7 @@ Future<void> _pump(
   WidgetTester tester,
   List<CalendarEvent> events, {
   ValueChanged<int>? onDaySelected,
-  ValueChanged<CalendarEvent>? onEventTap,
+  void Function(CalendarEvent event, int day)? onEventTap,
 }) async {
   tester.view.physicalSize = const Size(390 * 3, 700 * 3);
   tester.view.devicePixelRatio = 3;
@@ -97,21 +97,35 @@ void main() {
     expect(tapped, 14);
   });
 
-  testWidgets('막대를 누르면 그 일정을 알리고(상세 열기), 날짜 숫자를 누르면 날짜를 알린다', (tester) async {
+  testWidgets('막대를 누르면 그 일정과 누른 칸의 날짜를 알리고, 날짜 숫자를 누르면 날짜를 알린다', (
+    tester,
+  ) async {
     int? day;
     CalendarEvent? opened;
+    int? barDay;
     final festival = _event('a', 14, 15, '왕방축제');
     await _pump(
       tester,
       [festival],
       onDaySelected: (d) => day = d,
-      onEventTap: (e) => opened = e,
+      onEventTap: (e, d) {
+        opened = e;
+        barDay = d;
+      },
     );
 
     await tester.tap(find.text('왕방축제'));
     await tester.pumpAndSettle();
     expect(opened, festival);
+    expect(barDay, 14);
     expect(day, isNull);
+
+    // 14~15일 막대의 오른쪽(15일 칸)을 누르면 15일을 알린다.
+    final bar = tester.getRect(find.text('왕방축제'));
+    final col15 = tester.getCenter(find.text('15'));
+    await tester.tapAt(Offset(col15.dx, bar.center.dy));
+    await tester.pumpAndSettle();
+    expect(barDay, 15);
 
     await tester.tap(find.text('14'));
     await tester.pumpAndSettle();

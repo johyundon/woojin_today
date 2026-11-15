@@ -230,9 +230,10 @@ class _CalendarScreenState extends State<CalendarScreen>
     _syncMonth(month);
   }
 
-  /// 스크롤 화면에서 날짜를 누르면 그날을 고르고, 아래 일정 영역으로 부드럽게
-  /// 내려간다(시안 메모 B, 사용자 결정 2026-11-15). 직접 스크롤해도 보인다(A).
-  void _onScrollDaySelected(int day) {
+  /// 스크롤 화면에서 일정 막대를 누르면 누른 칸의 날짜를 고르고, 아래 일정
+  /// 영역으로 부드럽게 내려간다. 날짜 칸을 누르면 고르기만 하고 내려가지 않는다
+  /// (사용자 결정 2026-11-15). 직접 스크롤해도 일정 영역이 보인다.
+  void _onScrollEventTap(CalendarEvent event, int day) {
     _onDaySelected(day);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final target = _dayListKey.currentContext;
@@ -824,7 +825,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                           selectedDay: selectedDay,
                           today: DateTime.now(),
                           onDaySelected: _onExpandedDaySelected,
-                          onEventTap: _openEventDetail,
+                          onEventTap: (event, _) => _openEventDetail(event),
                         ),
                       ),
                       _expandHandle(expanded: true),
@@ -954,8 +955,8 @@ class _CalendarScreenState extends State<CalendarScreen>
                 events: _eventsInFocusedMonth,
                 selectedDay: selectedDay,
                 today: DateTime.now(),
-                onDaySelected: _onScrollDaySelected,
-                onEventTap: _openEventDetail,
+                onDaySelected: _onDaySelected,
+                onEventTap: _onScrollEventTap,
                 fitWeeksToContent: true,
               ),
             ),

@@ -41,9 +41,9 @@ class CalendarExpandedGrid extends StatelessWidget {
 
   final ValueChanged<int> onDaySelected;
 
-  /// 일정 막대를 눌렀을 때(그 일정의 상세 팝업 열기). null이면 막대는 누름을
-  /// 받지 않고 아래 날짜 칸이 받는다.
-  final ValueChanged<CalendarEvent>? onEventTap;
+  /// 일정 막대를 눌렀을 때. 그 일정과, 막대에서 손가락이 닿은 칸의 날짜(일)를
+  /// 알린다. null이면 막대는 누름을 받지 않고 아래 날짜 칸이 받는다.
+  final void Function(CalendarEvent event, int day)? onEventTap;
 
   /// true면 주 줄 높이를 그 주에 실제로 있는 막대 줄 수에 맞춘다(일정이 없는
   /// 주는 날짜 숫자 높이만). 이때 격자는 부모 높이를 채우지 않고 내용만큼만
@@ -196,8 +196,8 @@ class CalendarExpandedGrid extends StatelessWidget {
                   ),
               ],
             ),
-            // 막대를 누르면 그 일정의 상세가 열리고, 막대 밖(날짜 숫자·빈 곳)을
-            // 누르면 날짜 칸이 받는다(사용자 요청, 2026-11-14).
+            // 막대를 누르면 그 일정과 누른 칸의 날짜를 알리고, 막대 밖(날짜
+            // 숫자·빈 곳)을 누르면 날짜 칸이 받는다.
             IgnorePointer(
               ignoring: onEventTap == null,
               child: Stack(
@@ -216,10 +216,10 @@ class CalendarExpandedGrid extends StatelessWidget {
                         height: _barHeight,
                         child: onEventTap == null
                             ? _EventBar(segment: s)
-                            : Pressable(
-                                onTap: () => onEventTap!(s.event),
-                                pressedScale: 0.96,
-                                child: _EventBar(segment: s),
+                            : _tappableBar(
+                                s,
+                                firstDay: firstDay,
+                                columnWidth: columnWidth,
                               ),
                       ),
                 ],
@@ -228,6 +228,29 @@ class CalendarExpandedGrid extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  /// 누를 수 있는 막대. 손가락이 닿은 위치로 어느 날짜 칸인지 계산해 함께 알린다
+  /// (여러 날 막대의 가운데를 누르면 그날을 고르게).
+  Widget _tappableBar(
+    _WeekSegment s, {
+    required int firstDay,
+    required double columnWidth,
+  }) {
+    var tapX = 0.0;
+    final leftInset = s.continuesBefore ? 0.0 : 1.0;
+    return Listener(
+      onPointerDown: (e) => tapX = e.localPosition.dx,
+      child: Pressable(
+        onTap: () {
+          final col = (s.startCol + ((tapX + leftInset) / columnWidth).floor())
+              .clamp(s.startCol, s.endCol);
+          onEventTap!(s.event, firstDay + col);
+        },
+        pressedScale: 0.96,
+        child: _EventBar(segment: s),
+      ),
     );
   }
 

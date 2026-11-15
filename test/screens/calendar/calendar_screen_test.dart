@@ -224,21 +224,34 @@ void main() {
     expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
   });
 
-  testWidgets('제목 "캘린더"와 막대 달력이 보이고, 날짜를 누르면 아래 일정 영역으로 내려간다', (tester) async {
+  testWidgets('날짜를 누르면 고르기만 하고, 일정 막대를 누르면 그날 일정 영역으로 내려간다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
     expect(find.text('캘린더'), findsWidgets);
     // 위쪽 달력 칸 안에 일정 막대(제목)가 보인다.
     expect(find.byType(CalendarExpandedGrid), findsOneWidget);
     expect(find.text('왕방축제'), findsWidgets);
 
-    final header = find.textContaining('월 21일');
-    await tester.tap(find.text('21').first);
+    // 날짜 칸(28일, 일정 있음)을 누르면 그날이 골라지지만 화면은 그대로다.
+    final header28 = find.textContaining('월 28일');
+    await tester.tap(find.text('28').first);
     await tester.pumpAndSettle();
+    expect(header28, findsOneWidget);
+    expect(tester.getTopLeft(header28).dy, greaterThan(400));
 
-    // 일정 영역 머리글이 화면 위쪽(앱바·달 이동 줄 아래)까지 올라와 있다.
-    expect(header, findsOneWidget);
-    expect(tester.getTopLeft(header).dy, lessThan(250));
+    // 21일의 "수업평가 참여 기간" 막대를 누르면 21일을 고르고 일정 영역으로 내려간다.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CalendarExpandedGrid),
+        matching: find.text('수업평가 참여 기간'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final header21 = find.textContaining('월 21일');
+    expect(header21, findsOneWidget);
+    expect(tester.getTopLeft(header21).dy, lessThan(250));
     expect(_card('수업평가 참여 기간'), findsOneWidget);
+    // 상세 팝업은 열리지 않는다(카드를 눌러야 열림).
+    expect(find.text('닫기'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
