@@ -117,4 +117,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(day, 14);
   });
+
+  testWidgets('내용에 맞춤이면 일정 없는 주는 일정 있는 주보다 낮다', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 900 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: CalendarExpandedGrid(
+              focusedMonth: DateTime(2026, 9),
+              // 둘째 주(6~12일)에만 일정 두 줄.
+              events: [_event('a', 7, 9, '가'), _event('b', 8, 8, '나')],
+              selectedDay: null,
+              today: DateTime(2026, 9, 1),
+              onDaySelected: (_) {},
+              fitWeeksToContent: true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // 같은 열(일요일)의 6일→13일 간격(일정 있는 주)과 13일→20일 간격(없는 주).
+    final y6 = tester.getTopLeft(find.text('6')).dy;
+    final y13 = tester.getTopLeft(find.text('13')).dy;
+    final y20 = tester.getTopLeft(find.text('20')).dy;
+    expect(y13 - y6, greaterThan(y20 - y13));
+    expect(y20 - y13, lessThan(50));
+    expect(find.text('가'), findsOneWidget);
+    expect(find.text('나'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

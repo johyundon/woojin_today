@@ -79,9 +79,6 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// 펼치기" 화면이다(안 쓰는 화면이지만 지우지 않고 남겨 둔다).
   static const bool _useScrollLayout = true;
 
-  /// 스크롤 화면에서 한 주 줄의 높이(시안 기준 약 100). 막대 3줄과 "+N"이 들어간다.
-  static const double _scrollWeekHeight = 104;
-
   /// 스크롤 화면에서 날짜를 누르면 아래 일정 영역으로 내려가려고 쓰는 표시.
   final _dayListKey = GlobalKey();
 
@@ -941,14 +938,6 @@ class _CalendarScreenState extends State<CalendarScreen>
     required DateTime? selectedDate,
     required List<CalendarEvent> dayEvents,
   }) {
-    final daysInMonth = DateTime(
-      _focusedMonth.year,
-      _focusedMonth.month + 1,
-      0,
-    ).day;
-    final leadingBlanks =
-        DateTime(_focusedMonth.year, _focusedMonth.month, 1).weekday % 7;
-    final weekCount = ((leadingBlanks + daysInMonth) / 7).ceil();
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return LayoutBuilder(
@@ -958,17 +947,16 @@ class _CalendarScreenState extends State<CalendarScreen>
             Padding(
               // 달력(막대 포함) 양옆 여백 16(사용자 요청, 2026-11-15).
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                // 요일 줄(약 20) + 주 줄들.
-                height: 20 + weekCount * _scrollWeekHeight,
-                child: CalendarExpandedGrid(
-                  focusedMonth: _focusedMonth,
-                  events: _eventsInFocusedMonth,
-                  selectedDay: selectedDay,
-                  today: DateTime.now(),
-                  onDaySelected: _onScrollDaySelected,
-                  onEventTap: _openEventDetail,
-                ),
+              // 주 줄 높이는 그 주 일정 막대 수에 맞춘다(일정 없는 주는
+              // 낮게, 사용자 요청 2026-11-15).
+              child: CalendarExpandedGrid(
+                focusedMonth: _focusedMonth,
+                events: _eventsInFocusedMonth,
+                selectedDay: selectedDay,
+                today: DateTime.now(),
+                onDaySelected: _onScrollDaySelected,
+                onEventTap: _openEventDetail,
+                fitWeeksToContent: true,
               ),
             ),
             const SizedBox(height: 12),

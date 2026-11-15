@@ -24,6 +24,7 @@ class CalendarExpandedGrid extends StatelessWidget {
     required this.today,
     required this.onDaySelected,
     this.onEventTap,
+    this.fitWeeksToContent = false,
     super.key,
   });
 
@@ -43,6 +44,14 @@ class CalendarExpandedGrid extends StatelessWidget {
   /// 일정 막대를 눌렀을 때(그 일정의 상세 팝업 열기). null이면 막대는 누름을
   /// 받지 않고 아래 날짜 칸이 받는다.
   final ValueChanged<CalendarEvent>? onEventTap;
+
+  /// true면 주 줄 높이를 그 주에 실제로 있는 막대 줄 수에 맞춘다(일정이 없는
+  /// 주는 날짜 숫자 높이만). 이때 격자는 부모 높이를 채우지 않고 내용만큼만
+  /// 차지한다. false면 주 줄들이 부모 높이를 똑같이 나눠 갖는다.
+  final bool fitWeeksToContent;
+
+  /// [fitWeeksToContent]일 때 날짜 숫자 아래(막대 뒤) 여백.
+  static const double _fitBottomGap = 10;
 
   /// 한 주에 그리는 막대 줄 수의 최대값.
   static const int maxLanes = 3;
@@ -88,39 +97,77 @@ class CalendarExpandedGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        Expanded(
-          child: Column(
-            children: [
-              for (var week = 0; week < weekCount; week++)
-                Expanded(
-                  child: _buildWeek(
-                    firstDay: week * 7 - leadingBlanks + 1,
-                    daysInMonth: daysInMonth,
+        if (fitWeeksToContent)
+          for (var week = 0; week < weekCount; week++)
+            _fittedWeek(
+              firstDay: week * 7 - leadingBlanks + 1,
+              daysInMonth: daysInMonth,
+            )
+        else
+          Expanded(
+            child: Column(
+              children: [
+                for (var week = 0; week < weekCount; week++)
+                  Expanded(
+                    child: _buildWeek(
+                      firstDay: week * 7 - leadingBlanks + 1,
+                      daysInMonth: daysInMonth,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
+    );
+  }
+
+  /// 내용에 맞춘 높이의 주 줄: 날짜 숫자 + 쓰인 막대 줄(최대 [maxLanes]) +
+  /// 못 그린 일정이 있으면 "+N" 자리 + 아래 여백.
+  Widget _fittedWeek({required int firstDay, required int daysInMonth}) {
+    final segments = _layoutWeek(firstDay, daysInMonth);
+    final usedLanes = segments.isEmpty
+        ? 0
+        : math.min(maxLanes, segments.map((s) => s.lane).reduce(math.max) + 1);
+    final hasMore = segments.any((s) => s.lane >= maxLanes);
+    return SizedBox(
+      height:
+          _numberHeight +
+          usedLanes * (_barHeight + _barGap) +
+          (hasMore ? _moreHeight : 0) +
+          _fitBottomGap,
+      child: _buildWeek(
+        firstDay: firstDay,
+        daysInMonth: daysInMonth,
+        segments: segments,
+        fixedLanes: usedLanes,
+      ),
     );
   }
 
   /// 한 주 줄. [firstDay]는 이 줄 맨 왼쪽(일요일) 칸의 일(달 밖이면 0 이하이거나
   /// [daysInMonth]보다 크다).
-  Widget _buildWeek({required int firstDay, required int daysInMonth}) {
-    final segments = _layoutWeek(firstDay, daysInMonth);
+  /// [fixedLanes]를 주면 칸 높이로 계산하지 않고 그 줄 수만큼 막대를 그린다.
+  Widget _buildWeek({
+    required int firstDay,
+    required int daysInMonth,
+    List<_WeekSegment>? segments,
+    int? fixedLanes,
+  }) {
+    final weekSegments = segments ?? _layoutWeek(firstDay, daysInMonth);
     return LayoutBuilder(
       builder: (context, constraints) {
         final columnWidth = constraints.maxWidth / 7;
         // 칸 높이에 들어가는 만큼만(최대 maxLanes줄) 막대를 그린다.
         final room =
             constraints.maxHeight - _numberHeight - _moreHeight + _barGap;
-        final lanes = math.min(
-          maxLanes,
-          math.max(0, (room / (_barHeight + _barGap)).floor()),
-        );
+        final lanes =
+            fixedLanes ??
+            math.min(
+              maxLanes,
+              math.max(0, (room / (_barHeight + _barGap)).floor()),
+            );
         final hiddenPerColumn = List.filled(7, 0);
-        for (final s in segments) {
+        for (final s in weekSegments) {
           if (s.lane < lanes) continue;
           for (var col = s.startCol; col <= s.endCol; col++) {
             hiddenPerColumn[col]++;
@@ -155,7 +202,7 @@ class CalendarExpandedGrid extends StatelessWidget {
               ignoring: onEventTap == null,
               child: Stack(
                 children: [
-                  for (final s in segments)
+                  for (final s in weekSegments)
                     if (s.lane < lanes)
                       Positioned(
                         top: _numberHeight + s.lane * (_barHeight + _barGap),
