@@ -116,4 +116,90 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('중앙도서관'), findsNothing);
   });
+
+  testWidgets('출발·도착 두 칸 검색: 도착 칸에서 최근 검색을 고르면 도착으로 돌려준다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'campus_map_recent_places': ['중앙도서관'],
+    });
+    CampusSearchResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                result = await Navigator.of(context).push<CampusSearchResult>(
+                  MaterialPageRoute(
+                    builder: (_) => CampusMapSearchScreen(
+                      todayClasses: const [],
+                      now: _now,
+                      endpoints: const CampusSearchEndpoints(
+                        originName: '공대 가동',
+                        destinationName: null,
+                        editingOrigin: false,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('열기'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('캠퍼스 지도'), findsOneWidget);
+    expect(find.text('공대 가동'), findsOneWidget);
+    expect(find.text('최근 검색'), findsWidgets);
+
+    await tester.tap(find.text('중앙도서관'));
+    await tester.pumpAndSettle();
+    expect(result?.destination.name, '중앙도서관');
+    expect(result?.forOrigin, isFalse);
+  });
+
+  testWidgets('출발·도착 두 칸 검색: 출발 칸을 눌러 바꾸면 출발로 돌려준다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'campus_map_recent_places': ['학생회관'],
+    });
+    CampusSearchResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                result = await Navigator.of(context).push<CampusSearchResult>(
+                  MaterialPageRoute(
+                    builder: (_) => CampusMapSearchScreen(
+                      todayClasses: const [],
+                      now: _now,
+                      endpoints: const CampusSearchEndpoints(
+                        originName: '공대 가동',
+                        destinationName: '인문학관',
+                        editingOrigin: false,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('열기'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('공대 가동'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('학생회관'));
+    await tester.pumpAndSettle();
+    expect(result?.destination.name, '학생회관');
+    expect(result?.forOrigin, isTrue);
+  });
 }

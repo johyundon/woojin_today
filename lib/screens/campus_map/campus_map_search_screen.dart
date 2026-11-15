@@ -10,6 +10,7 @@ import 'models/route_classes.dart';
 import 'models/room_building.dart';
 import 'services/recent_place_store.dart';
 import 'widgets/campus_map_top_bar.dart';
+import 'widgets/campus_route_header.dart';
 
 /// 검색 화면에서 고른 결과. [origin]이 있으면 "오늘 수업 길찾기"를 고른
 /// 것이라 지도는 출발지 → 도착지 길을 그린다.
@@ -18,10 +19,16 @@ class CampusSearchResult {
     required this.destination,
     this.origin,
     this.classes,
+    this.forOrigin = false,
   });
 
+  /// 고른 건물. [origin]이 없으면 이 건물 하나만 고른 것이다.
   final CampusBuilding destination;
   final CampusBuilding? origin;
+
+  /// 출발·도착 두 칸 검색([CampusMapSearchScreen.endpoints])에서 출발 칸에
+  /// 넣으려고 고른 건물이면 true.
+  final bool forOrigin;
 
   /// "오늘 수업 길찾기"로 고른 앞·뒤 수업.
   final RouteClasses? classes;
@@ -32,13 +39,20 @@ class CampusSearchResult {
 /// 글자가 비어 있으면 "오늘 수업 길찾기", "오늘 강의실", "최근 검색"을,
 /// 글자를 치면 맞는 건물 목록을 보여 준다. 고르면 [CampusSearchResult]를
 /// 돌려주며 닫힌다. 각 칸은 보여 줄 것이 없으면 통째로 숨긴다.
+///
+/// [endpoints]를 주면(길안내 화면에서 출발·도착 칸을 눌렀을 때) 위쪽이
+/// 길안내 화면과 같은 출발·도착 두 칸으로 바뀌고, 고른 칸에 글자를 친다.
 class CampusMapSearchScreen extends StatefulWidget {
   const CampusMapSearchScreen({
     super.key,
     required this.todayClasses,
     required this.now,
     this.recentStore = const RecentPlaceStore(),
+    this.endpoints,
   });
+
+  /// 길안내 화면에서 열었을 때의 출발·도착 칸 상태. null이면 기본 검색창.
+  final CampusSearchEndpoints? endpoints;
 
   /// 오늘 수업(시작 시각 순). 시간표를 못 받았으면 빈 목록.
   final List<TodayClass> todayClasses;
@@ -49,10 +63,27 @@ class CampusMapSearchScreen extends StatefulWidget {
   State<CampusMapSearchScreen> createState() => _CampusMapSearchScreenState();
 }
 
+/// 출발·도착 두 칸 검색의 처음 상태 — 지금 들어 있는 이름과, 어느 칸을
+/// 눌러서 열었는지.
+class CampusSearchEndpoints {
+  const CampusSearchEndpoints({
+    required this.originName,
+    required this.destinationName,
+    required this.editingOrigin,
+  });
+
+  final String? originName;
+  final String? destinationName;
+  final bool editingOrigin;
+}
+
 class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
   final _controller = TextEditingController();
   String _query = '';
   List<String> _recent = const [];
+
+  /// 두 칸 검색에서 지금 글자를 치는 칸이 출발이면 true.
+  late bool _editingOrigin = widget.endpoints?.editingOrigin ?? false;
 
   @override
   void initState() {
@@ -102,6 +133,7 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
         destination: building,
         origin: origin,
         classes: classes,
+        forOrigin: origin == null && _editingOrigin,
       ),
     );
   }
@@ -132,31 +164,164 @@ class _CampusMapSearchScreenState extends State<CampusMapSearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 10, 16, 8),
-              child: Row(
-                children: [
-                  Pressable.icon(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const SizedBox(
-                      width: 44,
-                      height: 52,
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.textStrong,
-                        size: 20,
-                        semanticLabel: '뒤로',
+            if (widget.endpoints case final endpoints?)
+              _endpointsHeader(endpoints)
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 10, 16, 8),
+                child: Row(
+                  children: [
+                    Pressable.icon(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const SizedBox(
+                        width: 44,
+                        height: 52,
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: AppColors.textStrong,
+                          size: 20,
+                          semanticLabel: '뒤로',
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(child: _searchField()),
-                ],
+                    const SizedBox(width: 4),
+                    Expanded(child: _searchField()),
+                  ],
+                ),
               ),
-            ),
             Expanded(child: _query.isEmpty ? _suggestions() : _results()),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 길안내 화면과 같은 위쪽 카드 — "‹ 캠퍼스 지도", 출발·도착 두 칸.
+  /// 고른 칸은 테두리가 생기고 글자를 받는다. 다른 칸을 누르면 그 칸으로
+  /// 바꾼다.
+  Widget _endpointsHeader(CampusSearchEndpoints endpoints) {
+    Widget field({
+      required bool origin,
+      required String? name,
+      required Widget icon,
+    }) {
+      final editing = origin == _editingOrigin;
+      final box = Container(
+        height: 40,
+        padding: const EdgeInsets.only(left: 8, right: 4),
+        decoration: BoxDecoration(
+          color: editing ? CampusMapColors.surface : AppColors.fill,
+          borderRadius: BorderRadius.circular(10),
+          border: editing
+              ? Border.all(color: AppColors.textStrong, width: 1)
+              : null,
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 24, child: Center(child: icon)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: editing
+                  ? TextField(
+                      key: ValueKey(origin),
+                      controller: _controller,
+                      autofocus: true,
+                      textInputAction: TextInputAction.search,
+                      onChanged: (v) => setState(() => _query = v.trim()),
+                      style: const TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: name ?? CampusMapTopBar.searchHint,
+                        hintStyle: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        isCollapsed: true,
+                      ),
+                    )
+                  : Text(
+                      name ?? CampusMapTopBar.searchHint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: name == null
+                            ? AppColors.textMuted
+                            : AppColors.textStrong,
+                        fontSize: 14,
+                        fontWeight: name == null
+                            ? FontWeight.w400
+                            : FontWeight.w600,
+                      ),
+                    ),
+            ),
+            if (editing && _query.isNotEmpty)
+              Pressable.icon(
+                onTap: () {
+                  _controller.clear();
+                  setState(() => _query = '');
+                },
+                child: const SizedBox(
+                  width: 36,
+                  height: 40,
+                  child: Icon(
+                    Icons.cancel_rounded,
+                    color: AppColors.checkLine,
+                    size: 18,
+                    semanticLabel: '지우기',
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+      if (editing) return box;
+      return Pressable(
+        onTap: () {
+          _controller.clear();
+          setState(() {
+            _query = '';
+            _editingOrigin = origin;
+          });
+        },
+        pressedScale: 0.98,
+        child: box,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      child: Column(
+        children: [
+          CampusMapTitleRow(onBack: () => Navigator.of(context).pop()),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              // 길안내 화면의 바꾸기 버튼 자리. 여기선 칸을 눌러 바꾼다.
+              const SizedBox(width: 36),
+              Expanded(
+                child: Column(
+                  children: [
+                    field(
+                      origin: true,
+                      name: endpoints.originName,
+                      icon: const RouteOriginDot(),
+                    ),
+                    const SizedBox(height: 8),
+                    field(
+                      origin: false,
+                      name: endpoints.destinationName,
+                      icon: const RouteDestinationPin(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

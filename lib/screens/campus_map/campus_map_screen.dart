@@ -225,12 +225,51 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     );
   }
 
-  void _openOriginPicker() {
-    setState(() => _pickerTarget = _PickerTarget.origin);
-  }
+  void _openOriginPicker() => _openEndpointSearch(editingOrigin: true);
 
-  void _openDestinationPicker() {
-    setState(() => _pickerTarget = _PickerTarget.destination);
+  void _openDestinationPicker() => _openEndpointSearch(editingOrigin: false);
+
+  /// 길안내 화면 위 출발·도착 칸을 누르면 검색 화면을 두 칸 모습으로 연다
+  /// (예전 "건물 선택" 팝업 대신). 고른 건물을 고른 칸에 넣는다.
+  Future<void> _openEndpointSearch({required bool editingOrigin}) async {
+    final now = DateTime.now();
+    final courses = SessionCache.lastMyTimetable?.courses ?? const [];
+    final result = await Navigator.of(context).push<CampusSearchResult>(
+      MaterialPageRoute(
+        builder: (_) => CampusMapSearchScreen(
+          todayClasses: todayClasses(courses: courses, now: now),
+          now: now,
+          endpoints: CampusSearchEndpoints(
+            originName: _routeClasses?.fromTitle ?? _originLabel,
+            destinationName: _routeClasses?.toTitle ?? _destinationLabel,
+            editingOrigin: editingOrigin,
+          ),
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    final origin = result.origin;
+    setState(() {
+      if (origin != null) {
+        // "오늘 수업 길찾기"를 고르면 두 칸을 함께 채운다.
+        _origin = origin;
+        _originIsMe = false;
+        _destination = result.destination;
+        _destinationIsMe = false;
+        _routeClasses = result.classes;
+      } else {
+        if (result.forOrigin) {
+          _origin = result.destination;
+          _originIsMe = false;
+        } else {
+          _destination = result.destination;
+          _destinationIsMe = false;
+        }
+        _routeClasses = null;
+      }
+      _selectedBuilding = null;
+    });
+    await _fetchRoute();
   }
 
   void _closePicker() {

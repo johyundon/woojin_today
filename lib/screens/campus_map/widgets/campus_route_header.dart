@@ -63,7 +63,7 @@ class CampusRouteHeader extends StatelessWidget {
                 children: [
                   _EndpointField(
                     name: originName,
-                    icon: const _OriginDot(),
+                    icon: const RouteOriginDot(),
                     clearLabel: '출발 지우기',
                     onTap: onTapOrigin,
                     onClear: onClearOrigin,
@@ -71,11 +71,7 @@ class CampusRouteHeader extends StatelessWidget {
                   const SizedBox(height: 8),
                   _EndpointField(
                     name: destinationName,
-                    icon: const Icon(
-                      Icons.location_on_rounded,
-                      color: AppColors.blue,
-                      size: 22,
-                    ),
+                    icon: const RouteDestinationPin(),
                     clearLabel: '도착 지우기',
                     onTap: onTapDestination,
                     onClear: onClearDestination,
@@ -162,9 +158,23 @@ class _EndpointField extends StatelessWidget {
   }
 }
 
+/// 도착 칸 아이콘: 파란 위치 핀.
+class RouteDestinationPin extends StatelessWidget {
+  const RouteDestinationPin({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(
+      Icons.location_on_rounded,
+      color: AppColors.blue,
+      size: 22,
+    );
+  }
+}
+
 /// 출발 칸 아이콘: 옅은 원 안의 파란 점(예전 출발·도착 카드와 같다).
-class _OriginDot extends StatelessWidget {
-  const _OriginDot();
+class RouteOriginDot extends StatelessWidget {
+  const RouteOriginDot({super.key});
 
   @override
   Widget build(BuildContext context) {
