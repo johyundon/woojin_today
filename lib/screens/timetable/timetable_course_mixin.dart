@@ -38,7 +38,10 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
   void _openAiRecommendWizard() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AiRecommendWizardScreen(onSubmit: _onAiRecommendSubmit),
+        builder: (_) => AiRecommendWizardScreen(
+          onSubmit: _onAiRecommendSubmit,
+          loadMyGrade: _loadMyGrade,
+        ),
       ),
     );
   }
@@ -107,6 +110,20 @@ mixin TimetableCourseMixin on TimetableSessionMixin {
           },
         ),
       ),
+    );
+  }
+
+  /// 내 학년(1~4). 학생 정보는 홈에서 이미 불러와 저장돼 있어 보통 새 요청이
+  /// 없다. 세션이 없거나 못 읽으면 null.
+  Future<int?> _loadMyGrade() async {
+    final userId2 = widget.userId2;
+    if (!_hasFullSession || userId2 == null) return null;
+    final info = await SessionCache.getStudentInfo(
+      widget.studentInfoService ?? ServiceFactory.studentInfo(),
+      userId2: userId2,
+    );
+    return int.tryParse(
+      RegExp(r'[1-4]').firstMatch(info.grade ?? '')?.group(0) ?? '',
     );
   }
 

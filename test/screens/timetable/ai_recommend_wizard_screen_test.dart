@@ -107,4 +107,57 @@ void main() {
     final theme = SliderTheme.of(tester.element(slider));
     expect(theme.tickMarkShape, SliderTickMarkShape.noTickMark);
   });
+
+  group('4/5 전공·교양 비율은 학년에 따라 보이는 게 다르다', () {
+    Future<void> goToRatioStep(WidgetTester tester, {int? grade}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AiRecommendWizardScreen(
+            onSubmit: (_, _) async {},
+            loadMyGrade: grade == null ? null : () async => grade,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.text('다음'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('전공과 교양 비율을\n정해주세요'), findsOneWidget);
+    }
+
+    final secondMajorSwitch = find.byKey(
+      const ValueKey('ai-second-major-switch'),
+    );
+
+    testWidgets('1학년이면 전공·교양 비율만 보인다', (tester) async {
+      await goToRatioStep(tester, grade: 1);
+      expect(find.text('교양 0%'), findsOneWidget);
+      expect(secondMajorSwitch, findsNothing);
+      expect(find.textContaining('타전공'), findsNothing);
+      expect(find.textContaining('주전공'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('학년을 모르면 1학년처럼 보인다', (tester) async {
+      await goToRatioStep(tester);
+      expect(secondMajorSwitch, findsNothing);
+    });
+
+    testWidgets('2학년 이상이면 복수전공 스위치가 있고, 켜면 학과 고르기가 나온다', (tester) async {
+      await goToRatioStep(tester, grade: 2);
+      expect(secondMajorSwitch, findsOneWidget);
+      expect(find.text('복수전공을 하고 있어요'), findsOneWidget);
+      expect(find.text('학과 고르기'), findsNothing);
+
+      await tester.tap(secondMajorSwitch);
+      await tester.pumpAndSettle();
+      expect(find.text('학과 고르기'), findsOneWidget);
+
+      await tester.tap(secondMajorSwitch);
+      await tester.pumpAndSettle();
+      expect(find.text('학과 고르기'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

@@ -25,7 +25,16 @@ const List<Weekday> _weekdayValues = [
 /// "이전"/"다음" 버튼을 둔다. 6번째 화면(결과 미리보기)은 이 위젯의 범위 밖이다 — [onSubmit]이 호출된 뒤 어디로
 /// 이동할지는 호출부가 결정한다.
 class AiRecommendWizardScreen extends StatefulWidget {
-  const AiRecommendWizardScreen({required this.onSubmit, super.key});
+  const AiRecommendWizardScreen({
+    required this.onSubmit,
+    this.loadMyGrade,
+    super.key,
+  });
+
+  /// 내 학년(1~4)을 읽는다. 2학년 이상이면 4/5에서 복수전공 스위치를 보여준다.
+  /// 없거나 학년을 모르면 1학년처럼 전공·교양 비율만 보여준다(UT 피드백,
+  /// 2026-11-16: 신입생은 주전공·타전공 구분을 낯설어함).
+  final Future<int?> Function()? loadMyGrade;
 
   /// 5단계 "시간표 만들기" 버튼을 눌렀을 때 호출된다. 호출부(이 위젯 밖)가
   /// 이 콜백 안에서 실제 추천 결과 화면으로 네비게이션한다 — 이 위젯은
@@ -41,6 +50,24 @@ class AiRecommendWizardScreen extends StatefulWidget {
 class _AiRecommendWizardScreenState extends State<AiRecommendWizardScreen> {
   final _answers = AiRecommendAnswers();
   int _step = 0;
+  int? _myGrade;
+
+  @override
+  void initState() {
+    super.initState();
+    _readMyGrade();
+  }
+
+  Future<void> _readMyGrade() async {
+    final load = widget.loadMyGrade;
+    if (load == null) return;
+    try {
+      final grade = await load();
+      if (mounted) setState(() => _myGrade = grade);
+    } catch (_) {
+      // 학년을 못 읽으면 1학년 화면(전공·교양 비율만)으로 둔다.
+    }
+  }
 
   void _goNext() {
     if (_step < 4) setState(() => _step++);
@@ -60,7 +87,12 @@ class _AiRecommendWizardScreenState extends State<AiRecommendWizardScreen> {
       _CreditStep(answers: _answers, onNext: _goNext),
       _FreeDayStep(answers: _answers, onNext: _goNext, onBack: _goBack),
       _TimePreferenceStep(answers: _answers, onNext: _goNext, onBack: _goBack),
-      _MajorRatioStep(answers: _answers, onNext: _goNext, onBack: _goBack),
+      _MajorRatioStep(
+        answers: _answers,
+        showSecondMajor: (_myGrade ?? 1) >= 2,
+        onNext: _goNext,
+        onBack: _goBack,
+      ),
       _ExtraOptionStep(answers: _answers, onSubmit: _submit, onBack: _goBack),
     ];
 
@@ -594,11 +626,15 @@ class _TimePreferenceStepState extends State<_TimePreferenceStep> {
 class _MajorRatioStep extends StatefulWidget {
   const _MajorRatioStep({
     required this.answers,
+    required this.showSecondMajor,
     required this.onNext,
     required this.onBack,
   });
 
   final AiRecommendAnswers answers;
+
+  /// 2학년 이상이면 true — 복수전공 스위치 카드를 보여준다.
+  final bool showSecondMajor;
   final VoidCallback onNext;
   final VoidCallback onBack;
 
@@ -612,6 +648,17 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
     fontSize: 13,
     fontWeight: FontWeight.w800,
   );
+
+  /// 복수전공 스위치. 처음에는 고른 학과가 있으면 켜진 채로 시작한다.
+  late bool _secondMajorOn = widget.answers.secondMajorDepartment != null;
+
+  void _toggleSecondMajor(bool on) {
+    setState(() {
+      _secondMajorOn = on;
+      // 끄면 고른 학과도 지워 추천에 타전공을 섞지 않는다.
+      if (!on) widget.answers.secondMajorDepartment = null;
+    });
+  }
 
   void _toggleAny() {
     setState(() {
@@ -652,7 +699,7 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
                             Flexible(
                               child: Text.rich(
                                 TextSpan(
-                                  text: '전공(주전공+타전공) ',
+                                  text: '전공 ',
                                   children: [
                                     TextSpan(
                                       text: '${answers.majorRatio.round()}%',
@@ -686,12 +733,16 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _SecondMajorCard(
-                    answers: answers,
-                    labelStyle: _labelStyle,
-                    onChanged: () => setState(() {}),
-                  ),
+                  if (widget.showSecondMajor) ...[
+                    const SizedBox(height: 12),
+                    _SecondMajorCard(
+                      answers: answers,
+                      labelStyle: _labelStyle,
+                      on: _secondMajorOn,
+                      onToggle: _toggleSecondMajor,
+                      onChanged: () => setState(() {}),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -713,17 +764,22 @@ class _MajorRatioStepState extends State<_MajorRatioStep> {
   }
 }
 
-/// 4/5의 타전공 카드. 복수전공 학과를 고르기 전에는 고르는 줄만, 고른 뒤에는
-/// 주전공/타전공 비율 슬라이더도 보여준다(학과를 모르면 반영할 수 없어서).
+/// 4/5의 복수전공 카드(2학년 이상만). 맨 위 「복수전공을 하고 있어요」 스위치를
+/// 켜면 학과 고르는 줄이 나오고, 학과를 고른 뒤에는 "내 학과 전공 / 복수전공"
+/// 비율 슬라이더도 보여준다(학과를 모르면 반영할 수 없어서).
 class _SecondMajorCard extends StatelessWidget {
   const _SecondMajorCard({
     required this.answers,
     required this.labelStyle,
+    required this.on,
+    required this.onToggle,
     required this.onChanged,
   });
 
   final AiRecommendAnswers answers;
   final TextStyle labelStyle;
+  final bool on;
+  final ValueChanged<bool> onToggle;
   final VoidCallback onChanged;
 
   Future<void> _pick(BuildContext context) async {
@@ -745,50 +801,104 @@ class _SecondMajorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Pressable(
-            pressedScale: 0.98,
-            onTap: () => _pick(context),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '타전공(복수전공) 학과',
-                    style: TextStyle(
-                      color: AppColors.textStrong,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '복수전공을 하고 있어요',
+                      style: TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '복수전공 학과의 전공 과목도 함께 담아요',
+                      style: TextStyle(
+                        color: AppColors.textSub,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 시간표 화면 알림 토글과 같은 46x26 크기·색.
+              SizedBox(
+                width: 46,
+                height: 26,
+                child: FittedBox(
+                  child: Switch(
+                    key: const ValueKey('ai-second-major-switch'),
+                    value: on,
+                    onChanged: onToggle,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    activeThumbColor: AppColors.blue,
+                    activeTrackColor: AppColors.blueSoft,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: AppColors.fillDisabled,
+                    trackOutlineColor: const WidgetStatePropertyAll(
+                      Colors.transparent,
                     ),
                   ),
                 ),
-                Text(
-                  second ?? '선택 안 함',
-                  style: TextStyle(
-                    color: second == null ? AppColors.textSub : AppColors.blue,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.textSub,
-                  size: 20,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          if (second != null) ...[
+          if (on) ...[
+            const SizedBox(height: 14),
+            Pressable(
+              pressedScale: 0.98,
+              onTap: () => _pick(context),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '복수전공 학과',
+                      style: TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    second ?? '학과 고르기',
+                    style: TextStyle(
+                      color: second == null
+                          ? AppColors.textSub
+                          : AppColors.blue,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textSub,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (on && second != null) ...[
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '주전공 ${answers.majorSubRatio.round()}%',
+                  '내 학과 전공 ${answers.majorSubRatio.round()}%',
                   style: labelStyle,
                 ),
                 Opacity(
                   opacity: 0.8,
                   child: Text(
-                    '타전공 ${(100 - answers.majorSubRatio).round()}%',
+                    '복수전공 ${(100 - answers.majorSubRatio).round()}%',
                     style: labelStyle,
                   ),
                 ),

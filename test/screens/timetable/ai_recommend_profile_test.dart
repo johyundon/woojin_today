@@ -228,16 +228,19 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // 4/5: 타전공 학과를 고르기 전에는 주전공/타전공 슬라이더가 없다.
-    expect(find.textContaining('주전공 '), findsNothing);
-    await tester.tap(find.text('선택 안 함'));
+    // 4/5: 3학년이라 복수전공 스위치가 보인다. 켜고 학과를 고르기 전에는
+    // 내 학과 전공/복수전공 슬라이더가 없다.
+    await tester.tap(find.byKey(const ValueKey('ai-second-major-switch')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('내 학과 전공 '), findsNothing);
+    await tester.tap(find.text('학과 고르기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '경영');
     await tester.pumpAndSettle();
     await tester.tap(find.text('경영학과'));
     await tester.pumpAndSettle();
     expect(find.text('경영학과'), findsOneWidget);
-    expect(find.textContaining('주전공 '), findsOneWidget);
+    expect(find.textContaining('내 학과 전공 '), findsOneWidget);
 
     await tester.tap(find.text('다음'));
     await tester.pumpAndSettle();

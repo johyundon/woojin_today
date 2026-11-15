@@ -75,7 +75,7 @@ class _SecondMajorPickerSheetState extends State<_SecondMajorPickerSheet> {
             const Padding(
               padding: EdgeInsets.fromLTRB(22, 20, 22, 4),
               child: Text(
-                '타전공(복수전공) 학과',
+                '복수전공 학과',
                 style: TextStyle(
                   color: AppColors.textStrong,
                   fontSize: 19,
@@ -86,7 +86,7 @@ class _SecondMajorPickerSheetState extends State<_SecondMajorPickerSheet> {
             const Padding(
               padding: EdgeInsets.fromLTRB(22, 0, 22, 14),
               child: Text(
-                '고른 학과 전공을 타전공으로 담아요',
+                '고른 학과의 전공 과목도 함께 담아요',
                 style: TextStyle(color: AppColors.textSub, fontSize: 13),
               ),
             ),
