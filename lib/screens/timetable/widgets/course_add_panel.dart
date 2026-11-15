@@ -13,11 +13,20 @@ class CourseAddPanel extends StatelessWidget {
     required this.searchFilterBar,
     required this.results,
     required this.onClose,
+    this.onHandleDragUpdate,
+    this.onHandleDragEnd,
   });
 
   final Widget searchFilterBar;
   final Widget results;
   final VoidCallback onClose;
+
+  /// 손잡이를 끄는 동안의 세로 이동량(아래가 +). 있으면 손잡이로 시트 높이를
+  /// 바꾸고(시안: 최소~최대), 없으면 예전처럼 아래로 쓸어내릴 때 [onClose].
+  final ValueChanged<double>? onHandleDragUpdate;
+
+  /// 손잡이 끌기를 놓았을 때의 세로 속도(아래가 +).
+  final ValueChanged<double>? onHandleDragEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +40,17 @@ class CourseAddPanel extends StatelessWidget {
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
+            onVerticalDragUpdate: onHandleDragUpdate == null
+                ? null
+                : (details) => onHandleDragUpdate!(details.primaryDelta ?? 0),
             onVerticalDragEnd: (details) {
-              if ((details.primaryVelocity ?? 0) > 0) onClose();
+              final velocity = details.primaryVelocity ?? 0;
+              final onEnd = onHandleDragEnd;
+              if (onEnd != null) {
+                onEnd(velocity);
+              } else if (velocity > 0) {
+                onClose();
+              }
             },
             child: const SizedBox(
               width: double.infinity,

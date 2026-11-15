@@ -35,11 +35,13 @@ class TimetableTopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 10, 4),
       child: Row(
         children: [
+          // 시안 캡처 비율(제목 약 18, 학기 칩 글자 약 12.5)에 맞춰 줄임
+          // (사용자 요청, 2026-11-16).
           const Text(
             '시간표',
             style: TextStyle(
               color: AppColors.textStrong,
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.6,
             ),
@@ -62,14 +64,14 @@ class TimetableTopBar extends StatelessWidget {
                     semesterLabel,
                     style: const TextStyle(
                       color: AppColors.blueText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(width: 2),
                   const Icon(
                     Icons.expand_more_rounded,
-                    size: 18,
+                    size: 16,
                     color: AppColors.blueText,
                   ),
                 ],

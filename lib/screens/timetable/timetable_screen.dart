@@ -38,6 +38,7 @@ import 'widgets/search_panel.dart';
 import 'widgets/timetable_grid.dart';
 import 'widgets/timetable_header.dart';
 import 'widgets/timetable_notice_dialog.dart';
+import 'widgets/timetable_edit_bar.dart';
 import 'widgets/timetable_top_bar.dart';
 
 part 'timetable_session_mixin.dart';
@@ -156,6 +157,40 @@ class _TimetableScreenState extends State<TimetableScreen>
     }
   }
 
+  /// "시간표 만들기" 편집 화면인지(과목 추가 시트가 열려 있음, 새 상단에서만).
+  bool get _editMode => _useFigmaTopBar && _addPanelOpen;
+
+  /// 시트 높이(화면 높이 비율). 시안(2272-18343)의 최소·최대.
+  static const double _sheetMinFraction = 0.30;
+  static const double _sheetMaxFraction = 0.61;
+  double _sheetFraction = _sheetMinFraction;
+
+  void _onSheetDragUpdate(double dy) {
+    final h = MediaQuery.sizeOf(context).height;
+    setState(() {
+      _sheetFraction = (_sheetFraction - dy / h).clamp(
+        _sheetMinFraction,
+        _sheetMaxFraction,
+      );
+    });
+  }
+
+  /// 손을 떼면 최소·최대 중 가까운 쪽(빠르게 튕기면 그 방향)으로 붙인다.
+  void _onSheetDragEnd(double velocity) {
+    final mid = (_sheetMinFraction + _sheetMaxFraction) / 2;
+    final goUp = velocity < -300 || (velocity <= 300 && _sheetFraction >= mid);
+    setState(
+      () => _sheetFraction = goUp ? _sheetMaxFraction : _sheetMinFraction,
+    );
+  }
+
+  String get _creditsText {
+    final credits = _totalCredits;
+    return credits == credits.roundToDouble()
+        ? credits.toInt().toString()
+        : credits.toString();
+  }
+
   /// ⋮ 메뉴를 열고 고른 일을 한다.
   Future<void> _openMoreMenu() async {
     final action = await showTimetableMoreSheet(
@@ -268,13 +303,20 @@ class _TimetableScreenState extends State<TimetableScreen>
         color: AppColors.fill,
         borderRadius: BorderRadius.circular(12),
       ),
+      // 판 한가운데(가로·세로 모두)에 놓는다(사용자 요청, 2026-11-16). 글자들은
+      // 한 덩어리 글(Text.rich)로 묶어 아랫선이 맞게 한다.
+      alignment: Alignment.center,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('이번 학기 ', style: label),
-          Text('$thisSemester 학점', style: value),
+          Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: '이번 학기 ', style: label),
+                TextSpan(text: '$thisSemester 학점', style: value),
+              ],
+            ),
+          ),
           if (earned != null) ...[
             Container(
               width: 1,
@@ -282,9 +324,16 @@ class _TimetableScreenState extends State<TimetableScreen>
               margin: const EdgeInsets.symmetric(horizontal: 14),
               color: AppColors.checkLine,
             ),
-            const Text('전체 학점 ', style: label),
-            Text('$earned', style: value),
-            if (required != null) Text(' / $required', style: label),
+            Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: '전체 학점 ', style: label),
+                  TextSpan(text: '$earned', style: value),
+                  if (required != null)
+                    TextSpan(text: ' / $required', style: label),
+                ],
+              ),
+            ),
           ],
         ],
       ),
@@ -292,7 +341,10 @@ class _TimetableScreenState extends State<TimetableScreen>
   }
 
   void _setAddPanelOpen(bool open) {
-    setState(() => _addPanelOpen = open);
+    setState(() {
+      _addPanelOpen = open;
+      if (open) _sheetFraction = _sheetMinFraction;
+    });
     open ? _addPanelController.forward() : _addPanelController.reverse();
   }
 
@@ -418,7 +470,13 @@ class _TimetableScreenState extends State<TimetableScreen>
           bottom: false,
           child: Column(
             children: [
-              if (_useFigmaTopBar)
+              if (_editMode)
+                TimetableEditBar(
+                  creditsLabel: '$_creditsText학점',
+                  onBack: () => _setAddPanelOpen(false),
+                  onSave: _openSaveDialog,
+                )
+              else if (_useFigmaTopBar)
                 TimetableTopBar(
                   semesterLabel: '$_year년 $_semester학기',
                   semesterKey: _headerKey,
@@ -452,10 +510,19 @@ class _TimetableScreenState extends State<TimetableScreen>
                     // 실측 높이"를 기준으로 상한을 계산해서, 핸들을 아무리
                     // 당겨도 화면(Column)이 넘치지 않는 값으로만 움직이게
                     // 한다.
-                    final panelHeight = constraints.maxHeight * 0.75;
+                    // 시안(2272-18343): 시트는 화면 높이의 최소 30%~최대 61% 사이를
+                    // 손잡이로 끌어 오간다. 격자 높이는 최소 높이만 비워 두고,
+                    // 시트를 더 올리면 격자 위로 겹쳐 덮는다(시안 "최대").
+                    final screenHeight = MediaQuery.sizeOf(context).height;
+                    final panelHeight = _useFigmaTopBar
+                        ? screenHeight * _sheetFraction
+                        : constraints.maxHeight * 0.75;
+                    final reserveHeight = _useFigmaTopBar
+                        ? screenHeight * _sheetMinFraction
+                        : panelHeight;
                     final displayedGridHeight = _computedMaxGridViewportHeight(
                       filterPanelOpen: false,
-                      extraReserve: _addPanelOpen ? panelHeight : 0,
+                      extraReserve: _addPanelOpen ? reserveHeight : 0,
                     );
                     _scheduleChromeMeasurement(displayedGridHeight);
 
@@ -465,22 +532,45 @@ class _TimetableScreenState extends State<TimetableScreen>
                           key: _chromeAboveGridKey,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
-                              child: QuickActionsRow(
-                                loading: _myTimetableLoading,
-                                onLoadMyTimetable: () =>
-                                    _loadMyTimetable(announce: true),
-                                // 새 상단에서는 "내 시간표 불러오기"가 ⋮ 메뉴로
-                                // 옮겨 가서, 이 줄엔 알림 스위치만 남는다.
-                                showLoadButton:
-                                    !_useFigmaTopBar && !_catalogNotReady,
-                                showNotificationToggle:
-                                    _isViewingCurrentSemester,
-                                notificationsEnabled: _notificationsEnabled,
-                                onNotificationsChanged: _onNotificationsToggled,
+                            if (_editMode)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  18,
+                                  12,
+                                  18,
+                                  0,
+                                ),
+                                child: TimetableEditActions(
+                                  showLoadMine: !_catalogNotReady,
+                                  loading: _myTimetableLoading,
+                                  onLoadMine: () =>
+                                      _loadMyTimetable(announce: true),
+                                  onAutoFill: _openAiRecommendWizard,
+                                ),
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  22,
+                                  14,
+                                  22,
+                                  0,
+                                ),
+                                child: QuickActionsRow(
+                                  loading: _myTimetableLoading,
+                                  onLoadMyTimetable: () =>
+                                      _loadMyTimetable(announce: true),
+                                  // 새 상단에서는 "내 시간표 불러오기"가 ⋮ 메뉴로
+                                  // 옮겨 가서, 이 줄엔 알림 스위치만 남는다.
+                                  showLoadButton:
+                                      !_useFigmaTopBar && !_catalogNotReady,
+                                  showNotificationToggle:
+                                      _isViewingCurrentSemester,
+                                  notificationsEnabled: _notificationsEnabled,
+                                  onNotificationsChanged:
+                                      _onNotificationsToggled,
+                                ),
                               ),
-                            ),
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 22,
@@ -494,7 +584,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                             const SizedBox(height: 12),
                           ],
                         ),
-                        if (_useFigmaTopBar)
+                        if (_useFigmaTopBar && !_editMode)
                           // 시안(2152-1429): 격자를 화면 폭 전체의 흰 판(위쪽만 크게
                           // 둥글게)에 담고, 학점 줄도 그 판 안 아래쪽에 둔다.
                           Expanded(
@@ -513,31 +603,38 @@ class _TimetableScreenState extends State<TimetableScreen>
                                   ),
                                 ],
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Padding(
-                                    key: _gridWrapperKey,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      14,
-                                      20,
-                                      14,
-                                      0,
+                              // 편집 화면에서 돌아온 첫 프레임엔 높이 실측이 한 박자
+                              // 늦어 내용이 잠깐 넘칠 수 있어, 넘침 경고 대신 잘라 보인다.
+                              child: SingleChildScrollView(
+                                physics: const NeverScrollableScrollPhysics(),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Padding(
+                                      key: _gridWrapperKey,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        14,
+                                        20,
+                                        14,
+                                        0,
+                                      ),
+                                      child: _gridWithEmptyPrompt(
+                                        now,
+                                        displayedGridHeight,
+                                      ),
                                     ),
-                                    child: _gridWithEmptyPrompt(
-                                      now,
-                                      displayedGridHeight,
+                                    Column(
+                                      key: _chromeBelowGridKey,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!_addPanelOpen) _creditSummaryBar(),
+                                        SizedBox(
+                                          height: _addPanelOpen ? 0 : 100,
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  Column(
-                                    key: _chromeBelowGridKey,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (!_addPanelOpen) _creditSummaryBar(),
-                                      SizedBox(height: _addPanelOpen ? 0 : 100),
-                                    ],
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           )
@@ -623,6 +720,9 @@ class _TimetableScreenState extends State<TimetableScreen>
 
     return CourseAddPanel(
       onClose: () => _setAddPanelOpen(false),
+      // 새 화면에서는 손잡이로 시트 높이를 최소~최대 사이로 바꾼다(닫기는 뒤로가기).
+      onHandleDragUpdate: _useFigmaTopBar ? _onSheetDragUpdate : null,
+      onHandleDragEnd: _useFigmaTopBar ? _onSheetDragEnd : null,
       searchFilterBar: SearchFilterBar(
         controller: _searchController,
         focusNode: _searchFocusNode,

@@ -224,7 +224,7 @@ class TimetableHeader extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _AutoFillButton(onTap: onAutoFill),
+              TimetableAutoFillButton(onTap: onAutoFill),
               const SizedBox(width: 8),
               Pressable(
                 pressedScale: 0.93,
@@ -295,8 +295,8 @@ class TimetableHeader extends StatelessWidget {
 
 /// "자동 생성" 버튼. 파랑→보라→분홍 그라데이션 테두리(1.5) 안에 흰 바탕,
 /// 반짝이 아이콘도 같은 그라데이션으로 칠한다.
-class _AutoFillButton extends StatelessWidget {
-  const _AutoFillButton({required this.onTap});
+class TimetableAutoFillButton extends StatelessWidget {
+  const TimetableAutoFillButton({super.key, required this.onTap});
 
   final VoidCallback onTap;
 

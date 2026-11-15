@@ -43,11 +43,15 @@ class _NoCoursesTimetable implements MyTimetableServiceBase {
 }
 
 /// 새 상단(2026-11-16): "과목 추가"는 연필 버튼(시간표가 비어 있으면 가운데
-/// "시간표 만들기" 버튼)이 대신한다. 열려 있으면 연필로 닫는다.
+/// "시간표 만들기" 버튼)이 대신한다. 열리면 "시간표 만들기" 화면이 되고 뒤로가기로 닫는다.
 Future<void> _tapAddCourse(WidgetTester tester) async {
+  // 열려 있으면("시간표 만들기" 편집 화면) 뒤로가기로 닫는다.
+  final back = find.byKey(const ValueKey('timetable-edit-back'));
   final edit = find.byKey(const ValueKey('timetable-edit'));
   await tester.tap(
-    edit.evaluate().isNotEmpty
+    back.evaluate().isNotEmpty
+        ? back
+        : edit.evaluate().isNotEmpty
         ? edit
         : find.byKey(const ValueKey('timetable-create')),
   );
@@ -81,6 +85,40 @@ void main() {
     await _tapAddCourse(tester);
     await tester.pumpAndSettle();
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
+  });
+
+  testWidgets('시간표 만들기 화면: 상단·버튼이 바뀌고, 손잡이로 시트를 최소~최대로 끈다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsOneWidget);
+    expect(find.text('저장'), findsOneWidget);
+    expect(find.text('자동 생성'), findsOneWidget);
+
+    final search = find.text('과목코드, 교수명, 과목명 검색');
+    final minTop = tester.getTopLeft(search).dy;
+    // 손잡이(검색창 바로 위)를 위로 끌면 시트가 최대로 올라간다.
+    await tester.dragFrom(
+      tester.getTopLeft(search) + const Offset(150, -20),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    final maxTop = tester.getTopLeft(search).dy;
+    expect(maxTop, lessThan(minTop - 200));
+    // 시트 높이 차이는 화면의 31%(844 * 0.31 ≈ 262)쯤이다.
+    expect(minTop - maxTop, closeTo(844 * 0.31, 2));
+
+    // 뒤로가기로 닫으면 원래 시간표 상단으로 돌아온다.
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('패널은 미끄러져 올라오고, 다 내려간 뒤에 탭 바가 다시 보인다', (tester) async {
