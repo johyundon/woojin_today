@@ -326,6 +326,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('필터를 접으면 고른 값이 풀리고 칩도 남지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('학년'));
+    await tester.pumpAndSettle();
+    final option = find.textContaining('학년').last;
+    final label = tester.widget<Text>(option).data!;
+    await tester.tap(option);
+    await tester.pumpAndSettle();
+    expect(find.text(label), findsOneWidget); // 위 칩에만 보인다.
+
+    await tester.tap(find.byIcon(Icons.tune_rounded)); // 필터 접기
+    await tester.pumpAndSettle();
+    expect(find.text(label), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.tune_rounded)); // 다시 펴면 '학년'으로
+    await tester.pumpAndSettle();
+    expect(find.text('학년'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('패널은 미끄러져 올라오고, 다 내려간 뒤에 탭 바가 다시 보인다', (tester) async {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2;

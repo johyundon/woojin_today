@@ -827,8 +827,12 @@ class _TimetableScreenState extends State<TimetableScreen>
         filterPanelOpen: _filterPanelOpen,
         // 필터를 열어도 시트 높이는 그대로 둔다(예전엔 최대로 올렸는데 시트가
         // 갑자기 튀어 올라 사용자 지적, 2026-11-16). 필터 칸은 시트 안에서 민다.
-        onToggleFilterPanel: () =>
-            setState(() => _filterPanelOpen = !_filterPanelOpen),
+        // 필터를 접으면 필터링을 끈 것으로 보고 고른 값을 모두 푼다. 접은 뒤에
+        // "2학년" 같은 칩이 남아 목록을 몰래 거르지 않게(사용자 지적, 2026-11-16).
+        onToggleFilterPanel: () => setState(() {
+          _filterPanelOpen = !_filterPanelOpen;
+          if (!_filterPanelOpen) _filters.clear();
+        }),
         onFiltersChanged: () => setState(() {}),
         availableGrades: grades,
         availableCourseTypes: courseTypes,
