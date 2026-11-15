@@ -53,6 +53,8 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>캠퍼스 지도에 내 위치를 보여 주고 건물까지 걷는 시간을 알려 주기 위해 필요해요.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>캠퍼스 지도에 내 위치를 보여 주고 건물까지 걷는 시간을 알려 주기 위해 필요해요. 앱을 쓰는 동안에만 위치를 사용해요.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>같은 와이파이에 있는 다른 사람을 찾아 파일을 공유하기 위해 필요해요.</string>
 	<key>NSBonjourServices</key>
