@@ -4,12 +4,16 @@ import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
+import '../../widgets/top_banner.dart';
 import 'campus_map_colors.dart';
 import 'models/campus_building.dart';
 import 'models/geo_point.dart';
 import 'services/campus_route_service.dart';
+import 'services/current_location_service.dart';
 import 'widgets/building_detail_card.dart';
 import 'widgets/building_picker_panel.dart';
+import 'widgets/building_sheet.dart';
+import 'widgets/campus_map_top_bar.dart';
 import 'widgets/campus_search_bar.dart';
 import 'widgets/route_info_banner.dart';
 
@@ -36,11 +40,16 @@ class CampusMapScreen extends StatefulWidget {
 }
 
 /// 지금 "건물 선택" 패널이 어느 칸을 채우는 중인지. [none]이면 패널이
-/// 닫혀있다.
-enum _PickerTarget { none, origin, destination }
+/// 닫혀있다. [select]는 기본 화면 검색창에서 건물 하나를 고르는 중이다.
+enum _PickerTarget { none, origin, destination, select }
+
+/// 건물 핀을 지도에 그릴지. 사용자 요청으로 지금은 숨겨 두었다(핀 만드는
+/// 코드와 핀을 눌렀을 때 처리는 다시 켤 때를 위해 남겨 둔다).
+const bool _showBuildingPins = false;
 
 class _CampusMapScreenState extends State<CampusMapScreen> {
   final _routeService = CampusRouteService();
+  final _locationService = const CurrentLocationService();
 
   KakaoMapController? _mapController;
   CampusBuilding? _origin;
@@ -48,6 +57,20 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   CampusBuilding? _selectedBuilding;
   CampusRoute? _route;
   _PickerTarget _pickerTarget = _PickerTarget.none;
+
+  /// 기기의 현재 위치. 권한이 없거나 못 읽었으면 null(파란 점을 안 그린다).
+  GeoPoint? _myLocation;
+
+  /// 현재 위치 → 고른 건물까지 걷는 경로(시트의 "걸어서 N분"에 쓴다).
+  CampusRoute? _walkToSelected;
+
+  /// 위쪽 카테고리 칩 중 고른 것.
+  int? _selectedCategory;
+
+  /// 시간표에서 "이동하기"로 들어와 출발지·목적지를 고르는 중이면 true.
+  /// 이때는 예전 출발지/목적지 검색바를 그대로 쓴다(길안내 화면은 아직 시안
+  /// 반영 전).
+  bool get _isRouteMode => _origin != null || _destination != null;
 
   // 뒤로가기 버튼 + 출발지/목적지 검색바(헤더)의 실제 렌더 높이를 측정해,
   // 경로 배너/건물 선택 패널이 기기(노치 유무 등)에 상관없이 늘 헤더
@@ -74,6 +97,47 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     if (_origin != null && _destination != null) {
       _fetchRoute();
     }
+    _loadMyLocation();
+  }
+
+  /// 현재 위치를 읽어 파란 점을 갱신한다. [moveCamera]면(현재 위치 버튼)
+  /// 지도도 그 자리로 옮기고, 못 읽으면 안내 배너를 띄운다.
+  Future<void> _loadMyLocation({bool moveCamera = false}) async {
+    final location = await _locationService.current();
+    if (!mounted) return;
+    if (location == null) {
+      if (moveCamera) {
+        showTopBanner(
+          context,
+          title: '현재 위치를 알 수 없어요',
+          message: '설정에서 위치 권한을 켜 주세요.',
+          icon: Icons.location_off_rounded,
+        );
+      }
+      return;
+    }
+    setState(() => _myLocation = location);
+    if (moveCamera) {
+      await _mapController?.panTo(LatLng(location.lat, location.lng));
+    }
+    await _updateWalkToSelected();
+  }
+
+  /// 현재 위치와 고른 건물이 둘 다 있으면 걷는 경로를 다시 구한다.
+  Future<void> _updateWalkToSelected() async {
+    final from = _myLocation;
+    final building = _selectedBuilding;
+    if (from == null || building == null) {
+      setState(() => _walkToSelected = null);
+      return;
+    }
+    final route = await _routeService.findRoute(
+      origin: from,
+      destination: GeoPoint(lat: building.lat, lng: building.lng),
+    );
+    // 기다리는 사이 다른 건물을 골랐으면 버린다.
+    if (!mounted || _selectedBuilding != building) return;
+    setState(() => _walkToSelected = route);
   }
 
   CampusBuilding? _findBuilding(String? name) {
@@ -120,6 +184,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   Future<void> _onBuildingPicked(String name) async {
     final target = _pickerTarget;
     final building = _findBuilding(name);
+    if (target == _PickerTarget.select) {
+      _selectBuilding(building);
+      return;
+    }
     setState(() {
       if (target == _PickerTarget.origin) {
         _origin = building;
@@ -130,6 +198,50 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       _selectedBuilding = null;
     });
     await _fetchRoute();
+  }
+
+  /// 기본 화면에서 건물을 고른다 — 지도를 그 건물로 옮기고, 그려 둔 길은
+  /// 지우고, 걷는 거리를 다시 구한다.
+  void _selectBuilding(CampusBuilding? building) {
+    setState(() {
+      _pickerTarget = _PickerTarget.none;
+      _selectedBuilding = building;
+      _walkToSelected = null;
+      _route = null;
+    });
+    if (building == null) return;
+    _mapController?.panTo(LatLng(building.lat, building.lng));
+    _updateWalkToSelected();
+  }
+
+  /// "길 알려줘" — 현재 위치에서 고른 건물까지 길을 지도에 그린다.
+  Future<void> _showDirections() async {
+    if (_myLocation == null) {
+      showTopBanner(
+        context,
+        title: '현재 위치를 알 수 없어요',
+        message: '위치 권한을 켜면 지금 있는 곳에서 가는 길을 그려 드려요.',
+        icon: Icons.location_off_rounded,
+      );
+      return;
+    }
+    if (_walkToSelected == null) await _updateWalkToSelected();
+    final route = _walkToSelected;
+    if (!mounted || route == null) return;
+    setState(() => _route = route);
+    await _mapController?.fitBounds(
+      route.path.map((g) => LatLng(g.lat, g.lng)).toList(),
+      padding: 80,
+    );
+  }
+
+  void _showFloorGuidePending() {
+    showTopBanner(
+      context,
+      title: '층별 안내는 준비 중이에요',
+      message: '건물별 층 정보를 모으는 중이에요.',
+      icon: Icons.layers_rounded,
+    );
   }
 
   void _onMarkerTap(String markerId) {
@@ -184,9 +296,32 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     null => _defaultCenter,
   };
 
-  List<Marker> get _markers => campusBuildings
-      .map((b) => Marker(markerId: b.name, latLng: LatLng(b.lat, b.lng)))
-      .toList();
+  List<Marker>? get _markers => !_showBuildingPins
+      ? null
+      : campusBuildings
+            .map((b) => Marker(markerId: b.name, latLng: LatLng(b.lat, b.lng)))
+            .toList();
+
+  /// 현재 위치 파란 점(옅은 원 위에 흰 테두리 점).
+  List<CustomOverlay>? get _customOverlays {
+    final location = _myLocation;
+    if (location == null) return null;
+    return [
+      CustomOverlay(
+        customOverlayId: 'my_location',
+        latLng: LatLng(location.lat, location.lng),
+        yAnchor: 0.5,
+        zIndex: 10,
+        content:
+            '<div style="width:28px;height:28px;border-radius:50%;'
+            'background:rgba(10,120,230,0.18);display:flex;'
+            'align-items:center;justify-content:center;">'
+            '<div style="width:14px;height:14px;border-radius:50%;'
+            'background:#0A78E6;border:3px solid #fff;'
+            'box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div></div>',
+      ),
+    ];
+  }
 
   List<Polyline>? get _polylines {
     final route = _route;
@@ -218,6 +353,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               center: _initialCenter,
               currentLevel: 4,
               markers: _markers,
+              customOverlays: _customOverlays,
               polylines: _polylines,
               onMapCreated: (controller) => _mapController = controller,
               onMarkerTap: (markerId, latLng, zoomLevel) =>
@@ -240,40 +376,53 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
                   child: SafeArea(
                     bottom: false,
-                    // 뒤로가기 버튼과 출발지/목적지 검색바를 한 줄에 나란히 둔다.
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                      child: Row(
-                        children: [
-                          Pressable.icon(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.fill,
-                                borderRadius: BorderRadius.circular(12),
+                      child: !_isRouteMode
+                          ? CampusMapTopBar(
+                              onBack: () => Navigator.of(context).pop(),
+                              onTapSearch: () => setState(
+                                () => _pickerTarget = _PickerTarget.select,
                               ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                color: AppColors.textStrong,
-                                size: 15,
-                                semanticLabel: '뒤로',
+                              selectedCategory: _selectedCategory,
+                              onCategoryTap: (i) => setState(
+                                () => _selectedCategory = _selectedCategory == i
+                                    ? null
+                                    : i,
                               ),
+                            )
+                          // 뒤로가기 버튼과 출발지/목적지 검색바를 한 줄에 나란히 둔다.
+                          : Row(
+                              children: [
+                                Pressable.icon(
+                                  onTap: () => Navigator.of(context).pop(),
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.fill,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: AppColors.textStrong,
+                                      size: 15,
+                                      semanticLabel: '뒤로',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: CampusSearchBar(
+                                    originName: _origin?.name,
+                                    destinationName: _destination?.name,
+                                    onTapOrigin: _openOriginPicker,
+                                    onTapDestination: _openDestinationPicker,
+                                    onReset: _reset,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: CampusSearchBar(
-                              originName: _origin?.name,
-                              destinationName: _destination?.name,
-                              onTapOrigin: _openOriginPicker,
-                              onTapDestination: _openDestinationPicker,
-                              onReset: _reset,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ),
@@ -281,7 +430,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
             ),
             // "건물 선택" 패널이 열려있는 동안엔 경로 배너/건물 상세 카드를
             // 같이 보여주면 화면이 복잡해지니 숨긴다.
-            if (route != null && _pickerTarget == _PickerTarget.none)
+            if (route != null &&
+                _isRouteMode &&
+                _pickerTarget == _PickerTarget.none)
               Positioned(
                 top: _headerHeight,
                 left: 0,
@@ -295,7 +446,37 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
                 ),
               ),
-            if (selected != null && _pickerTarget == _PickerTarget.none)
+            if (!_isRouteMode && _pickerTarget == _PickerTarget.none)
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 22,
+                child: KakaoMapPointerInterceptor(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MyLocationButton(
+                        onTap: () => _loadMyLocation(moveCamera: true),
+                      ),
+                      if (selected != null) ...[
+                        const SizedBox(height: 12),
+                        BuildingSheet(
+                          buildingName: selected.name,
+                          walkMinutes: _walkToSelected?.walkMinutes,
+                          distanceMeters: _walkToSelected?.distanceMeters,
+                          onFloorGuide: _showFloorGuidePending,
+                          onDirections: _showDirections,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            // 핀을 다시 켜고 길안내 중에 핀을 누르면 예전 카드를 쓴다.
+            if (_isRouteMode &&
+                selected != null &&
+                _pickerTarget == _PickerTarget.none)
               Positioned(
                 left: 10,
                 right: 10,
@@ -333,6 +514,35 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 지도 오른쪽의 현재 위치 버튼(흰 둥근 네모 + 조준 아이콘).
+class _MyLocationButton extends StatelessWidget {
+  const _MyLocationButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable.icon(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: CampusMapColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: const Icon(
+          Icons.my_location_rounded,
+          color: CampusMapColors.accent,
+          size: 24,
+          semanticLabel: '현재 위치로 이동',
         ),
       ),
     );
