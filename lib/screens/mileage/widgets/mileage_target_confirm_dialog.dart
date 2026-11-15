@@ -112,23 +112,37 @@ class _MileageTargetConfirmDialog extends StatelessWidget {
 }
 
 /// 실제 명단 대조 결과 다이얼로그. [result]가 끝날 때까지 로딩을 보여주고,
-/// 대상자인지만 알려준다. 다른 학생 학번 명단은 보여주지 않는다.
+/// 대상자인지와 명단 인원수만 알려준다. 다른 학생 학번은 보여주지 않고, 명단이
+/// 궁금하면 "공지 원문 보기"([onOpenNotice])로 학교 공지 상세 화면에 가서 첨부
+/// 파일을 직접 열게 한다.
 Future<void> showMileageTargetResultDialog(
   BuildContext context, {
   required String title,
-  required Future<MileageTargetResult> result,
+  required Future<MileageTargetCheck> result,
+  VoidCallback? onOpenNotice,
 }) {
   return showDialog<void>(
     context: context,
-    builder: (_) => _MileageTargetResultDialog(title: title, result: result),
+    builder: (_) => _MileageTargetResultDialog(
+      title: title,
+      result: result,
+      onOpenNotice: onOpenNotice,
+    ),
   );
 }
 
 class _MileageTargetResultDialog extends StatelessWidget {
-  const _MileageTargetResultDialog({required this.title, required this.result});
+  const _MileageTargetResultDialog({
+    required this.title,
+    required this.result,
+    this.onOpenNotice,
+  });
 
   final String title;
-  final Future<MileageTargetResult> result;
+  final Future<MileageTargetCheck> result;
+
+  /// 누르면 다이얼로그를 닫고 부른다. null이면 버튼을 그리지 않는다.
+  final VoidCallback? onOpenNotice;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +166,7 @@ class _MileageTargetResultDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            FutureBuilder<MileageTargetResult>(
+            FutureBuilder<MileageTargetCheck>(
               future: result,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -172,23 +186,71 @@ class _MileageTargetResultDialog extends StatelessWidget {
                 }
                 final message = snapshot.hasError
                     ? '명단을 확인하지 못했어요.\n잠시 후 다시 시도해 주세요.'
-                    : switch (snapshot.data!) {
+                    : switch (snapshot.data!.result) {
                         MileageTargetResult.target => '축하해요! 대상자 명단에 있어요',
                         MileageTargetResult.notTarget => '아쉽게도 대상자 명단에 없어요..',
                         MileageTargetResult.noRoster => '이 공지에는 확인할 명단 파일이 없어요',
                       };
-                return Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textStrong,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+                final count = snapshot.hasError
+                    ? null
+                    : snapshot.data!.rosterCount;
+                return Column(
+                  children: [
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (count != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '이번 대상자는 모두 ${_formatCount(count)}명이에요',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.textSub,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
                 );
               },
             ),
             const SizedBox(height: 24),
+            if (onOpenNotice != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: Pressable.effect(
+                  pressedScale: 0.96,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      onOpenNotice!();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.blue,
+                      side: const BorderSide(color: AppColors.blueSoftLine),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '공지 원문 보기',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             SizedBox(
               width: double.infinity,
               child: Pressable.effect(
@@ -217,3 +279,9 @@ class _MileageTargetResultDialog extends StatelessWidget {
     );
   }
 }
+
+/// 1,200처럼 천 단위 쉼표를 넣는다.
+String _formatCount(int value) => value.toString().replaceAllMapped(
+  RegExp(r'\B(?=(\d{3})+(?!\d))'),
+  (_) => ',',
+);

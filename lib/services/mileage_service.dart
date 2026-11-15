@@ -127,6 +127,17 @@ enum MileageTargetResult {
   noRoster,
 }
 
+/// 장학 대상자 확인 결과와 명단 인원수.
+class MileageTargetCheck {
+  const MileageTargetCheck(this.result, {this.rosterCount});
+
+  final MileageTargetResult result;
+
+  /// 명단에 있는 학번 개수(같은 학번은 한 번만 셈). 명단이 없으면 null.
+  /// 다른 학생 학번 자체는 넘기지 않고 개수만 알려준다.
+  final int? rosterCount;
+}
+
 /// [MileageService]의 공개 API. 화면은 이 타입으로 받아 테스트에서 가짜를 끼운다.
 abstract class MileageServiceBase {
   /// 내 점수·순위·비교과 이수 내역. [forceRefresh]면 캐시를 무시하고 새로 받는다.
@@ -141,9 +152,10 @@ abstract class MileageServiceBase {
   /// 실패하면 [NoticeException].
   Future<List<NoticeItem>> fetchTargetNotices({bool forceRefresh = false});
 
-  /// [detailPath] 공지의 xlsx 명단에 [studentId]가 있는지. 명단은 결과만 보고
-  /// 버리며 화면에 넘기거나 저장하지 않는다. 실패하면 [NoticeException].
-  Future<MileageTargetResult> checkTarget({
+  /// [detailPath] 공지의 xlsx 명단에 [studentId]가 있는지와 명단 인원수. 명단은
+  /// 결과·개수만 보고 버리며 학번을 화면에 넘기거나 저장하지 않는다.
+  /// 실패하면 [NoticeException].
+  Future<MileageTargetCheck> checkTarget({
     required String detailPath,
     required String studentId,
   });
@@ -329,7 +341,7 @@ class MileageService implements MileageServiceBase {
   }
 
   @override
-  Future<MileageTargetResult> checkTarget({
+  Future<MileageTargetCheck> checkTarget({
     required String detailPath,
     required String studentId,
   }) async {
@@ -337,20 +349,36 @@ class MileageService implements MileageServiceBase {
     final roster = detail.attachments
         .where((a) => a.name.trim().toLowerCase().endsWith('.xlsx'))
         .firstOrNull;
-    if (roster == null) return MileageTargetResult.noRoster;
+    if (roster == null) {
+      return const MileageTargetCheck(MileageTargetResult.noRoster);
+    }
     final bytes = await _notices.downloadBytes(roster.url);
-    return rosterContains(bytes, studentId)
-        ? MileageTargetResult.target
-        : MileageTargetResult.notTarget;
+    final (:found, :count) = readRoster(bytes, studentId);
+    return MileageTargetCheck(
+      found ? MileageTargetResult.target : MileageTargetResult.notTarget,
+      rosterCount: count,
+    );
   }
 
-  /// xlsx 안의 모든 시트·셀 중 [studentId]와 같은 값이 있는지(명세 6번).
+  /// [readRoster]의 결과 중 [studentId]가 있는지만.
+  @visibleForTesting
+  static bool rosterContains(Uint8List bytes, String studentId) =>
+      readRoster(bytes, studentId).found;
+
+  /// 학번으로 보는 칸: 숫자 8~10자리(실제 명단은 8자리).
+  static final _studentIdPattern = RegExp(r'^\d{8,10}$');
+
+  /// xlsx 안의 모든 시트·셀 중 [studentId]와 같은 값이 있는지(명세 6번)와,
+  /// 학번 모양(숫자 8~10자리) 칸이 몇 개인지(같은 값은 한 번만 셈).
   ///
   /// 실제 명단(2026-10-31 확인)은 학번만 숫자 칸에 들어 있고, 공유 문자열 파일
   /// (`xl/sharedStrings.xml`)이 아예 없기도 하다. 서버가 주는 Content-Type은
   /// 믿지 않고 파일 앞 두 글자가 zip 표시 `PK`인지로 확인한다.
   @visibleForTesting
-  static bool rosterContains(Uint8List bytes, String studentId) {
+  static ({bool found, int count}) readRoster(
+    Uint8List bytes,
+    String studentId,
+  ) {
     final target = studentId.trim();
     if (bytes.length < 2 || bytes[0] != 0x50 || bytes[1] != 0x4B) {
       throw const NoticeException('명단 파일이 엑셀(xlsx) 형식이 아니에요');
@@ -385,6 +413,8 @@ class MileageService implements MileageServiceBase {
     ];
 
     final sheetName = RegExp(r'^xl/worksheets/sheet\d+\.xml$');
+    final ids = <String>{};
+    var found = false;
     for (final file in zip.files) {
       if (!sheetName.hasMatch(file.name)) continue;
       for (final cell in xmlOf(file.name)!.findAllElements('c')) {
@@ -402,10 +432,12 @@ class MileageService implements MileageServiceBase {
             }
           }
         }
-        if (_normalizeCell(value) == target) return true;
+        final cellValue = _normalizeCell(value);
+        if (cellValue == target) found = true;
+        if (_studentIdPattern.hasMatch(cellValue)) ids.add(cellValue);
       }
     }
-    return false;
+    return (found: found, count: ids.length);
   }
 
   /// 숫자 칸이 "20201234.0"이나 "2.0201234E7"로 저장된 경우도 정수 글자로 맞춘다.

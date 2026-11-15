@@ -329,20 +329,18 @@ void main() {
     test('명단에 학번이 있으면 대상자, 없으면 대상자 아님', () async {
       final log = <http.Request>[];
       final s = service(_www(log));
-      expect(
-        await s.checkTarget(
-          detailPath: '/bbs/daejin/189/10/artclView.do',
-          studentId: '11110002',
-        ),
-        MileageTargetResult.target,
+      final hit = await s.checkTarget(
+        detailPath: '/bbs/daejin/189/10/artclView.do',
+        studentId: '11110002',
       );
-      expect(
-        await s.checkTarget(
-          detailPath: '/bbs/daejin/189/10/artclView.do',
-          studentId: '11119999',
-        ),
-        MileageTargetResult.notTarget,
+      expect(hit.result, MileageTargetResult.target);
+      expect(hit.rosterCount, 2, reason: '명단 인원수만 알려준다');
+      final miss = await s.checkTarget(
+        detailPath: '/bbs/daejin/189/10/artclView.do',
+        studentId: '11119999',
       );
+      expect(miss.result, MileageTargetResult.notTarget);
+      expect(miss.rosterCount, 2);
       expect(
         log.last.url.toString(),
         'https://www.daejin.ac.kr/bbs/daejin/189/555/download.do',
@@ -355,7 +353,8 @@ void main() {
         detailPath: '/bbs/daejin/189/9/artclView.do',
         studentId: '1',
       );
-      expect(result, MileageTargetResult.noRoster);
+      expect(result.result, MileageTargetResult.noRoster);
+      expect(result.rosterCount, isNull);
       expect(log.where((r) => r.url.path.endsWith('download.do')), isEmpty);
     });
 
@@ -388,6 +387,20 @@ void main() {
       expect(MileageService.rosterContains(decimal, '11110005'), isTrue);
       expect(MileageService.rosterContains(decimal, '11110006'), isTrue);
       expect(MileageService.rosterContains(decimal, '1111000'), isFalse);
+    });
+
+    test('인원수는 학번 모양 칸만, 같은 학번은 한 번만 센다', () {
+      final roster = _xlsx(
+        '<c r="A1" t="s"><v>0</v></c>'
+        '<c r="B1"><v>11110001</v></c>'
+        '<c r="C1"><v>11110001.0</v></c>'
+        '<c r="D1"><v>11110002</v></c>'
+        '<c r="E1"><v>3</v></c>',
+        sharedStrings: '<sst><si><t>학번</t></si></sst>',
+      );
+      final r = MileageService.readRoster(roster, '11110002');
+      expect(r.found, isTrue);
+      expect(r.count, 2);
     });
   });
 }

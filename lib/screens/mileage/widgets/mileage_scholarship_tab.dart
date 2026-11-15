@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/mileage_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../notice/models/notice_item.dart';
+import '../../notice/notice_detail_screen.dart';
 import '../models/mileage_models.dart';
 import 'mileage_notice_card.dart';
 import 'mileage_target_confirm_dialog.dart';
@@ -45,6 +46,11 @@ class _MileageScholarshipTabState extends State<MileageScholarshipTab> {
       result: widget.service.checkTarget(
         detailPath: notice.detailPath!,
         studentId: widget.studentId,
+      ),
+      onOpenNotice: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => NoticeDetailScreen(notice: notice),
+        ),
       ),
     );
   }

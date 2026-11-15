@@ -3,6 +3,7 @@
 
 import 'package:daejin_app/screens/mileage/mileage_screen.dart';
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
+import 'package:daejin_app/screens/notice/notice_detail_screen.dart';
 import 'package:daejin_app/services/mileage_service.dart';
 import 'package:daejin_app/services/twin_client.dart';
 import 'package:flutter/material.dart';
@@ -76,12 +77,12 @@ class _FakeMileage implements MileageServiceBase {
   ];
 
   @override
-  Future<MileageTargetResult> checkTarget({
+  Future<MileageTargetCheck> checkTarget({
     required String detailPath,
     required String studentId,
   }) async {
     checked.add((detailPath: detailPath, studentId: studentId));
-    return targetResult;
+    return MileageTargetCheck(targetResult, rosterCount: 1200);
   }
 }
 
@@ -199,6 +200,8 @@ void main() {
     await tester.tap(find.text('대상자 확인').first);
     await tester.pumpAndSettle();
     expect(find.text('축하해요! 대상자 명단에 있어요'), findsOneWidget);
+    expect(find.text('이번 대상자는 모두 1,200명이에요'), findsOneWidget);
+    expect(find.text('공지 원문 보기'), findsOneWidget);
     expect(service.checked.single, (
       detailPath: '/bbs/daejin/189/10/artclView.do',
       studentId: '11110001',
@@ -211,6 +214,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('아쉽게도 대상자 명단에 없어요..'), findsOneWidget);
     expect(find.text('명단보기'), findsNothing, reason: '다른 학생 명단은 보여주지 않는다');
+
+    // "공지 원문 보기"는 결과 창을 닫고 학교 공지 상세 화면으로 간다(목록 조회는
+    // 이 테스트의 관심사가 아니라 화면 전환만 짧게 기다린다).
+    await tester.tap(find.text('공지 원문 보기'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(NoticeDetailScreen), findsOneWidget);
+    expect(find.text('아쉽게도 대상자 명단에 없어요..'), findsNothing);
   });
 
   testWidgets('작은 화면(360w)에서도 넘치지 않는다', (tester) async {
