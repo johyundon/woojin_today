@@ -346,11 +346,13 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     await _fetchRoute();
   }
 
-  /// "길 안내" — 아래 시트를 접고, 출발할 자리(현재 위치, 없으면 출발점)로
-  /// 지도를 크게 당긴다. 걸음마다 알려 주는 안내는 아직 없다.
+  /// "길 안내" — 아래 시트를 접고, 출발 칸에 있는 자리로 지도를 크게
+  /// 당긴다. 출발이 "내 위치"일 때만 현재 위치로 간다(전에는 현재 위치를
+  /// 먼저 써서, 학교 밖에서 건물끼리 길을 고르면 집 근처로 갔다). 걸음마다
+  /// 알려 주는 안내는 아직 없다.
   Future<void> _startGuidance() async {
     setState(() => _sheetHidden = true);
-    final start = _myLocation ?? _originPoint;
+    final start = _originPoint;
     if (start == null) return;
     await _mapController?.setLevel(2);
     await _mapController?.panTo(LatLng(start.lat, start.lng));
