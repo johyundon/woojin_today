@@ -20,6 +20,7 @@ import '../home/widgets/home_bottom_nav.dart';
 import 'widgets/calendar_colors.dart';
 import 'widgets/calendar_expanded_grid.dart';
 import 'widgets/calendar_month_grid.dart';
+import 'widgets/month_pick_sheet.dart';
 import 'widgets/event_delete_dialog.dart';
 import 'widgets/event_detail_sheet.dart';
 import 'widgets/event_row.dart';
@@ -78,6 +79,11 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// 일정"을 한 장으로 스크롤하는 화면을 쓸지. false면 예전의 "점 달력 + 끌어서
   /// 펼치기" 화면이다(안 쓰는 화면이지만 지우지 않고 남겨 둔다).
   static const bool _useScrollLayout = true;
+
+  /// 상단을 시간표 시안(Figma 2152-1429)처럼 "캘린더 [2026년 11월 ⌄]" 한 줄로
+  /// 쓸지(사용자 결정 2026-11-16). false면 제목 줄 + 화살표 달 이동 줄이다
+  /// (안 쓰지만 지우지 않고 남겨 둔다).
+  static const bool _useMonthChipHeader = true;
 
   /// 스크롤 화면에서 날짜를 누르면 아래 일정 영역으로 내려가려고 쓰는 표시.
   final _dayListKey = GlobalKey();
@@ -721,8 +727,12 @@ class _CalendarScreenState extends State<CalendarScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (_useScrollLayout) ...[
-                _scrollAppBar(),
-                _scrollMonthNav(),
+                if (_useMonthChipHeader)
+                  _monthChipHeader()
+                else ...[
+                  _scrollAppBar(),
+                  _scrollMonthNav(),
+                ],
               ] else
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
@@ -1045,6 +1055,73 @@ class _CalendarScreenState extends State<CalendarScreen>
         ),
       ),
     );
+  }
+
+  /// 시간표 시안과 같은 상단: 왼쪽 "캘린더" 제목, 그 옆 연한 파란 달 칩.
+  /// 칩을 누르면 달 고르기 시트가 뜬다.
+  Widget _monthChipHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+      child: Row(
+        children: [
+          const Text(
+            '캘린더',
+            style: TextStyle(
+              color: AppColors.textStrong,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Pressable(
+            key: const ValueKey('calendar-month-chip'),
+            onTap: _openMonthPicker,
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              decoration: BoxDecoration(
+                color: AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${_focusedMonth.year}년 ${_focusedMonth.month}월',
+                    style: const TextStyle(
+                      color: AppColors.blueText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.expand_more_rounded,
+                    size: 18,
+                    color: AppColors.blueText,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 달 칩을 누르면 달 고르기 시트를 열고, 고른 달로 넘어간다.
+  Future<void> _openMonthPicker() async {
+    final picked = await showMonthPickSheet(
+      context,
+      initialMonth: _focusedMonth,
+    );
+    if (picked == null || !mounted) return;
+    final delta =
+        (picked.year - _focusedMonth.year) * 12 +
+        picked.month -
+        _focusedMonth.month;
+    if (delta != 0) _moveMonth(delta);
   }
 
   /// 스크롤 화면 맨 위 앱바 제목.

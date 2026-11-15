@@ -69,10 +69,8 @@ void main() {
 
     await _tapTab(tester, '시간표');
     await _tapTab(tester, '캘린더');
-    expect(
-      find.byIcon(Icons.chevron_right_rounded),
-      findsOneWidget,
-    ); // 캘린더의 달 이동 버튼
+    // 캘린더 상단의 달 칩(예전엔 달 이동 화살표였다).
+    expect(find.byKey(const ValueKey('calendar-month-chip')), findsOneWidget);
 
     await _tapTab(tester, '모아보기');
     expect(find.text('자주 찾는 메뉴'), findsOneWidget);

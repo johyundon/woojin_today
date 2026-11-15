@@ -144,6 +144,28 @@ List<AcademicScheduleItem> _thisMonthSchedule() {
 Finder _card(String title) =>
     find.descendant(of: find.byType(EventRow), matching: find.text(title));
 
+/// 상단 달 칩을 눌러 달 고르기 시트에서 [to]의 달로 넘어간다([from]은 지금 보고
+/// 있는 달 — 연도가 다르면 시트의 연도 화살표를 먼저 누른다).
+Future<void> _goToMonth(WidgetTester tester, DateTime from, DateTime to) async {
+  await tester.tap(find.byKey(const ValueKey('calendar-month-chip')));
+  await tester.pumpAndSettle();
+  final years = to.year - from.year;
+  for (var i = 0; i < years.abs(); i++) {
+    await tester.tap(
+      find
+          .byIcon(
+            years > 0
+                ? Icons.chevron_right_rounded
+                : Icons.chevron_left_rounded,
+          )
+          .last,
+    );
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.text('${to.month}월').last);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _pump(WidgetTester tester, {_FakeSchedule? schedule}) async {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
   tester.view.devicePixelRatio = 3;
@@ -213,13 +235,13 @@ void main() {
     final now = DateTime.now();
     final next = DateTime(now.year, now.month + 1);
 
-    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+    await _goToMonth(tester, now, next);
     await tester.pumpAndSettle();
     expect(find.text('${next.year}년 ${next.month}월'), findsOneWidget);
     expect(find.textContaining('${next.month}월 1일'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byIcon(Icons.chevron_left_rounded));
+    await _goToMonth(tester, next, now);
     await tester.pumpAndSettle();
     expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
   });
@@ -232,11 +254,13 @@ void main() {
     expect(find.text('왕방축제'), findsWidgets);
 
     // 날짜 칸(28일, 일정 있음)을 누르면 그날이 골라지지만 화면은 그대로다.
+    final dayHeader = find.textContaining('요일');
+    final before = tester.getTopLeft(dayHeader.first).dy;
     final header28 = find.textContaining('월 28일');
     await tester.tap(find.text('28').first);
     await tester.pumpAndSettle();
     expect(header28, findsOneWidget);
-    expect(tester.getTopLeft(header28).dy, greaterThan(400));
+    expect(tester.getTopLeft(header28).dy, before);
 
     // 21일의 "수업평가 참여 기간" 막대를 누르면 21일을 고르고 일정 영역으로 내려간다.
     await tester.tap(
@@ -252,6 +276,19 @@ void main() {
     expect(_card('수업평가 참여 기간'), findsOneWidget);
     // 상세 팝업은 열리지 않는다(카드를 눌러야 열림).
     expect(find.text('닫기'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('상단은 "캘린더" 제목과 달 칩이고, 칩으로 다른 해·달로 넘어간다', (tester) async {
+    await _pump(tester);
+    final now = DateTime.now();
+    expect(find.text('캘린더'), findsWidgets);
+    expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
+
+    final target = DateTime(now.year + 1, 3);
+    await _goToMonth(tester, now, target);
+    expect(find.text('${target.year}년 3월'), findsOneWidget);
+    expect(find.textContaining('3월 1일'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -493,7 +530,7 @@ void main() {
       final now = DateTime.now();
       final next = DateTime(now.year, now.month + 1);
 
-      await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+      await _goToMonth(tester, now, next);
       await tester.pumpAndSettle();
       expect(schedule.requested.last, '${next.year}-${next.month}');
     });
@@ -547,7 +584,7 @@ void main() {
       final todayDate = DateTime(today.year, today.month, today.day);
       if (todayDate.isBefore(start) || todayDate.isAfter(end)) {
         if (start.month != today.month) {
-          await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+          await _goToMonth(tester, today, start);
         } else {
           await tester.tap(find.text('${start.day}').first);
         }
@@ -631,9 +668,8 @@ void main() {
         if (yesterday.month == DateTime.now().month) {
           await tester.tap(find.text('${yesterday.day}').first);
         } else {
-          await tester.tap(
-            find.byIcon(Icons.chevron_left_rounded),
-          ); // 지난달 말일이 어제
+          // 지난달 말일이 어제.
+          await _goToMonth(tester, DateTime.now(), yesterday);
           await tester.pumpAndSettle();
           await tester.tap(find.text('${yesterday.day}').first);
         }
@@ -678,7 +714,7 @@ void main() {
       if (daysAhead > 0) {
         // 다음 달이면 달을 넘긴 뒤(그 달 1일이 선택됨) 그 날짜를 누른다.
         if (date.month != today.month) {
-          await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+          await _goToMonth(tester, today, date);
           await tester.pumpAndSettle();
         }
         await tester.tap(find.text('${date.day}').first);
