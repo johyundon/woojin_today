@@ -28,6 +28,7 @@ mixin TimetableSaveLoadMixin on TimetableDataLoadingMixin {
       courses: _confirmedCourses,
     );
     await _savedTimetableStorage.save(saved);
+    _editStartCourses = _confirmedCourses; // 저장했으니 나갈 때 묻지 않는다.
     await _loadSavedCount();
     if (!mounted) return;
     showTopBanner(

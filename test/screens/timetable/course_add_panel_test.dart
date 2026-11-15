@@ -16,6 +16,9 @@ class _FakeStorage implements SavedTimetableStorage {
   Future<List<SavedTimetable>> loadAll() async => [];
 
   @override
+  Future<void> save(SavedTimetable timetable) async {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -104,6 +107,9 @@ void main() {
     expect(find.text('강의계획서'), findsOneWidget);
 
     await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    // 담은 게 있어 확인창이 뜬다 — "나가기".
+    await tester.tap(find.byKey(const ValueKey('edit-leave-confirm')));
     await tester.pumpAndSettle();
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
   });
@@ -215,6 +221,23 @@ void main() {
     await tester.pumpAndSettle();
     await _tapAddCourse(tester); // 뒤로가기
     await tester.pumpAndSettle();
+    // 담은 게 있으니 "작성 중인 내용이 있어요"가 뜬다. "계속 작성"이면 그대로 남는다.
+    expect(find.text('작성 중인 내용이 있어요'), findsOneWidget);
+    expect(find.text('지금 나가면 내용이 저장되지 않아요.'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('edit-leave-cancel')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsOneWidget);
+
+    // 저장하면 뒤로가기 때 묻지 않고 담은 과목도 남는다.
+    await tester.tap(find.byKey(const ValueKey('timetable-edit-save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4)); // 저장 안내 배너 타이머 비우기
+    await tester.pumpAndSettle();
+    await _tapAddCourse(tester); // 뒤로가기
+    await tester.pumpAndSettle();
+    expect(find.text('작성 중인 내용이 있어요'), findsNothing);
     expect(find.byKey(const ValueKey('timetable-edit-back')), findsNothing);
 
     // 일반 화면의 블록을 누른다.
@@ -231,6 +254,58 @@ void main() {
     expect(find.text('강의계획서'), findsOneWidget);
     expect(find.text('담음'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('시간표 만들기에서 담고 뒤로가기 → "나가기"면 담은 과목이 빠진다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    final blocksBefore = find.byType(CourseBlock).evaluate().length;
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(CourseResultTile).first,
+            matching: find.byType(Text),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('담기'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byType(CourseBlock).evaluate().length,
+      greaterThan(blocksBefore),
+    );
+
+    await _tapAddCourse(tester); // 뒤로가기
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-leave-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsNothing);
+    expect(find.byType(CourseBlock).evaluate().length, blocksBefore);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('시간표 만들기에서 아무것도 안 바꾸고 뒤로가기면 묻지 않고 닫힌다', (tester) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+    await _tapAddCourse(tester); // 뒤로가기
+    await tester.pumpAndSettle();
+    expect(find.text('작성 중인 내용이 있어요'), findsNothing);
+    expect(find.byKey(const ValueKey('timetable-edit-back')), findsNothing);
   });
 
   testWidgets('패널은 미끄러져 올라오고, 다 내려간 뒤에 탭 바가 다시 보인다', (tester) async {

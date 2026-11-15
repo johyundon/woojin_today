@@ -5,9 +5,30 @@ import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
 
 /// 시간표 블록의 "×"를 눌렀을 때 뜨는 "삭제하시겠습니까?" 확인창(사용자가 보낸
-/// 시안 캡처, 2026-11-16). 연분홍 원 안의 빨간 "!", 제목, 아래 "취소"·"삭제"
-/// 두 버튼. 삭제하면 true, 취소하거나 바깥을 눌러 닫으면 false.
-Future<bool> showCourseRemoveDialog(BuildContext context) async {
+/// 시안 캡처, 2026-11-16). 삭제하면 true, 취소하거나 바깥을 눌러 닫으면 false.
+Future<bool> showCourseRemoveDialog(BuildContext context) {
+  return showAppConfirmModal(
+    context,
+    title: '삭제하시겠습니까?',
+    cancelLabel: '취소',
+    confirmLabel: '삭제',
+    cancelKey: const ValueKey('course-remove-cancel'),
+    confirmKey: const ValueKey('course-remove-confirm'),
+  );
+}
+
+/// 시안의 "AppConfirmModal": 연분홍 원 안의 빨간 "!", 제목, (있으면) 회색 설명,
+/// 아래 두 버튼(왼쪽 연한 버튼·오른쪽 빨간 버튼). 오른쪽을 누르면 true,
+/// 왼쪽을 누르거나 바깥을 눌러 닫으면 false.
+Future<bool> showAppConfirmModal(
+  BuildContext context, {
+  required String title,
+  String? message,
+  required String cancelLabel,
+  required String confirmLabel,
+  Key? cancelKey,
+  Key? confirmKey,
+}) async {
   final result = await showDialog<bool>(
     context: context,
     barrierColor: TimetableColors.barrier,
@@ -41,22 +62,35 @@ Future<bool> showCourseRemoveDialog(BuildContext context) async {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '삭제하시겠습니까?',
-              style: TextStyle(
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
                 color: AppColors.textStrong,
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.4,
               ),
             ),
+            if (message != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSub,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
             const SizedBox(height: 22),
             Row(
               children: [
                 Expanded(
                   child: _RemoveDialogButton(
-                    key: const ValueKey('course-remove-cancel'),
-                    label: '취소',
+                    key: cancelKey,
+                    label: cancelLabel,
                     background: _RemoveDialogColors.cancelFill,
                     foreground: _RemoveDialogColors.cancelText,
                     onTap: () => Navigator.of(dialogContext).pop(false),
@@ -65,8 +99,8 @@ Future<bool> showCourseRemoveDialog(BuildContext context) async {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _RemoveDialogButton(
-                    key: const ValueKey('course-remove-confirm'),
-                    label: '삭제',
+                    key: confirmKey,
+                    label: confirmLabel,
                     background: _RemoveDialogColors.alertRed,
                     foreground: Colors.white,
                     onTap: () => Navigator.of(dialogContext).pop(true),

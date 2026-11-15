@@ -28,6 +28,11 @@ mixin TimetableSessionMixin on State<TimetableScreen> {
     _onConfirmedCoursesChanged();
   }
 
+  /// "시간표 만들기" 화면을 열 때의 과목 목록. 뒤로가기 때 이것과 달라졌으면
+  /// "작성 중인 내용이 있어요" 확인창을 띄우고, 나가면 이 목록으로 되돌린다.
+  /// 저장하면 지금 목록으로 바꾼다.
+  List<PlannedCourse> _editStartCourses = const [];
+
   /// [TimetableReminderMixin]이 구현한다.
   void _onConfirmedCoursesChanged();
   List<CourseCatalogItem> _catalog = [];

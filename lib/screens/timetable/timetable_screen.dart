@@ -348,15 +348,46 @@ class _TimetableScreenState extends State<TimetableScreen>
   }
 
   void _setAddPanelOpen(bool open) {
+    final wasOpen = _addPanelOpen;
     setState(() {
       _addPanelOpen = open;
-      if (open) _sheetFraction = _sheetMinFraction;
+      if (open) {
+        _sheetFraction = _sheetMinFraction;
+        if (!wasOpen) _editStartCourses = _confirmedCourses;
+      }
       if (!open) {
         _pinnedCourse = null;
         _expandedCourseKey = null;
       }
     });
     open ? _addPanelController.forward() : _addPanelController.reverse();
+  }
+
+  /// "시간표 만들기" 화면을 연 뒤 과목을 담거나 뺐는지(순서는 따지지 않음).
+  bool get _hasUnsavedEdits {
+    final before = _editStartCourses.map((c) => c.key).toSet();
+    final now = _confirmedCourses.map((c) => c.key).toSet();
+    return before.length != now.length || !before.containsAll(now);
+  }
+
+  /// "시간표 만들기" 화면의 뒤로가기. 바뀐 게 있으면 시안의 확인창
+  /// (AppConfirmModal "작성 중인 내용이 있어요")을 띄우고, "나가기"를 고르면
+  /// 연 때의 과목 목록으로 되돌린 뒤 닫는다(2026-11-16).
+  Future<void> _onEditBack() async {
+    if (_hasUnsavedEdits) {
+      final leave = await showAppConfirmModal(
+        context,
+        title: '작성 중인 내용이 있어요',
+        message: '지금 나가면 내용이 저장되지 않아요.',
+        cancelLabel: '계속 작성',
+        confirmLabel: '나가기',
+        cancelKey: const ValueKey('edit-leave-cancel'),
+        confirmKey: const ValueKey('edit-leave-confirm'),
+      );
+      if (!leave || !mounted) return;
+      setState(() => _confirmedCourses = _editStartCourses);
+    }
+    _setAddPanelOpen(false);
   }
 
   @override
@@ -533,7 +564,7 @@ class _TimetableScreenState extends State<TimetableScreen>
               if (_editMode)
                 TimetableEditBar(
                   creditsLabel: '$_creditsText학점',
-                  onBack: () => _setAddPanelOpen(false),
+                  onBack: _onEditBack,
                   onSave: _openSaveDialog,
                 )
               else if (_useFigmaTopBar)
