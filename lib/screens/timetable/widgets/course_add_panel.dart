@@ -36,6 +36,12 @@ class CourseAddPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => _buildSheet(constraints.maxHeight),
+    );
+  }
+
+  Widget _buildSheet(double panelHeight) {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: TimetableColors.panelBackground,
@@ -82,7 +88,11 @@ class CourseAddPanel extends StatelessWidget {
           if (headerScrollable)
             // 필터를 펼치면 이 부분이 길어진다. 시트가 낮을 때도 넘치지 않고 밀어서
             // 볼 수 있게 스크롤되는 칸에 담는다(사용자 지적, 2026-11-16).
-            Flexible(
+            // Flexible로 나누면 필터가 자기 몫(절반)을 다 안 써도 남는 높이가
+            // 목록으로 안 넘어가 아래에 흰 빈칸이 생겨서, 최대 높이만 걸고 남는
+            // 높이는 전부 목록(Expanded)이 쓰게 한다.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: panelHeight * 0.5),
               child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),

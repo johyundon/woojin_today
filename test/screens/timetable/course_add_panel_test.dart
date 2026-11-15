@@ -8,6 +8,7 @@ import 'package:daejin_app/screens/timetable/widgets/course_block.dart';
 import 'package:daejin_app/screens/timetable/widgets/course_result_tile.dart';
 import 'package:daejin_app/services/fakes/fake_course_catalog_service.dart';
 import 'package:daejin_app/services/my_timetable_service.dart';
+import 'package:daejin_app/screens/timetable/widgets/course_add_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -323,6 +324,18 @@ void main() {
     await tester.tap(find.byIcon(Icons.tune_rounded));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(search).dy, before);
+    // 필터를 펼치고 시트를 최대로 올려도 과목 목록이 시트 맨 아래까지 닿아
+    // 흰 빈칸이 없다.
+    await tester.dragFrom(
+      tester.getTopLeft(search) + const Offset(150, -20),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    final list = find.descendant(
+      of: find.byType(CourseAddPanel),
+      matching: find.byType(ListView),
+    );
+    expect(tester.getBottomLeft(list.last).dy, closeTo(844, 1));
     expect(tester.takeException(), isNull);
   });
 
