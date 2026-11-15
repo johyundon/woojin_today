@@ -57,6 +57,9 @@ void main() {
 
     await tester.tap(find.text('전체 동의합니다'));
     await tester.pump();
+    // 테스트 기본 화면(800×600)은 낮아서 버튼이 스크롤 아래에 있다.
+    await tester.ensureVisible(find.text('동의하고 시작하기'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('동의하고 시작하기'));
     await tester.pumpAndSettle();
 

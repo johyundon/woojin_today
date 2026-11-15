@@ -160,76 +160,98 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4),
-                        child: Text(
-                          '서비스 이용을 위해 아래 약관을 확인하고 모두 동의해주세요',
-                          style: TextStyle(
-                            color: AppColors.textSub,
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
+                  // 안내 상자를 펼쳐 화면이 모자라면 흰 칸 안이 스크롤된다.
+                  child: LayoutBuilder(
+                    builder: (context, box) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: box.maxHeight),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 4),
+                                  child: Text(
+                                    '서비스 이용을 위해 아래 약관을 확인하고 모두 동의해주세요',
+                                    style: TextStyle(
+                                      color: AppColors.textSub,
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  decoration: BoxDecoration(
+                                    color: _allChecked
+                                        ? AppColors.blue.withValues(alpha: 0.1)
+                                        : AppColors.fill,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: AppCheckboxRow(
+                                    label: '전체 동의합니다',
+                                    checked: _allChecked,
+                                    onChanged: _toggleAll,
+                                    padding: const EdgeInsets.all(18),
+                                    labelStyle: TextStyle(
+                                      color: _allChecked
+                                          ? AppColors.textStrong
+                                          : AppColors.textBody,
+                                      fontSize: 15,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                const Divider(color: _dividerColor, height: 1),
+                                const SizedBox(height: 10),
+                                AppCheckboxRow(
+                                  label: '이용약관 동의 (필수)',
+                                  checked: _termsChecked,
+                                  onChanged: (v) =>
+                                      setState(() => _termsChecked = v),
+                                  padding: _itemPadding,
+                                  labelStyle: _itemLabelStyle,
+                                  onViewPressed: () => _openDetail(
+                                    '이용약관',
+                                    TermsDetailScreen.termsOfServiceBody,
+                                  ),
+                                ),
+                                AppCheckboxRow(
+                                  label: '개인정보 처리방침 동의 (필수)',
+                                  checked: _privacyChecked,
+                                  onChanged: (v) =>
+                                      setState(() => _privacyChecked = v),
+                                  padding: _itemPadding,
+                                  labelStyle: _itemLabelStyle,
+                                  onViewPressed: () => _openDetail(
+                                    '개인정보 처리방침',
+                                    TermsDetailScreen.privacyPolicyBody,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                const SizedBox(height: 24),
+                                const _OnDeviceNotice(),
+                                const SizedBox(height: 14),
+                                PrimaryButton(
+                                  label: '동의하고 시작하기',
+                                  enabled: _allChecked,
+                                  onPressed: _onSubmit,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        decoration: BoxDecoration(
-                          color: _allChecked
-                              ? AppColors.blue.withValues(alpha: 0.1)
-                              : AppColors.fill,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: AppCheckboxRow(
-                          label: '전체 동의합니다',
-                          checked: _allChecked,
-                          onChanged: _toggleAll,
-                          padding: const EdgeInsets.all(18),
-                          labelStyle: TextStyle(
-                            color: _allChecked
-                                ? AppColors.textStrong
-                                : AppColors.textBody,
-                            fontSize: 15,
-                            height: 1.4,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(color: _dividerColor, height: 1),
-                      const SizedBox(height: 10),
-                      AppCheckboxRow(
-                        label: '이용약관 동의 (필수)',
-                        checked: _termsChecked,
-                        onChanged: (v) => setState(() => _termsChecked = v),
-                        padding: _itemPadding,
-                        labelStyle: _itemLabelStyle,
-                        onViewPressed: () => _openDetail(
-                          '이용약관',
-                          TermsDetailScreen.termsOfServiceBody,
-                        ),
-                      ),
-                      AppCheckboxRow(
-                        label: '개인정보 처리방침 동의 (필수)',
-                        checked: _privacyChecked,
-                        onChanged: (v) => setState(() => _privacyChecked = v),
-                        padding: _itemPadding,
-                        labelStyle: _itemLabelStyle,
-                        onViewPressed: () => _openDetail(
-                          '개인정보 처리방침',
-                          TermsDetailScreen.privacyPolicyBody,
-                        ),
-                      ),
-                      const Spacer(),
-                      PrimaryButton(
-                        label: '동의하고 시작하기',
-                        enabled: _allChecked,
-                        onPressed: _onSubmit,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -247,4 +269,94 @@ class _TermsAgreementScreenState extends State<TermsAgreementScreen> {
     height: 1.4,
     fontWeight: FontWeight.w600,
   );
+}
+
+/// "내 정보는 내 휴대폰에만 저장돼요" 접히는 안내 상자. 누르면 설명이 펼쳐진다.
+class _OnDeviceNotice extends StatefulWidget {
+  const _OnDeviceNotice();
+
+  static const title = '내 정보는 내 휴대폰에만 저장돼요';
+  static const body =
+      '[우진이의 하루]는 대진대학교 서버와 직접 통신합니다. 별도의 서버가 존재하지 '
+      '않아 민감정보(전화번호, 이름, 생년월일, 학번, 비밀번호 등)는 모두 휴대폰에 '
+      '저장되고 활용되며 앱 삭제 시 전부 폐기 처리됩니다. 따라서 앱을 삭제하거나 '
+      '휴대폰을 변경하는 등의 경우 이전 앱의 정보는 공유되지 않습니다.';
+
+  @override
+  State<_OnDeviceNotice> createState() => _OnDeviceNoticeState();
+}
+
+class _OnDeviceNoticeState extends State<_OnDeviceNotice> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              button: true,
+              expanded: _open,
+              child: InkWell(
+                onTap: () => setState(() => _open = !_open),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          _OnDeviceNotice.title,
+                          style: TextStyle(
+                            color: AppColors.textBody,
+                            fontSize: 15,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      AnimatedRotation(
+                        turns: _open ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.textSub,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_open) ...[
+              const Divider(color: AppColors.line, height: 1),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 14, 20, 16),
+                child: Text(
+                  _OnDeviceNotice.body,
+                  style: TextStyle(
+                    color: AppColors.textSub,
+                    fontSize: 13,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
