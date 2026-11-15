@@ -5,9 +5,12 @@ import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
 
 /// 홈 화면 하단 탭 바 ("우진이의 하루" v7).
-/// 화면 아래에 떠 있는 흰색 바이며, 시간표 / 모아보기 / [가운데 홈 버튼] /
-/// 캘린더 / MY 순서다. 가운데 홈 버튼은 바 위로 살짝 솟아 있다. 탭을 눌렀을 때
-/// 어디로 이동할지는 [onTap]이 인덱스로 받아 처리한다.
+/// 화면 아래에 떠 있는 흰색 바이며, 모아보기 / 캘린더 / [가운데 홈 버튼] /
+/// 시간표 / MY 순서로 보인다(사용자 요청, 2026-11-15). 가운데 홈 버튼은 바 위로
+/// 살짝 솟아 있다. 탭을 눌렀을 때 어디로 이동할지는 [onTap]이 인덱스로 받아
+/// 처리한다. 인덱스는 보이는 자리와 상관없이 탭마다 고정이다(0 시간표,
+/// 1 모아보기, 2 홈, 3 캘린더, 4 MY) — 여러 화면이 이 번호로 탭을 구분하므로
+/// 자리만 바꾸고 번호는 그대로 둔다.
 ///
 /// 아이콘은 Figma "03 홈"에서 받은 SVG(Material Symbols Rounded, 굵기 600)를
 /// 쓴다. Flutter 기본 아이콘은 선 굵기와 모양이 달라서다. 선택된 탭은 안이
@@ -21,29 +24,35 @@ class HomeBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onTap;
 
+  // 보이는 순서대로 나열한다. index는 [selectedIndex]·[onTap]이 쓰는 탭 번호.
   static const _items = [
     (
+      index: 1,
+      asset: 'assets/icons/apps_outline.svg',
+      selectedAsset: 'assets/icons/apps.svg',
+      label: '모아보기',
+    ),
+    (
+      index: 3,
+      asset: 'assets/icons/event_outline.svg',
+      selectedAsset: 'assets/icons/event.svg',
+      label: '캘린더',
+    ),
+    null, // 가운데 홈 버튼 자리(탭 번호 2)
+    (
+      index: 0,
       asset: 'assets/icons/calendar_month_outline.svg',
       selectedAsset: 'assets/icons/calendar_month.svg',
       label: '시간표',
     ),
     (
-      asset: 'assets/icons/apps_outline.svg',
-      selectedAsset: 'assets/icons/apps.svg',
-      label: '모아보기',
-    ),
-    null, // 가운데 홈 버튼 자리
-    (
-      asset: 'assets/icons/event_outline.svg',
-      selectedAsset: 'assets/icons/event.svg',
-      label: '캘린더',
-    ),
-    (
+      index: 4,
       asset: 'assets/icons/person_outline.svg',
       selectedAsset: 'assets/icons/person.svg',
       label: 'MY',
     ),
   ];
+  static const _homeIndex = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -75,21 +84,21 @@ class HomeBottomNav extends StatelessWidget {
         child: Row(
           children: [
             // 디자인에서 가운데 홈 칸이 양옆 칸보다 넓다(약 80 : 66).
-            for (var i = 0; i < _items.length; i++)
+            for (final item in _items)
               Expanded(
-                flex: _items[i] == null ? 80 : 66,
-                child: _items[i] == null
+                flex: item == null ? 80 : 66,
+                child: item == null
                     ? _CenterButton(
-                        selected: i == selectedIndex,
-                        onTap: () => onTap?.call(i),
+                        selected: selectedIndex == _homeIndex,
+                        onTap: () => onTap?.call(_homeIndex),
                       )
                     : _NavItem(
-                        asset: i == selectedIndex
-                            ? _items[i]!.selectedAsset
-                            : _items[i]!.asset,
-                        label: _items[i]!.label,
-                        selected: i == selectedIndex,
-                        onTap: () => onTap?.call(i),
+                        asset: item.index == selectedIndex
+                            ? item.selectedAsset
+                            : item.asset,
+                        label: item.label,
+                        selected: item.index == selectedIndex,
+                        onTap: () => onTap?.call(item.index),
                       ),
               ),
           ],
