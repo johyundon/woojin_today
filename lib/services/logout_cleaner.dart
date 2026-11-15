@@ -24,7 +24,8 @@ import 'terms_acceptance_storage.dart';
 /// 내 일정이 돌아오게)만 남기고 전부 지운다 — 같은 학생이
 /// 다시 로그인했을 때 약관·온보딩을 또 보지 않게 하려는 것이고, 이 기록에는
 /// 학번과 "봤다"는 표시만 있다. 사용자와 무관한 기기 설정을 저장하게 되면 이
-/// 부분을 다시 봐야 한다.
+/// 부분을 다시 봐야 한다. 앱을 새로 깔았는지 가리는 표시
+/// ([CredentialStorage.isKeptOnLogout])도 남긴다.
 ///
 /// 저장 방식이 두 가지라 둘 다 지운다. 캐시들은 예전 방식([SharedPreferences])으로
 /// 저장하는데, Android에서는 새 방식([SharedPreferencesAsync])과 저장 파일이 달라
@@ -49,7 +50,8 @@ Future<void> clearUserDataOnLogout({
         .where(
           (k) =>
               !TermsAcceptanceStorage.isKeptOnLogout(k) &&
-              !CalendarEventStorage.isKeptOnLogout(k),
+              !CalendarEventStorage.isKeptOnLogout(k) &&
+              !CredentialStorage.isKeptOnLogout(k),
         )
         .toSet();
     if (toRemove.isNotEmpty) await p.clear(allowList: toRemove);

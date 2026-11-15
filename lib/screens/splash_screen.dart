@@ -48,6 +48,8 @@ class _SplashScreenState extends State<SplashScreen> {
     final minDisplay = _startMinDisplayTimer();
 
     final storage = widget.credentialStorage ?? CredentialStorage();
+    // iOS는 앱을 지워도 키체인이 남으므로, 다시 깐 첫 실행이면 먼저 지운다.
+    await storage.clearIfReinstalled();
     final credentials = await storage.read();
     if (credentials == null) {
       await minDisplay;
