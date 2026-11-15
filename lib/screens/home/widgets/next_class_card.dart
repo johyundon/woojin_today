@@ -72,6 +72,10 @@ class NextClassCard extends StatelessWidget {
 
   static const _radius = 16.0;
 
+  /// 수업 없음 카드 오른쪽 위의 연한 파란 원. Figma "03-2 홈 · 수업 없음"에
+  /// 없어 숨겼다. 다시 보이려면 true로 바꾼다.
+  static const _showEmptyCircle = false;
+
   @override
   Widget build(BuildContext context) {
     final item = next;
@@ -128,8 +132,8 @@ class NextClassCard extends StatelessWidget {
   }
 
   Widget _buildEmpty() {
-    final headline = hasClassesToday ? '오늘 수업 다 끝났어!' : '오늘은 수업 없음!';
-    final subtitle = hasClassesToday ? '오늘 하루도 수고했어!' : '학식 먹고 캠퍼스 한 바퀴 어때?';
+    final headline = hasClassesToday ? '오늘 수업 다 끝났어!' : '수업 없음';
+    final subtitle = hasClassesToday ? '오늘 하루도 수고했어!' : '오늘 하루 푹 쉬어요.';
     final badge = hasClassesToday ? '완료' : '공강';
     final item = upcoming;
 
@@ -137,18 +141,19 @@ class NextClassCard extends StatelessWidget {
       borderColor: AppColors.fillDisabled,
       child: Stack(
         children: [
-          Positioned(
-            top: -29,
-            right: -29,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: const BoxDecoration(
-                color: AppColors.blueSoft,
-                shape: BoxShape.circle,
+          if (_showEmptyCircle)
+            Positioned(
+              top: -29,
+              right: -29,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: const BoxDecoration(
+                  color: AppColors.blueSoft,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -166,11 +171,11 @@ class NextClassCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          width: 30,
-                          height: 30,
+                          width: 28,
+                          height: 28,
                           decoration: BoxDecoration(
                             color: AppColors.blueSoft,
-                            borderRadius: BorderRadius.circular(9),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
                             Icons.event_available_rounded,
@@ -227,7 +232,7 @@ class NextClassCard extends StatelessWidget {
                       subtitle,
                       style: const TextStyle(
                         color: AppColors.textBody,
-                        fontSize: 13,
+                        fontSize: 14,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
                       ),
@@ -239,29 +244,15 @@ class NextClassCard extends StatelessWidget {
               if (item != null) ...[
                 const _TicketDivider(),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                   child: Row(
                     children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: AppColors.blueSoft,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.wb_sunny_rounded,
-                          color: AppColors.blue,
-                          size: 21,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '$upcomingDayLabel 첫 수업',
+                              '$upcomingDayLabel 수업',
                               style: const TextStyle(
                                 color: AppColors.textBody,
                                 fontSize: 12,
@@ -324,18 +315,26 @@ class NextClassCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.schedule_rounded,
-                      color: Colors.white,
-                      size: 17,
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: HomeV7Colors.onBlueTitle,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.event_available_rounded,
+                        color: AppColors.blue,
+                        size: 16,
+                      ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
                         '다음 수업',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 13,
                           height: 1.4,
                           fontWeight: FontWeight.w700,
                         ),
@@ -363,35 +362,18 @@ class NextClassCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      formatMinutesAsTime(item.slot.startMinutes),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        height: 1.4,
-                        letterSpacing: -1.2,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        '~ ${formatMinutesAsTime(item.slot.endMinutes)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: HomeV7Colors.onBlueSub,
-                          fontSize: 15,
-                          height: 1.4,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  '${formatMinutesAsTime(item.slot.startMinutes)} ~ '
+                  '${formatMinutesAsTime(item.slot.endMinutes)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    height: 1.4,
+                    letterSpacing: -0.96,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -400,9 +382,9 @@ class NextClassCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: HomeV7Colors.onBlueTitle,
-                    fontSize: 16,
+                    fontSize: 15,
                     height: 1.4,
-                    letterSpacing: -0.32,
+                    letterSpacing: -0.3,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -410,42 +392,28 @@ class NextClassCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.blueSoft,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.location_on_rounded,
-                    color: AppColors.blueText,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _WalkOrProfessorLine(
+                        professor: professor,
+                        origin: walkOrigin,
+                        destination: walkDestination,
+                      ),
                       Text(
                         room.isEmpty ? '강의실 정보 없음' : room,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: HomeV7Colors.cardTitle,
-                          fontSize: 16,
+                          fontSize: 15,
                           height: 1.4,
                           fontWeight: FontWeight.w700,
                         ),
-                      ),
-                      _WalkOrProfessorLine(
-                        professor: professor,
-                        origin: walkOrigin,
-                        destination: walkDestination,
                       ),
                     ],
                   ),
@@ -479,7 +447,7 @@ class NextClassCard extends StatelessWidget {
   }
 }
 
-/// 강의실 아래 한 줄. 앞 수업 건물에서 걷는 시간을 구하면 "걸어서 N분 · Mm",
+/// 강의실 위 한 줄. 앞 수업 건물에서 걷는 시간을 구하면 "걸어서 N분 · Mm",
 /// 못 구하면(첫 수업, 같은 건물, 건물을 못 찾음) 교수님 이름을 보여준다.
 class _WalkOrProfessorLine extends StatefulWidget {
   const _WalkOrProfessorLine({
@@ -552,7 +520,7 @@ class _WalkOrProfessorLineState extends State<_WalkOrProfessorLine> {
         : null;
     if (text == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         text,
         maxLines: 1,
@@ -568,7 +536,7 @@ class _WalkOrProfessorLineState extends State<_WalkOrProfessorLine> {
   }
 }
 
-/// 카드 오른쪽 아래의 파란 버튼("길찾기 →", "시간표 →"). 높이 46.
+/// 카드 오른쪽 아래의 파란 버튼("길찾기 →", "시간표 →"). 높이 40.
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.label,
@@ -596,8 +564,8 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       pressedScale: 0.92,
       child: Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: gradient == null ? AppColors.blue : null,
           gradient: gradient,

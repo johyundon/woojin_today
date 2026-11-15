@@ -113,10 +113,15 @@ class _HomeNoticeBannerState extends State<HomeNoticeBanner> {
     return Padding(
       padding: widget.padding,
       child: Container(
-        height: 76,
+        height: 64,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        // 테두리는 내용 위에 그린다. 바탕(decoration)에 두면 흰 카드가 둥근
+        // 모서리의 테두리를 덮어 모서리만 테두리가 끊겨 보인다.
+        foregroundDecoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.line),
         ),
         clipBehavior: Clip.antiAlias,
@@ -188,8 +193,8 @@ class _BannerCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.blueSoft,
               borderRadius: BorderRadius.circular(12),
@@ -211,7 +216,7 @@ class _BannerCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: AppColors.blueText,
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -231,15 +236,15 @@ class _BannerCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Padding(
-                  // 오른쪽 아래 넘김 점과 겹치지 않게 조금 비운다.
-                  padding: const EdgeInsets.only(right: 34),
+                  // 오른쪽 아래 넘김 점(최대 5개, 폭 약 52)과 겹치지 않게 비운다.
+                  padding: const EdgeInsets.only(right: 56),
                   child: Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.textStrong,
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

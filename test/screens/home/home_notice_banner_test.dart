@@ -206,7 +206,7 @@ void main() {
                   .first,
             )
             .height,
-        76,
+        64,
       );
 
       await tester.pump(HomeNoticeBanner.autoSlide);

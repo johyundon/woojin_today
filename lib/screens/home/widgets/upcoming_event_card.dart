@@ -158,7 +158,9 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
     final event = _event;
     return HomeMiniCard(
       icon: Icons.event_rounded,
-      iconColor: AppColors.blue,
+      iconColor: Colors.white,
+      // Figma "03 홈": 남색 카드 위 반투명 흰 상자에 흰 아이콘.
+      iconBackground: Colors.white.withValues(alpha: 0.18),
       label: '다가오는 일정',
       labelColor: HomeV7Colors.onNavySub,
       title: event?.title ?? '예정된 일정이\n없어요',

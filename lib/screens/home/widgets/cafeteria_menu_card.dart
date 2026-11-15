@@ -28,6 +28,9 @@ class CafeteriaMenuCard extends StatefulWidget {
 }
 
 class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
+  /// 식당 이름 옆 가격 칩(숨김). 다시 보이려면 true로 바꾼다.
+  static const _showPrice = false;
+
   CafeteriaMenuItem? _item;
 
   @override
@@ -67,6 +70,8 @@ class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
       labelColor: AppColors.textStrong.withValues(alpha: 0.75),
       title: title,
       titleColor: HomeV7Colors.lunchTitle,
+      titleFontSize: 20,
+      titleMaxLines: 2,
       footer: item == null
           ? const Text('학식을 조회할 수 있어요', style: footerLabel)
           : Row(
@@ -79,26 +84,29 @@ class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
                     style: footerLabel,
                   ),
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    item.priceText,
-                    style: const TextStyle(
-                      color: HomeV7Colors.cardTitle,
-                      fontSize: 12,
-                      height: 1.4,
-                      fontWeight: FontWeight.w800,
+                // 가격 칩은 Figma "03 홈"에 없어 숨겼다.
+                if (_showPrice) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      item.priceText,
+                      style: const TextStyle(
+                        color: HomeV7Colors.cardTitle,
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
       backgroundColor: AppColors.blueSoft,

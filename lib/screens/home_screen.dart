@@ -131,6 +131,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<CourseCatalogItem> _enrolledCourses = const [];
   bool _timetableLoaded = false;
 
+  /// 내 시간표를 실제로 받아 왔는지. 세션이 없거나 실패하면 false라,
+  /// 오늘 수업이 비어 있어도 "공강" 인사말 대신 기본 인사말을 쓴다.
+  bool _todayClassesKnown = false;
+
   late final StudentInfoServiceBase _studentInfoService;
   StudentInfoResponse? _studentInfoData;
   bool _studentInfoLoading = true;
@@ -292,6 +296,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _todayClasses = todayClasses(courses: myTimetable.courses, now: _now());
         _enrolledCourses = myTimetable.courses;
         _timetableLoaded = true;
+        _todayClassesKnown = true;
       });
     } catch (e) {
       debugPrint('[Home] 오늘 수업 조회 실패: $e');
@@ -544,8 +549,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ? buildingForRoom(roomForSlot(_todayClasses[nextIndex - 1]))
         : null;
 
-    final greeting = !_timetableLoaded || _todayClasses.isEmpty
-        ? '오늘 하루도\n화이팅해요!'
+    final name = _studentInfoData?.name?.trim() ?? '';
+    final greeting = !_todayClassesKnown
+        ? '오늘 하루도\n화이팅 해요!'
+        : _todayClasses.isEmpty
+        ? (name.isEmpty ? '오늘은\n공강이에요!' : '$name님\n오늘은 공강이에요!')
         : remaining.isEmpty
         ? '오늘도\n수고했어요!'
         : '오늘은\n수업 ${remaining.length}개 남았어요!';
@@ -577,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 2, 18, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -600,10 +608,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       load: _loadBanner,
                       onOpenCalendar: _openCalendar,
                       now: _now,
-                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 7),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 17),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
@@ -614,8 +622,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 7,
+                                    horizontal: 8,
+                                    vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
                                     color: HomeV7Colors.dateBadge,
@@ -636,16 +644,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 // 잡아, 오른쪽 마스코트가 아래 카드를 덮지 않게 한다.
                                 Container(
                                   constraints: const BoxConstraints(
-                                    minHeight: 73,
+                                    minHeight: 60,
                                   ),
                                   padding: const EdgeInsets.only(right: 80),
                                   child: Text(
                                     greeting,
                                     style: const TextStyle(
                                       color: AppColors.inkNavy,
-                                      fontSize: 26,
-                                      height: 1.4,
-                                      letterSpacing: -0.91,
+                                      fontSize: 20,
+                                      height: 1.5,
+                                      letterSpacing: -0.6,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
@@ -656,13 +664,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           const Positioned(
                             right: -13,
                             top: 23,
-                            child: MascotSticker(width: 90, angle: 0.14),
+                            child: MascotSticker(width: 75, angle: 0.14),
                           ),
                         ],
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
                       child: NextClassCard(
                         next: next,
                         nowMinutes: nowMinutes,
@@ -687,7 +695,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                       child: Row(
                         children: [
                           Expanded(
@@ -699,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               onTap: _openCalendarFromEventCard,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: CafeteriaMenuCard(
                               now: now,

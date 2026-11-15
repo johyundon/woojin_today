@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../widgets/pressable.dart';
 
 /// 홈 화면 "다음 수업" 카드 아래 나란히 놓이는 작은 정사각 카드 (v7 디자인 12·13).
-/// 흰 네모 아이콘 + 라벨 → 제목(두 줄까지) → 맨 아래 [footer] 순서.
+/// 네모 아이콘 + 라벨 → 제목(세 줄까지) → 맨 아래 [footer] 순서.
 /// 바탕·글자 색을 받아서 남색 "학과 등수" 카드와 연한 파랑 "오늘 점심" 카드에 함께 쓴다.
 class HomeMiniCard extends StatelessWidget {
   const HomeMiniCard({
@@ -18,6 +18,9 @@ class HomeMiniCard extends StatelessWidget {
     required this.onTap,
     required this.backgroundColor,
     this.borderColor,
+    this.iconBackground = Colors.white,
+    this.titleFontSize = 16,
+    this.titleMaxLines = 3,
   });
 
   final IconData icon;
@@ -32,6 +35,14 @@ class HomeMiniCard extends StatelessWidget {
 
   /// 테두리 색. null이면 테두리 없음.
   final Color? borderColor;
+
+  /// 아이콘 상자 바탕색.
+  final Color iconBackground;
+
+  /// 제목 글자 크기·최대 줄 수. Figma "03 홈"에서 일정 카드는 16·세 줄,
+  /// 점심 카드는 20·두 줄이다.
+  final double titleFontSize;
+  final int titleMaxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -52,13 +63,13 @@ class HomeMiniCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    color: iconBackground,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, size: 17, color: iconColor),
+                  child: Icon(icon, size: 16, color: iconColor),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -79,13 +90,13 @@ class HomeMiniCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
-              maxLines: 2,
+              maxLines: titleMaxLines,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: titleColor,
-                fontSize: 18,
-                height: 1.4,
-                letterSpacing: -0.54,
+                fontSize: titleFontSize,
+                height: titleFontSize >= 20 ? 1.4 : 1.5,
+                letterSpacing: -titleFontSize * 0.02,
                 fontWeight: FontWeight.w700,
               ),
             ),

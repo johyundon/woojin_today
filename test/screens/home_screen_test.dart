@@ -64,7 +64,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('인사말(오늘은 수업 N개 남았어요!/오늘 하루도 화이팅해요!)', () {
+  group('인사말(오늘은 수업 N개 남았어요!/오늘 하루도 화이팅 해요!)', () {
     // 날씨 조회는 이 그룹의 관심사가 아니므로, 전부 같은 성공 응답으로 고정해
     // 실제 네트워크 호출 없이 끝내고 greeting 로직만 분리해서 본다.
     WeatherService fakeWeatherService() => WeatherService(
@@ -126,7 +126,7 @@ void main() {
 
       expect(find.text('오늘은\n수업 1개 남았어요!'), findsOneWidget);
       expect(find.text('자료구조'), findsOneWidget);
-      expect(find.text('오늘 하루도\n화이팅해요!'), findsNothing);
+      expect(find.text('오늘 하루도\n화이팅 해요!'), findsNothing);
     });
 
     testWidgets('다음 수업 강의실 건물을 못 찾으면 걷는 거리 대신 교수님 이름을 보여준다', (tester) async {
@@ -223,7 +223,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘 하루도\n화이팅해요!'), findsOneWidget);
+      expect(find.text('오늘 하루도\n화이팅 해요!'), findsOneWidget);
     });
 
     testWidgets('세션은 있지만 오늘 수업이 모두 끝났으면 그 안내 문구를 보여준다', (tester) async {
@@ -249,6 +249,35 @@ void main() {
       expect(find.text('오늘도\n수고했어요!'), findsOneWidget);
     });
 
+    testWidgets('시간표를 받았는데 오늘 수업이 없으면 공강 인사말과 "수업 없음" 카드를 보여준다', (
+      tester,
+    ) async {
+      final timetableClient = MockClient(
+        (request) async => http.Response.bytes(timetableFixtureBytes(), 200),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            weatherService: fakeWeatherService(),
+            jsessionId: 'JSESSION123',
+            wmonid: 'WMONID123',
+            userId2: 'REAL_USER_UID',
+            myTimetableService: MyTimetableService(client: timetableClient),
+            studentInfoService: fakeStudentInfoService(),
+            // 일요일: 시간표(화요일 수업)에 오늘 수업이 없다. 학생 이름은
+            // 못 받았으므로(404) 이름 없이 나온다.
+            now: () => DateTime(2026, 10, 11, 10, 0),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('오늘은\n공강이에요!'), findsOneWidget);
+      expect(find.text('수업 없음'), findsOneWidget);
+      expect(find.text('오늘 하루 푹 쉬어요.'), findsOneWidget);
+    });
+
     testWidgets('서비스 호출 중 예외가 발생해도 앱이 죽지 않고 원래 문구로 폴백한다', (tester) async {
       final timetableClient = MockClient(
         (request) async => http.Response('Internal Server Error', 500),
@@ -269,7 +298,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('오늘 하루도\n화이팅해요!'), findsOneWidget);
+      expect(find.text('오늘 하루도\n화이팅 해요!'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
