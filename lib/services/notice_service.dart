@@ -22,6 +22,9 @@ enum NoticeBoard {
   /// 장학공지(게시판 193). 로그인 불필요.
   scholarship('/daejin/1004/subview.do', NoticeTag.scholarship),
 
+  /// 취업공지(게시판 194). 로그인 불필요.
+  career('/daejin/1005/subview.do', NoticeTag.career),
+
   /// 종합강의시간표 공지. **로그인한 사람만** 볼 수 있다 — 로그인 정보 없이
   /// 요청하면 상태 200에 "접근 권한이 없습니다."만 담겨 온다(2026-11-06 직접
   /// 확인). 그래서 로그인 때 홈페이지가 준 쿠키를 실어 보낸다([NoticeService.new]).

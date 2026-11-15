@@ -31,6 +31,7 @@ class _FakeNotices implements NoticeServiceBase {
     ),
   ];
   List<NoticeItem> scholarship = const [];
+  List<NoticeItem> career = const [];
   final boards = <NoticeBoard>[];
   final forceFlags = <bool>[];
   final detailCalls = <String>[];
@@ -65,6 +66,7 @@ class _FakeNotices implements NoticeServiceBase {
       return general;
     }
     if (board == NoticeBoard.scholarship) return scholarship;
+    if (board == NoticeBoard.career) return career;
     if (board == NoticeBoard.mileage) {
       return const [
         NoticeItem(
@@ -210,9 +212,15 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('놓치면 안 되는 공지'), findsOneWidget);
     expect(find.text('새 글 2개'), findsOneWidget);
-    for (final label in ['전체', '학사', '일반', '장학']) {
+    final labels = ['전체', '일반', '학사', '장학', '취업'];
+    for (final label in labels) {
       expect(find.text(label), findsWidgets);
     }
+    // 칩은 전체 → 일반 → 학사 → 장학 → 취업 순서로 놓인다.
+    final lefts = [
+      for (final label in labels) tester.getTopLeft(find.text(label).first).dx,
+    ];
+    expect(lefts, [...lefts]..sort());
     expect(find.text('마일리지'), findsNothing);
     expect(find.text('학과'), findsNothing);
     expect(find.text('행사'), findsNothing);
@@ -282,6 +290,28 @@ void main() {
     expect(find.text('2026학년도 1학기 마일리지장학 대상자 공지'), findsNothing);
   });
 
+  testWidgets('취업 칩을 누르면 취업 공지만 보인다', (tester) async {
+    final service = _FakeNotices()
+      ..career = const [
+        NoticeItem(
+          title: '[추천채용] 기술엔지니어 모집',
+          author: '취업지원팀',
+          date: '2026.11.04',
+          viewCount: 30,
+          tag: NoticeTag.career,
+          detailPath: '/c1',
+        ),
+      ];
+    await _pump(tester, service);
+    expect(service.boards, contains(NoticeBoard.career));
+
+    await tester.ensureVisible(find.text('취업').first);
+    await tester.tap(find.text('취업').first);
+    await tester.pumpAndSettle();
+    expect(find.text('[추천채용] 기술엔지니어 모집'), findsOneWidget);
+    expect(find.text('부·복수전공 이수신청 안내'), findsNothing);
+  });
+
   testWidgets('공지를 열면 실제 본문과 첨부파일이 보이고, 새 글 개수가 줄어 유지된다', (tester) async {
     final service = _FakeNotices();
     await _pump(tester, service);
@@ -339,11 +369,11 @@ void main() {
   testWidgets('당겨서 새로고침하면 캐시를 무시하고 새로 받는다', (tester) async {
     final service = _FakeNotices();
     await _pump(tester, service);
-    expect(service.forceFlags, [false, false, false]);
+    expect(service.forceFlags, [false, false, false, false]);
 
     await tester.fling(find.text('부·복수전공 이수신청 안내'), const Offset(0, 400), 1000);
     await tester.pumpAndSettle();
-    expect(service.forceFlags.skip(3), [true, true, true]);
+    expect(service.forceFlags.skip(4), [true, true, true, true]);
   });
 
   testWidgets('"새 글 알림"은 기본 꺼짐이고, 저장된 값을 보여주며 끄면 저장된다', (tester) async {

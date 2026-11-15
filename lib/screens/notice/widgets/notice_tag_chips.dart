@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
 import '../models/notice_item.dart';
 
-/// 공지의 분류 칩 묶음 — "필독"(있으면, 파랑) + 분류(학사/일반/장학/마일리지/
+/// 공지의 분류 칩 묶음 — "필독"(있으면, 파랑) + 분류(학사/일반/장학/취업/마일리지/
 /// 종합강의시간표/학과/행사).
 /// 목록 카드가 쓴다(v7: 둥글기 8, 12px 굵은 글자).
 class NoticeTagChips extends StatelessWidget {
@@ -18,6 +18,7 @@ class NoticeTagChips extends StatelessWidget {
     NoticeTag.academic => AppColors.blue,
     NoticeTag.general => _eventBackground,
     NoticeTag.scholarship => AppColors.blueSoft,
+    NoticeTag.career => AppColors.blueSoft,
     NoticeTag.mileage => AppColors.blueSoft,
     NoticeTag.timetable => AppColors.blueSoft,
     NoticeTag.department => AppColors.blueSoft,
@@ -30,6 +31,7 @@ class NoticeTagChips extends StatelessWidget {
     NoticeTag.timetable ||
     NoticeTag.department => AppColors.blue,
     NoticeTag.general ||
+    NoticeTag.career ||
     NoticeTag.mileage ||
     NoticeTag.event => AppColors.textStrong,
   };

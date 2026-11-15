@@ -55,9 +55,10 @@ class _NoticeScreenState extends State<NoticeScreen> {
   /// 종합강의시간표는 로그인해야 읽을 수 있어서, 로그인하지 않았으면 빈 칩이
   /// 되지 않게 숨긴다.
   late final List<NoticeTag> _visibleTags = [
-    NoticeTag.academic,
     NoticeTag.general,
+    NoticeTag.academic,
     NoticeTag.scholarship,
+    NoticeTag.career,
     if (_loginCookie != null) NoticeTag.timetable,
   ];
 
@@ -172,6 +173,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
               NoticeBoard.academic => '학사공지',
               NoticeBoard.general => '일반공지',
               NoticeBoard.scholarship => '장학공지',
+              NoticeBoard.career => '취업공지',
               NoticeBoard.mileage => '마일리지장학 공지',
               NoticeBoard.timetable =>
                 loginExpired ? '종합강의시간표 공지(다시 로그인 필요)' : '종합강의시간표 공지',

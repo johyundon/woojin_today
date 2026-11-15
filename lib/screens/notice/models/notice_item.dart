@@ -5,6 +5,7 @@ enum NoticeTag {
   academic('학사'),
   general('일반'),
   scholarship('장학'),
+  career('취업'),
   mileage('마일리지'),
   timetable('종합강의시간표'),
   department('학과'),

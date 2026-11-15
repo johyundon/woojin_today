@@ -52,6 +52,7 @@ class _FakeNotices implements NoticeServiceBase {
       ],
       NoticeBoard.general ||
       NoticeBoard.scholarship ||
+      NoticeBoard.career ||
       NoticeBoard.timetable => const [],
     };
   }
