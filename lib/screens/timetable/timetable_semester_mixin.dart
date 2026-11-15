@@ -1,13 +1,14 @@
 part of 'timetable_screen.dart';
 
-/// 현재 학기를 추정한다. home_screen.dart의 `_estimateCurrentSemester`와
+/// 현재 학기를 추정한다(2~7월 1학기, 8~12월 2학기, 1월 전년도 2학기 —
+/// 사용자 결정, 2026-11-15). home_screen.dart의 `_estimateCurrentSemester`와
 /// 로직이 같지만, 그쪽은 private(화면 파일 밖에서 재사용 불가)이라 이 화면
 /// 전용으로 똑같이 작게 복제했다 — 이 화면 하나를 위해 홈 화면 파일을
 /// 건드리고 싶지 않았다.
 ({int year, int semester}) _estimateCurrentSemester(DateTime now) {
-  if (now.month >= 3 && now.month <= 8) {
+  if (now.month >= 2 && now.month <= 7) {
     return (year: now.year, semester: 1);
-  } else if (now.month >= 9 && now.month <= 12) {
+  } else if (now.month >= 8) {
     return (year: now.year, semester: 2);
   } else {
     return (year: now.year - 1, semester: 2);
