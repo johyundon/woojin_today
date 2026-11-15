@@ -190,9 +190,9 @@ class TimetableGrid extends StatelessWidget {
   Widget _positionedRemoveButton(CourseBlockLayout layout, double columnWidth) {
     const hitSize = 44.0;
     const badgeSize = 18.0;
-    // 블록의 보이는 오른쪽 위 모서리에서 오른쪽으로 2, 위로 2 더 나가게 둔다
-    // (블록 바깥 여백 2만큼, 사용자 요청 2026-11-16).
-    const inset = 0.0;
+    // 블록의 보이는 오른쪽 위 모서리에서 오른쪽으로 5, 위로 5 나가게 둔다
+    // (사용자 요청 2026-11-16: 모서리에 걸치도록 더 바깥으로).
+    const inset = -3.0;
     final columnIndex = gridColumnIndexOf(layout.day)!;
     final blockLeft = _hourLabelColumnWidth + columnIndex * columnWidth;
     final top = _minutesToY(layout.startMinutes);

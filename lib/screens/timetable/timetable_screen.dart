@@ -159,6 +159,10 @@ class _TimetableScreenState extends State<TimetableScreen>
     }
   }
 
+  /// 햄버거를 눌렀을 때 예전 ⋮ 메뉴 시트(불러오기·자동 생성·저장·저장 목록)를
+  /// 띄울지. 지금은 저장한 시간표 목록을 바로 연다(안 쓰지만 남겨 둔다).
+  static const bool _useMoreMenu = false;
+
   /// "시간표 만들기" 편집 화면인지(과목 추가 시트가 열려 있음, 새 상단에서만).
   bool get _editMode => _useFigmaTopBar && _addPanelOpen;
 
@@ -537,7 +541,9 @@ class _TimetableScreenState extends State<TimetableScreen>
                   semesterLabel: '$_year년 $_semester학기',
                   semesterKey: _headerKey,
                   onSemesterTap: _openSemesterMenu,
-                  onMoreTap: _openMoreMenu,
+                  // 햄버거는 예전처럼 저장한 시간표 목록을 바로 연다(사용자 요청,
+                  // 2026-11-16). 불러오기·자동 생성·저장은 "시간표 만들기" 화면에 있다.
+                  onMoreTap: _useMoreMenu ? _openMoreMenu : _openSavedList,
                   // 시안: 시간표가 비어 있으면 연필 대신 "시간표 만들기" 버튼.
                   // 과목 추가 창이 열려 있으면 닫을 수 있게 연필을 둔다.
                   onEditTap: _confirmedCourses.isEmpty && !_addPanelOpen

@@ -152,15 +152,21 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
-/// 새 상단의 ⋮ 메뉴를 연다("내 시간표 불러오기"·"자동 생성"·"저장"이 여기 있다).
+/// 불러오기·자동 생성·저장은 "시간표 만들기" 화면에 있다(햄버거는 저장 목록만
+/// 연다, 2026-11-16). 연필(빈 시간표면 "시간표 만들기" 버튼)로 들어간다.
 Future<void> _openMore(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('timetable-more')));
+  final edit = find.byKey(const ValueKey('timetable-edit'));
+  await tester.tap(
+    edit.evaluate().isNotEmpty
+        ? edit
+        : find.byKey(const ValueKey('timetable-create')),
+  );
   await tester.pumpAndSettle();
 }
 
-/// 열린 ⋮ 메뉴를 바깥을 눌러 닫는다.
+/// "시간표 만들기" 화면을 뒤로가기로 닫는다.
 Future<void> _closeMore(WidgetTester tester) async {
-  await tester.tapAt(const Offset(10, 10));
+  await tester.tap(find.byKey(const ValueKey('timetable-edit-back')));
   await tester.pumpAndSettle();
 }
 
@@ -299,11 +305,8 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     expect(find.text('아직 시간표가 나오지 않았어요'), findsNothing);
-    // 시간표가 안 나온 학기라 ⋮ 메뉴에 내 시간표 불러오기가 없고, 학교에도
-    // 묻지 않았다.
-    await _openMore(tester);
-    expect(find.text('내 시간표 불러오기'), findsNothing);
-    await _closeMore(tester);
+    // 시간표가 안 나온 학기라 학교에 묻지 않았다("시간표 만들기" 화면의 내 시간표
+    // 불러오기 버튼은 시안대로 늘 보인다, 2026-11-16).
     expect(service.calls, 1); // 처음 화면을 열 때(2026년 2학기) 한 번뿐
   });
 

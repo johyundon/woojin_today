@@ -104,9 +104,15 @@ class _EmptyCatalog implements CourseCatalogServiceBase {
   }) async => [];
 }
 
-/// 새 상단의 ⋮ 메뉴를 연다("내 시간표 불러오기"·"자동 생성"·"저장"이 여기 있다).
+/// 불러오기·자동 생성·저장은 "시간표 만들기" 화면에 있다(햄버거는 저장 목록만
+/// 연다, 2026-11-16). 연필(빈 시간표면 "시간표 만들기" 버튼)로 들어간다.
 Future<void> _openMore(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('timetable-more')));
+  final edit = find.byKey(const ValueKey('timetable-edit'));
+  await tester.tap(
+    edit.evaluate().isNotEmpty
+        ? edit
+        : find.byKey(const ValueKey('timetable-create')),
+  );
   await tester.pumpAndSettle();
 }
 
