@@ -316,7 +316,8 @@ class CalendarExpandedGrid extends StatelessWidget {
                     '+$hidden',
                     style: const TextStyle(
                       color: AppColors.textSub,
-                      fontSize: 11,
+                      // 사용자 요청으로 11 → 9.5(2026-11-15).
+                      fontSize: 9.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
