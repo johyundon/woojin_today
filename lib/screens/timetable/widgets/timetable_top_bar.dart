@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../theme/app_colors.dart';
 import '../../../widgets/pressable.dart';
@@ -85,15 +86,21 @@ class TimetableTopBar extends StatelessWidget {
               onTap: onEdit,
               // 시안(2152-1429 "만든 후 상태")의 연필: 테두리만 있는 둥근 네모 위에
               // 꽉 찬 연필이 걸친 모양, 짙은 회색(2026-11-16). 누르는 범위는 40.
-              child: const SizedBox(
+              child: SizedBox(
                 width: 40,
                 height: 40,
                 child: Center(
-                  // 시안과 같은 Material "edit_square" 아이콘(사용자 요청, 2026-11-16).
-                  child: Icon(
-                    Icons.edit_square,
-                    size: 22,
-                    color: AppColors.textBody,
+                  // 시안과 같은 Material Symbols "edit_square"(네모는 테두리만, 연필은
+                  // 칠함). Flutter 기본 Icons.edit_square는 네모 안이 검게 칠해진
+                  // 옛 모양이라 쓰지 않는다(2026-11-16).
+                  child: SvgPicture.string(
+                    _editSquareSvg,
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                      AppColors.textBody,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
               ),
@@ -200,3 +207,11 @@ Future<TimetableMoreAction?> showTimetableMoreSheet(
     ),
   );
 }
+
+/// Material Symbols "edit_square"(채움, 굵기 400). 네모 테두리 + 칠한 연필.
+const String _editSquareSvg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">'
+    '<path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h357'
+    'l-80 80H200v560h560v-278l80-80v358q0 33-23.5 56.5T760-120H200Zm280-360Z'
+    'M360-360v-170l367-367q12-12 27-18t30-6q16 0 30.5 6t26.5 18l56 57q11 12 17 '
+    '26.5t6 29.5q0 15-5.5 29.5T897-728L530-360H360Z"/></svg>';
