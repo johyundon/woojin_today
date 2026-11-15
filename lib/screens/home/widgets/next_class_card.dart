@@ -603,6 +603,10 @@ class _ActionButton extends StatelessWidget {
 class _TicketDivider extends StatelessWidget {
   const _TicketDivider();
 
+  /// 점선 양 끝의 반원 홈. 배경색으로 카드 테두리를 덮어 선이 끊겨 보이고
+  /// Figma "03-2 홈 · 수업 없음"에도 없어 숨겼다. 다시 보이려면 true로.
+  static const _showNotches = false;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -630,20 +634,21 @@ class _TicketDivider extends StatelessWidget {
               },
             ),
           ),
-          for (final left in [true, false])
-            Positioned(
-              top: -10.5,
-              left: left ? -10 : null,
-              right: left ? null : -10,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                  color: AppColors.canvas,
-                  shape: BoxShape.circle,
+          if (_showNotches)
+            for (final left in [true, false])
+              Positioned(
+                top: -10.5,
+                left: left ? -10 : null,
+                right: left ? null : -10,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: AppColors.canvas,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
-            ),
         ],
       ),
     );
