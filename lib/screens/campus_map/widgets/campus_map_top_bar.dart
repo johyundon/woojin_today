@@ -15,12 +15,9 @@ class CampusMapCategory {
   final List<String> places;
 }
 
-/// 위쪽에 보이는 칩. 누르면 지도에 그 종류 장소만 핀으로 띄운다.
-const List<CampusMapCategory> campusMapCategories = [
-  // 정류장은 학교 안 정류장만. 정문(짭정문) 정류장은 학생회관에서 2km 넘게
-  // 떨어져 있어 뺐다.
-  CampusMapCategory('정류장', Icons.directions_bus_rounded, ['학생회관(교내순환)']),
-];
+/// 위쪽에 보이는 칩. 누르면 지도에 그 종류 장소만 핀으로 띄운다. 사용자
+/// 요청으로 지금은 하나도 없어서 칩 줄 자체가 안 보인다.
+const List<CampusMapCategory> campusMapCategories = [];
 
 /// 사용자 요청으로 지금은 숨겨 둔 칩. 다시 보이려면 [campusMapCategories]로
 /// 옮긴다.
@@ -28,6 +25,9 @@ const List<CampusMapCategory> campusMapCategories = [
 /// *** 미검증 *** 식당은 학식이 있는 학생회관과 에그2000만 넣었다. 기숙사
 /// 식당 등 건물 목록에 없는 곳은 빠져 있다.
 const List<CampusMapCategory> hiddenCampusMapCategories = [
+  // 정류장은 학교 안 정류장만. 정문(짭정문) 정류장은 학생회관에서 2km 넘게
+  // 떨어져 있어 뺐다.
+  CampusMapCategory('정류장', Icons.directions_bus_rounded, ['학생회관(교내순환)']),
   CampusMapCategory('편의시설', Icons.local_cafe_rounded, [
     '학생회관 CU',
     '여자기숙사 CU',
@@ -127,22 +127,24 @@ class CampusMapTopBar extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var i = 0; i < campusMapCategories.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                _CategoryChip(
-                  category: campusMapCategories[i],
-                  selected: selectedCategory == i,
-                  onTap: () => onCategoryTap(i),
-                ),
+        if (campusMapCategories.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var i = 0; i < campusMapCategories.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  _CategoryChip(
+                    category: campusMapCategories[i],
+                    selected: selectedCategory == i,
+                    onTap: () => onCategoryTap(i),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

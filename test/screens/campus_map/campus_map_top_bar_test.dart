@@ -6,9 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:daejin_app/screens/campus_map/widgets/campus_map_top_bar.dart';
 
 void main() {
-  testWidgets('검색창과 정류장 칩이 보이고, 누르면 알려 준다', (tester) async {
+  testWidgets('검색창만 보이고 칩은 없다, 검색창을 누르면 알려 준다', (tester) async {
     var searchTaps = 0;
-    int? tappedChip;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -16,24 +15,19 @@ void main() {
             onBack: () {},
             onTapSearch: () => searchTaps++,
             selectedCategory: null,
-            onCategoryTap: (i) => tappedChip = i,
+            onCategoryTap: (_) {},
           ),
         ),
       ),
     );
 
     expect(find.text(CampusMapTopBar.searchHint), findsOneWidget);
-    for (final c in campusMapCategories) {
-      expect(find.text(c.label), findsOneWidget);
+    for (final c in hiddenCampusMapCategories) {
+      expect(find.text(c.label), findsNothing);
     }
 
     await tester.tap(find.text(CampusMapTopBar.searchHint));
-    await tester.tap(find.text('정류장'));
     await tester.pumpAndSettle();
-
     expect(searchTaps, 1);
-    expect(tappedChip, 0);
-    expect(find.text('편의시설'), findsNothing);
-    expect(find.text('식당'), findsNothing);
   });
 }
