@@ -15,7 +15,6 @@ class CourseAddPanel extends StatelessWidget {
     required this.onClose,
     this.onHandleDragUpdate,
     this.onHandleDragEnd,
-    this.headerScrollable = false,
   });
 
   final Widget searchFilterBar;
@@ -28,11 +27,6 @@ class CourseAddPanel extends StatelessWidget {
 
   /// 손잡이 끌기를 놓았을 때의 세로 속도(아래가 +).
   final ValueChanged<double>? onHandleDragEnd;
-
-  /// 필터를 펼쳐 [searchFilterBar]가 길어졌을 때 true. 그때만 그 부분을 스크롤되는
-  /// 칸에 담아, 시트가 낮아도 넘치지 않고 밀어서 볼 수 있게 한다(평소엔 목록이
-  /// 남는 높이를 다 쓴다).
-  final bool headerScrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -85,26 +79,18 @@ class CourseAddPanel extends StatelessWidget {
               ),
             ),
           ),
-          if (headerScrollable)
-            // 필터를 펼치면 이 부분이 길어진다. 시트가 낮을 때도 넘치지 않고 밀어서
-            // 볼 수 있게 스크롤되는 칸에 담는다(사용자 지적, 2026-11-16).
-            // Flexible로 나누면 필터가 자기 몫(절반)을 다 안 써도 남는 높이가
-            // 목록으로 안 넘어가 아래에 흰 빈칸이 생겨서, 최대 높이만 걸고 남는
-            // 높이는 전부 목록(Expanded)이 쓰게 한다.
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: panelHeight * 0.5),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: searchFilterBar,
-                ),
+          // 검색창·필터 부분은 시트 높이의 절반까지만 쓰고, 넘치면 그 안에서
+          // 민다. 시트를 15%까지 낮추거나 필터를 펼쳐도 넘치지 않는다
+          // (사용자 지적, 2026-11-16). 남는 높이는 전부 목록이 쓴다.
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: panelHeight * 0.5),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: searchFilterBar,
               ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: searchFilterBar,
             ),
+          ),
           const SizedBox(height: 12),
           Expanded(child: results),
         ],

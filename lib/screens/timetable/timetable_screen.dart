@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -166,10 +168,15 @@ class _TimetableScreenState extends State<TimetableScreen>
   /// "시간표 만들기" 편집 화면인지(과목 추가 시트가 열려 있음, 새 상단에서만).
   bool get _editMode => _useFigmaTopBar && _addPanelOpen;
 
-  /// 시트 높이(화면 높이 비율). 시안(2272-18343)의 최소·최대.
-  static const double _sheetMinFraction = 0.30;
-  static const double _sheetMaxFraction = 0.61;
-  double _sheetFraction = _sheetMinFraction;
+  /// 시트가 멈추는 높이(화면 높이 비율, 낮은 것부터). 피드백 반영
+  /// (2026-11-16): 15%·25%·50%·90%. 예전 시안(2272-18343)은 30%·61% 두 단계.
+  static const List<double> _sheetStops = [0.15, 0.25, 0.5, 0.9];
+  static const double _sheetMinFraction = 0.15;
+  static const double _sheetMaxFraction = 0.9;
+
+  /// 시간표 만들기를 열 때(과목 블록을 눌러 열 때도) 시트 높이.
+  static const double _sheetStartFraction = 0.25;
+  double _sheetFraction = _sheetStartFraction;
 
   void _onSheetDragUpdate(double dy) {
     final h = MediaQuery.sizeOf(context).height;
@@ -181,13 +188,44 @@ class _TimetableScreenState extends State<TimetableScreen>
     });
   }
 
-  /// 손을 떼면 최소·최대 중 가까운 쪽(빠르게 튕기면 그 방향)으로 붙인다.
+  /// 펼친 과목 줄(담기·강의계획서 버튼 포함).
+  final _expandedTileKey = GlobalKey();
+
+  /// 시트가 낮으면(15%·25%) 펼친 과목의 버튼이 목록 아래로 밀려 안 보여서,
+  /// 펼친 줄 아래 끝이 보이게 목록을 살짝 올린다.
+  void _revealExpandedTile() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final tile = _expandedTileKey.currentContext;
+      if (!mounted || tile == null) return;
+      Scrollable.ensureVisible(
+        tile,
+        duration: const Duration(milliseconds: 200),
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
+  }
+
+  /// 손을 떼면 가장 가까운 멈춤 높이에 붙인다. 빠르게 튕기면(초당 300 넘게)
+  /// 그 방향의 다음 멈춤 높이로 간다.
   void _onSheetDragEnd(double velocity) {
-    final mid = (_sheetMinFraction + _sheetMaxFraction) / 2;
-    final goUp = velocity < -300 || (velocity <= 300 && _sheetFraction >= mid);
-    setState(
-      () => _sheetFraction = goUp ? _sheetMaxFraction : _sheetMinFraction,
-    );
+    final current = _sheetFraction;
+    double target;
+    if (velocity < -300) {
+      target = _sheetStops.firstWhere(
+        (s) => s > current + 0.01,
+        orElse: () => _sheetStops.last,
+      );
+    } else if (velocity > 300) {
+      target = _sheetStops.lastWhere(
+        (s) => s < current - 0.01,
+        orElse: () => _sheetStops.first,
+      );
+    } else {
+      target = _sheetStops.reduce(
+        (a, b) => (a - current).abs() <= (b - current).abs() ? a : b,
+      );
+    }
+    setState(() => _sheetFraction = target);
   }
 
   String get _creditsText {
@@ -352,7 +390,7 @@ class _TimetableScreenState extends State<TimetableScreen>
     setState(() {
       _addPanelOpen = open;
       if (open) {
-        _sheetFraction = _sheetMinFraction;
+        _sheetFraction = _sheetStartFraction;
         if (!wasOpen) _editStartCourses = _confirmedCourses;
       }
       if (!open) {
@@ -507,12 +545,13 @@ class _TimetableScreenState extends State<TimetableScreen>
     setState(() {
       _pinnedCourse = item;
       _expandedCourseKey = _courseKey(item);
-      // 시트는 최소 높이로 두고(사용자 요청, 2026-11-16), 목록을 맨 위로 올려
+      // 시트는 처음 높이로 두고(사용자 요청, 2026-11-16), 목록을 맨 위로 올려
       // 고른 과목이 바로 보이게 한다.
-      _sheetFraction = _sheetMinFraction;
+      _sheetFraction = _sheetStartFraction;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_resultsScroll.hasClients) _resultsScroll.jumpTo(0);
+      _revealExpandedTile();
     });
   }
 
@@ -607,8 +646,13 @@ class _TimetableScreenState extends State<TimetableScreen>
                     // 손잡이로 끌어 오간다. 격자 높이는 최소 높이만 비워 두고,
                     // 시트를 더 올리면 격자 위로 겹쳐 덮는다(시안 "최대").
                     final screenHeight = MediaQuery.sizeOf(context).height;
+                    // 90%는 상단 바 아래 영역보다 클 수 있어, 손잡이가 잘리지
+                    // 않게 그 영역 높이를 넘지 않게 한다.
                     final panelHeight = _useFigmaTopBar
-                        ? screenHeight * _sheetFraction
+                        ? math.min(
+                            screenHeight * _sheetFraction,
+                            constraints.maxHeight,
+                          )
                         : constraints.maxHeight * 0.75;
                     final reserveHeight = _useFigmaTopBar
                         ? screenHeight * _sheetMinFraction
@@ -818,7 +862,6 @@ class _TimetableScreenState extends State<TimetableScreen>
       // 새 화면에서는 손잡이로 시트 높이를 최소~최대 사이로 바꾼다(닫기는 뒤로가기).
       onHandleDragUpdate: _useFigmaTopBar ? _onSheetDragUpdate : null,
       onHandleDragEnd: _useFigmaTopBar ? _onSheetDragEnd : null,
-      headerScrollable: _filterPanelOpen,
       searchFilterBar: SearchFilterBar(
         controller: _searchController,
         focusNode: _searchFocusNode,
@@ -911,15 +954,20 @@ class _TimetableScreenState extends State<TimetableScreen>
         itemBuilder: (context, index) {
           final item = items[index];
           final key = _courseKey(item);
+          final expanded = _expandedCourseKey == key;
           return CourseResultTile(
-            key: ValueKey('course-tile-$key'),
+            key: expanded ? _expandedTileKey : ValueKey('course-tile-$key'),
             course: item,
-            expanded: _expandedCourseKey == key,
+            expanded: expanded,
             alreadyAdded: _isAdded(item),
             highlighted: pinnedKey == key,
-            onTap: () => setState(
-              () => _expandedCourseKey = _expandedCourseKey == key ? null : key,
-            ),
+            onTap: () {
+              setState(
+                () =>
+                    _expandedCourseKey = _expandedCourseKey == key ? null : key,
+              );
+              if (_expandedCourseKey == key) _revealExpandedTile();
+            },
             onAdd: () => _addCourse(item),
             onViewSyllabus: () => _openSyllabus(item),
           );

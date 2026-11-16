@@ -115,7 +115,9 @@ void main() {
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
   });
 
-  testWidgets('시간표 만들기 화면: 상단·버튼이 바뀌고, 손잡이로 시트를 최소~최대로 끈다', (tester) async {
+  testWidgets('시간표 만들기 화면: 상단·버튼이 바뀌고, 손잡이로 시트를 15·25·50·90%에 멈춘다', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
@@ -130,18 +132,41 @@ void main() {
     expect(find.text('자동 생성'), findsOneWidget);
     expect(find.text('내 시간표 불러오기'), findsOneWidget);
 
+    // 화면 높이 844 기준. 시트 맨 위(손잡이)와 검색창 사이 거리는 늘 같으니,
+    // 검색창 위치로 시트 높이를 잰다. 처음엔 25%.
     final search = find.text('과목코드, 교수명, 과목명 검색');
-    final minTop = tester.getTopLeft(search).dy;
-    // 손잡이(검색창 바로 위)를 위로 끌면 시트가 최대로 올라간다.
-    await tester.dragFrom(
+    final startTop = tester.getTopLeft(search).dy;
+    double sheetHeight() =>
+        844 * 0.25 + (startTop - tester.getTopLeft(search).dy);
+    Future<void> flick(double dy) async {
+      await tester.timedDragFrom(
+        tester.getTopLeft(search) + const Offset(150, -20),
+        Offset(0, dy),
+        const Duration(milliseconds: 60),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await flick(-40); // 빠르게 위로 → 다음 멈춤(50%)
+    expect(sheetHeight(), closeTo(844 * 0.5, 2));
+    await flick(-40); // → 90%(상단 바 아래 영역을 넘으면 그 높이까지)
+    expect(sheetHeight(), greaterThan(844 * 0.85));
+    expect(tester.takeException(), isNull);
+    await flick(40); // 빠르게 아래로 → 50%
+    expect(sheetHeight(), closeTo(844 * 0.5, 2));
+    await flick(40); // → 25%
+    await flick(40); // → 15%
+    expect(sheetHeight(), closeTo(844 * 0.15, 2));
+    expect(tester.takeException(), isNull);
+
+    // 천천히 끌다 놓으면 가장 가까운 멈춤(15%에서 약 200 올리면 → 40% 근처 → 50%).
+    await tester.timedDragFrom(
       tester.getTopLeft(search) + const Offset(150, -20),
-      const Offset(0, -300),
+      const Offset(0, -200),
+      const Duration(seconds: 2),
     );
     await tester.pumpAndSettle();
-    final maxTop = tester.getTopLeft(search).dy;
-    expect(maxTop, lessThan(minTop - 200));
-    // 시트 높이 차이는 화면의 31%(844 * 0.31 ≈ 262)쯤이다.
-    expect(minTop - maxTop, closeTo(844 * 0.31, 2));
+    expect(sheetHeight(), closeTo(844 * 0.5, 2));
 
     // 뒤로가기로 닫으면 원래 시간표 상단으로 돌아온다.
     await _tapAddCourse(tester);
