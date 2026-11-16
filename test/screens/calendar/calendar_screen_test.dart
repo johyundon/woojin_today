@@ -313,13 +313,27 @@ void main() {
     // 숨겼다(코드는 남김, 2026-11-15). 다시 켜면 이 테스트도 다시 켠다.
   }, skip: true);
 
-  testWidgets('펼친 달력에서 일정 막대를 누르면 그 일정의 상세 팝업이 뜬다', (tester) async {
+  testWidgets('달력의 일정 막대를 누르면 그날 일정 목록이 나오고, 카드를 누르면 상세 팝업이 뜬다', (
+    tester,
+  ) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
-    await tester.drag(find.text('15').first, const Offset(0, 200));
-    await tester.pumpAndSettle();
     expect(find.byType(CalendarExpandedGrid), findsOneWidget);
 
-    await tester.tap(_card('왕방축제').first);
+    // 막대를 누르면 팝업 대신 그날(14일)을 고르고 아래 일정 목록으로 내려간다
+    // (47a1213). 오늘 날짜와 상관없이 같은 결과가 나오도록 막대를 직접 누른다.
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(CalendarExpandedGrid),
+            matching: find.text('왕방축제'),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('일정 1개'), findsOneWidget);
+    expect(_card('왕방축제'), findsOneWidget);
+
+    await tester.tap(_card('왕방축제'));
     await tester.pumpAndSettle();
     expect(find.text('학교에서 등록한 일정은 수정, 삭제할 수 없어요'), findsOneWidget);
     expect(tester.takeException(), isNull);
