@@ -224,6 +224,27 @@ void main() {
     expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
   });
 
+  testWidgets('달력을 왼쪽으로 밀면 다음 달, 오른쪽으로 밀면 이전 달로 넘어간다', (tester) async {
+    await _pump(tester);
+    final now = DateTime.now();
+    final next = DateTime(now.year, now.month + 1);
+    final grid = find.byType(CalendarExpandedGrid);
+
+    await tester.fling(grid, const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('${next.year}년 ${next.month}월'), findsOneWidget);
+
+    await tester.fling(grid, const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
+
+    // 살짝 천천히 끌기만 하면 달이 바뀌지 않는다.
+    await tester.drag(grid, const Offset(-40, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('${now.year}년 ${now.month}월'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('날짜를 누르면 고르기만 하고, 일정 막대를 누르면 그날 일정 영역으로 내려간다', (tester) async {
     await _pump(tester, schedule: _FakeSchedule(_thisMonthSchedule()));
     expect(find.text('캘린더'), findsWidgets);

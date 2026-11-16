@@ -213,6 +213,17 @@ class _CalendarScreenState extends State<CalendarScreen>
 
   void _goToNextMonth() => _moveMonth(1);
 
+  /// 달력 좌우 스와이프. 손을 뗄 때 빠르기로 방향을 정하고, 살짝 건드린
+  /// 정도(초당 200 이하)는 무시한다.
+  void _onMonthSwipeEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity < -200) {
+      _goToNextMonth();
+    } else if (velocity > 200) {
+      _goToPreviousMonth();
+    }
+  }
+
   /// 달을 넘기면 그 달의 날짜를 하나 골라 둔다(오늘이 그 달이면 오늘, 아니면
   /// 1일) — 아래 일정 목록과 "+" 버튼이 항상 쓸 수 있게.
   void _moveMonth(int delta) {
@@ -950,14 +961,21 @@ class _CalendarScreenState extends State<CalendarScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               // 주 줄 높이는 그 주 일정 막대 수에 맞춘다(일정 없는 주는
               // 낮게, 사용자 요청 2026-11-15).
-              child: CalendarExpandedGrid(
-                focusedMonth: _focusedMonth,
-                events: _eventsInFocusedMonth,
-                selectedDay: selectedDay,
-                today: DateTime.now(),
-                onDaySelected: _onDaySelected,
-                onEventTap: _onScrollEventTap,
-                fitWeeksToContent: true,
+              // 달력을 좌우로 밀면 달을 넘긴다(왼쪽으로 밀면 다음 달, 오른쪽은
+              // 이전 달, 피드백 반영 2026-11-16). 세로 스크롤과는 따로 인식된다.
+              child: GestureDetector(
+                key: const ValueKey('calendar-month-swipe'),
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragEnd: _onMonthSwipeEnd,
+                child: CalendarExpandedGrid(
+                  focusedMonth: _focusedMonth,
+                  events: _eventsInFocusedMonth,
+                  selectedDay: selectedDay,
+                  today: DateTime.now(),
+                  onDaySelected: _onDaySelected,
+                  onEventTap: _onScrollEventTap,
+                  fitWeeksToContent: true,
+                ),
               ),
             ),
             const SizedBox(height: 12),
