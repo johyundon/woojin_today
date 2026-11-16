@@ -5,6 +5,7 @@ import '../../../theme/app_colors.dart';
 import '../../../utils/credit_format.dart';
 import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
+import 'course_detail_dialog.dart' show enrollmentLabel;
 
 /// 과목 추가 패널의 검색 결과 한 줄.
 ///
@@ -76,7 +77,7 @@ class CourseResultCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '담은인원 ${course.enrollmentRatio}',
+                  '담은인원 ${enrollmentLabel(course)}',
                   style: const TextStyle(
                     color: AppColors.textSub,
                     fontSize: 12,

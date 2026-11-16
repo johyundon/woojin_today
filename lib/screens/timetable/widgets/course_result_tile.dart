@@ -5,6 +5,7 @@ import '../../../theme/app_colors.dart';
 import '../../../utils/credit_format.dart';
 import '../../../widgets/pressable.dart';
 import '../timetable_colors.dart';
+import 'course_detail_dialog.dart' show enrollmentLabel;
 
 /// "시간표 만들기" 시트의 과목 한 줄(Figma 2272-19176, 2026-11-16).
 ///
@@ -50,12 +51,8 @@ class CourseResultTile extends StatelessWidget {
       height: 1.4,
     );
     final competition = _competition;
-    // 개설과목 목록 값이 있으면 그걸, 없으면(내 시간표 과목) 담은 인원/정원으로.
-    final enrollment = course.enrollmentRatio.trim().isNotEmpty
-        ? course.enrollmentRatio
-        : course.capacity > 0
-        ? '${course.waitlistCount}/${course.capacity}명'
-        : null;
+    // 담은 인원은 어디서나 "21/32명"(담은 사람/정원)으로. 정원을 모르면 숨긴다.
+    final enrollment = course.capacity > 0 ? enrollmentLabel(course) : null;
     return Container(
       decoration: highlighted
           ? BoxDecoration(
