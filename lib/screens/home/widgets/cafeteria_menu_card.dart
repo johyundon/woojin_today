@@ -71,6 +71,20 @@ class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
     _load();
   }
 
+  /// 홈은 매 분 새 시각을 넘겨준다. 날짜가 바뀌었으면(자정을 넘김) 그날 메뉴를
+  /// 새로 받는다. 같은 날이면 끼니만 [_meal]이 따라 바뀌고 다시 받지 않는다.
+  @override
+  void didUpdateWidget(CafeteriaMenuCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final before = oldWidget.now;
+    final now = widget.now;
+    if (before.year != now.year ||
+        before.month != now.month ||
+        before.day != now.day) {
+      _load();
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();

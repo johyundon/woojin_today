@@ -115,10 +115,31 @@ class UpcomingEventCard extends StatefulWidget {
 class _UpcomingEventCardState extends State<UpcomingEventCard> {
   UpcomingEvent? _event;
 
+  /// 처음 불러온 내 일정·학사일정. 시각이 바뀔 때마다 이 안에서 다시 고른다
+  /// (서버에 다시 요청하지 않는다).
+  List<CalendarEvent> _mine = const [];
+  List<AcademicScheduleItem> _academic = const [];
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  /// 홈은 매 분 새 시각을 넘겨준다. 일정이 끝나면 다음 일정이 보이도록 받아 둔
+  /// 목록에서 다시 고르고, 달이 바뀌었으면 새 달 학사일정까지 다시 불러온다.
+  @override
+  void didUpdateWidget(UpcomingEventCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final before = oldWidget.now;
+    final now = widget.now;
+    if (before.year != now.year || before.month != now.month) {
+      _load();
+    } else if (before != now) {
+      setState(() {
+        _event = pickUpcomingEvent(mine: _mine, academic: _academic, now: now);
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -145,6 +166,8 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
 
     if (!mounted) return;
     setState(() {
+      _mine = mine;
+      _academic = academic;
       _event = pickUpcomingEvent(
         mine: mine,
         academic: academic,

@@ -119,4 +119,37 @@ void main() {
     expect(mealAt(DateTime(2026, 11, 16, 14, 59)), CafeteriaMeal.lunch);
     expect(mealAt(DateTime(2026, 11, 16, 15)), CafeteriaMeal.dinner);
   });
+
+  testWidgets('같은 날에는 다시 받지 않고, 날짜가 바뀌면 그날 메뉴를 새로 받는다', (tester) async {
+    final service = _RecordingService();
+    Widget card(DateTime now) => MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 180,
+          child: CafeteriaMenuCard(now: now, onTap: () {}, service: service),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(card(DateTime(2026, 11, 16, 11)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(card(DateTime(2026, 11, 16, 11, 1)));
+    await tester.pumpAndSettle();
+    expect(service.dates, [DateTime(2026, 11, 16, 11)]);
+
+    await tester.pumpWidget(card(DateTime(2026, 11, 17, 0, 0)));
+    await tester.pumpAndSettle();
+    expect(service.dates.last, DateTime(2026, 11, 17));
+  });
+}
+
+/// 어느 날짜 메뉴를 요청했는지 적어 둔다.
+class _RecordingService implements CafeteriaMenuServiceBase {
+  final dates = <DateTime>[];
+
+  @override
+  Future<DailyCafeteriaMenu> fetchMenu(DateTime date) async {
+    dates.add(date);
+    return const DailyCafeteriaMenu();
+  }
 }

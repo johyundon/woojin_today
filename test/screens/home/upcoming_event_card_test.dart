@@ -2,10 +2,13 @@
 // 가까운 일정을 고르고, 남은 날을 "D-3 · 11.11(수)"처럼 보여준다.
 
 import 'package:daejin_app/screens/calendar/models/calendar_event.dart';
+import 'package:daejin_app/screens/calendar/services/calendar_event_storage.dart';
 import 'package:daejin_app/screens/home/widgets/upcoming_event_card.dart';
 import 'package:daejin_app/services/academic_schedule_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 final _now = DateTime(2026, 11, 8, 9); // 일요일
 
@@ -115,4 +118,51 @@ void main() {
       expect(upcomingEventFooter(e, _now), '진행 중 · ~11.12');
     });
   });
+
+  testWidgets('홈이 넘겨주는 날짜가 바뀌면 받아 둔 일정 중에서 다시 고른다', (tester) async {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    final storage = CalendarEventStorage(userId: 'card-test');
+    await storage.saveAll([
+      _mine('오늘 일정', DateTime(2026, 11, 8)),
+      _mine('다음 일정', DateTime(2026, 11, 10), id: 'local-2'),
+    ]);
+    final schedule = _CountingSchedule();
+
+    Widget card(DateTime now) => MaterialApp(
+      home: Scaffold(
+        body: UpcomingEventCard(
+          now: now,
+          onTap: () {},
+          storage: storage,
+          schedule: schedule,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(card(DateTime(2026, 11, 8, 23, 59)));
+    await tester.pumpAndSettle();
+    expect(find.text('오늘 일정'), findsOneWidget);
+
+    // 자정이 지나 홈이 새 날짜를 넘기면 어제 일정 대신 다음 일정을 보여준다.
+    await tester.pumpWidget(card(DateTime(2026, 11, 9, 0, 0)));
+    await tester.pumpAndSettle();
+    expect(find.text('오늘 일정'), findsNothing);
+    expect(find.text('다음 일정'), findsOneWidget);
+  });
+}
+
+/// 내 일정이 있으면 학사일정은 부르지 않는다. 불렸는지만 센다.
+class _CountingSchedule implements AcademicScheduleServiceBase {
+  int calls = 0;
+
+  @override
+  Future<List<AcademicScheduleItem>> fetchMonth(
+    int year,
+    int month, {
+    bool forceRefresh = false,
+  }) async {
+    calls++;
+    return const [];
+  }
 }
