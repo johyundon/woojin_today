@@ -301,6 +301,41 @@ void main() {
       expect(find.text('오늘 하루도\n화이팅 해요!'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('시간이 흐르면 다음 수업까지 남은 시간이 매 분 새로 계산된다', (tester) async {
+      // 기본 시간표는 화요일 10:00 자료구조 한 과목이다.
+      final timetableClient = MockClient(
+        (request) async => http.Response.bytes(timetableFixtureBytes(), 200),
+      );
+      var now = DateTime(2026, 10, 6, 9, 40);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            weatherService: fakeWeatherService(),
+            // 세션 캐시가 다른 테스트와 섞이지 않게 이 테스트만의 값을 쓴다.
+            jsessionId: 'CLOCK_J',
+            wmonid: 'CLOCK_W',
+            userId2: 'CLOCK_U',
+            myTimetableService: MyTimetableService(client: timetableClient),
+            studentInfoService: fakeStudentInfoService(),
+            now: () => now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('20분 남음'), findsOneWidget);
+
+      // 시각이 흐르고 다음 "분"이 되면 앱을 다시 열지 않아도 화면이 바뀐다.
+      now = DateTime(2026, 10, 6, 9, 50);
+      await tester.pump(const Duration(seconds: 61));
+      expect(find.text('10분 남음'), findsOneWidget);
+      expect(find.text('20분 남음'), findsNothing);
+
+      now = DateTime(2026, 10, 6, 10, 1);
+      await tester.pump(const Duration(seconds: 61));
+      expect(find.text('수업 중'), findsOneWidget);
+    });
   });
 
   group('내 정보 다이얼로그', () {

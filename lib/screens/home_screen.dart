@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -162,18 +164,61 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadWeather();
     _loadTodayClasses();
     _loadStudentInfo();
+    _scheduleClockTick();
   }
 
   @override
   void dispose() {
+    _clockTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  /// 앱으로 다시 돌아올 때마다 새 공지를 확인한다.
+  /// 앱으로 다시 돌아올 때마다 새 공지를 확인하고, 남은 시간도 바로 다시
+  /// 계산한다(앱이 뒤에 있는 동안은 타이머가 멈춰 있기 때문).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkNotices();
+    if (state == AppLifecycleState.resumed) {
+      _checkNotices();
+      _onClockTick();
+    }
+  }
+
+  /// "다음 수업까지 N분"과 지금 수업을 시간이 흐르는 대로 갱신하는 타이머.
+  /// 화면은 그릴 때 시각을 한 번만 계산하므로, 매 분 0초에 다시 그려 준다
+  /// (학교 서버에는 요청하지 않는다).
+  Timer? _clockTimer;
+
+  /// 오늘 수업 목록을 만든 날짜. 자정이 지나면 새 날짜로 다시 만든다.
+  DateTime? _todayDate;
+
+  void _scheduleClockTick() {
+    _clockTimer?.cancel();
+    final now = DateTime.now();
+    final nextMinute = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute + 1,
+    );
+    _clockTimer = Timer(nextMinute.difference(now), () {
+      _onClockTick();
+      _scheduleClockTick();
+    });
+  }
+
+  void _onClockTick() {
+    if (!mounted) return;
+    final now = _now();
+    final today = DateTime(now.year, now.month, now.day);
+    setState(() {
+      // 시간표를 받은 뒤 날짜가 바뀌었으면(자정을 넘김) 오늘 수업을 새로 만든다.
+      if (_todayDate != null && _todayDate != today) {
+        _todayClasses = todayClasses(courses: _enrolledCourses, now: now);
+        _todayDate = today;
+      }
+    });
   }
 
   /// 새 공지가 올라왔는지 확인하고(알림이 켜져 있으면 알림도 띄움) 종 아이콘의
@@ -293,7 +338,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
       if (!mounted) return;
       setState(() {
-        _todayClasses = todayClasses(courses: myTimetable.courses, now: _now());
+        final now = _now();
+        _todayClasses = todayClasses(courses: myTimetable.courses, now: now);
+        _todayDate = DateTime(now.year, now.month, now.day);
         _enrolledCourses = myTimetable.courses;
         _timetableLoaded = true;
         _todayClassesKnown = true;
