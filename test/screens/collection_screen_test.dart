@@ -29,6 +29,8 @@ void main() {
       expect(find.text(label), findsOneWidget, reason: label);
     }
     expect(find.text('쌓은 점수와 내역'), findsOneWidget);
+    // "연강"은 캠퍼스 지도와 같은 화면이라 목록에서 뺐다.
+    expect(find.text('연강'), findsNothing);
   });
 
   testWidgets('많이 연 기능이 자주 찾는 메뉴 카드 맨 앞에 온다', (tester) async {

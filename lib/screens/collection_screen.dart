@@ -105,12 +105,8 @@ class CollectionScreen extends StatelessWidget {
       iconColor: _CollectionColors.orangeIcon,
       onTap: _opener(AppFeatures.mileage),
     ),
-    _ListItem(
-      feature: AppFeatures.consecutiveClasses,
-      boxColor: _CollectionColors.greenBox,
-      iconColor: _CollectionColors.greenIcon,
-      onTap: _opener(AppFeatures.consecutiveClasses),
-    ),
+    // "연강"은 캠퍼스 지도와 같은 화면을 열어 중복이라 목록에서 뺐다
+    // (정의는 [AppFeatures.consecutiveClasses]에 남겨 둠).
     _ListItem(
       feature: AppFeatures.weather,
       boxColor: _CollectionColors.orangeBox,

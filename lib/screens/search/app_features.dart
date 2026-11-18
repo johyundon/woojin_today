@@ -131,6 +131,8 @@ abstract final class AppFeatures {
     open: (context, links) => _push(context, const MileageScreen()),
   );
 
+  /// 캠퍼스 지도와 같은 화면을 열어 메뉴가 중복돼 모아보기·검색 목록에서 뺐다.
+  /// 검색어는 [campusMap]으로 옮겼다. 다시 쓸 일이 있을 때를 위해 정의만 남겨 둔다.
   static final consecutiveClasses = AppFeature(
     label: '연강',
     description: '붙어 있는 수업 이동 시간',
@@ -151,7 +153,11 @@ abstract final class AppFeatures {
     label: '캠퍼스 지도',
     description: '건물 위치와 길찾기',
     icon: Icons.map_rounded,
-    keywords: const ['지도', '길찾기', '건물', '위치'],
+    keywords: const [
+      '지도', '길찾기', '건물', '위치',
+      // 예전 "연강" 메뉴의 검색어(같은 화면이라 하나로 합침).
+      '연강', '이동', '이동시간', '쉬는시간',
+    ],
     open: (context, links) => _push(context, const CampusMapScreen()),
   );
 
@@ -181,7 +187,6 @@ abstract final class AppFeatures {
     departmentRank,
     graduationCredit,
     mileage,
-    consecutiveClasses,
     weather,
     campusMap,
     fileShare,

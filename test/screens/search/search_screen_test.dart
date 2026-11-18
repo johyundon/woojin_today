@@ -112,6 +112,10 @@ void main() {
       expect(AppFeatures.cafeteria.matches('학식'), isTrue);
       expect(AppFeatures.cafeteria.matches('점심'), isTrue);
       expect(AppFeatures.campusMap.matches('캠퍼스지도'), isTrue);
+      // 예전 "연강" 메뉴는 캠퍼스 지도로 합쳤다.
+      expect(AppFeatures.campusMap.matches('연강'), isTrue);
+      expect(AppFeatures.campusMap.matches('이동시간'), isTrue);
+      expect(AppFeatures.all, isNot(contains(AppFeatures.consecutiveClasses)));
       expect(AppFeatures.advisor.matches('지도 교수'), isTrue);
       expect(AppFeatures.cafeteria.matches('졸업'), isFalse);
       expect(AppFeatures.cafeteria.matches('  '), isFalse);
