@@ -10,9 +10,8 @@ import '../home_colors.dart';
 import 'home_mini_card.dart';
 
 /// 연한 파랑 "오늘 점심" 카드(v7). 지금 시각의 끼니([mealAt]: 아침·점심·저녁)
-/// 메뉴를 두 가지씩 묶어([menuPages])
-/// 보여 주고, 묶음이 둘 이상이면 [autoSlide]마다 다음 묶음으로 넘겨 계속 돈다
-/// (식당이 하나여도 메뉴가 많으면 넘어간다). 없거나 아직 불러오는 중이거나 불러오지 못했으면 안내 문구를 보여준다.
+/// 메뉴를 곁들이(음료·김치 등)를 빼고 한 장에 하나씩([menuPages]) 보여 주고,
+/// 장이 둘 이상이면 [autoSlide]마다 다음 장으로 넘겨 계속 돈다. 없거나 아직 불러오는 중이거나 불러오지 못했으면 안내 문구를 보여준다.
 class CafeteriaMenuCard extends StatefulWidget {
   const CafeteriaMenuCard({
     super.key,
@@ -34,18 +33,57 @@ class CafeteriaMenuCard extends StatefulWidget {
   State<CafeteriaMenuCard> createState() => _CafeteriaMenuCardState();
 }
 
-/// 카드 한 장에 보여 줄 것: 식당과 그 식당 메뉴 중 두 가지.
+/// 카드 한 장에 보여 줄 것: 식당과 그 식당 대표 메뉴 하나.
+/// 작은 카드에 두 줄로 두 메뉴를 넣으면 긴 이름이 잘려서(…) 한 장에 하나만 둔다.
 typedef LunchPage = ({CafeteriaMenuItem item, List<String> dishes});
 
-/// 식당마다 메뉴를 앞에서부터 두 개씩 묶는다. 메뉴가 없는 식당은 이름만 한 장.
+/// 실제 학식 응답에 늘 끼어 있는 음료·김치·장아찌·밥 같은 곁들이.
+/// 홈 카드에서는 빼고 학식 화면에서는 그대로 보여 준다.
+const _sideSuffixes = [
+  '우유',
+  '콜라',
+  '사이다',
+  '아이스티',
+  '수염차',
+  '귤피차',
+  '수정과',
+  '식혜',
+  '김치',
+  '깍두기',
+  '단무지',
+  '피클',
+  '치킨무',
+  '장아찌',
+  '절임',
+  '고추지',
+  '오복채',
+  '쌀밥',
+];
+const _sideContains = ['요플레', '요구르트', '주스'];
+const _sideExact = {'밥', '사과', '귤', '배', '바나나'};
+
+/// 홈 카드에서 뺄 곁들이 반찬·음료인지.
+bool isSideDish(String dish) {
+  final d = dish.trim();
+  return _sideExact.contains(d) ||
+      _sideSuffixes.any(d.endsWith) ||
+      _sideContains.any(d.contains);
+}
+
+/// 식당마다 곁들이를 뺀 메뉴를 한 장에 하나씩 둔다. 다 곁들이면 원래 메뉴를 쓰고,
+/// 메뉴가 없는 식당은 이름만 한 장.
 List<LunchPage> menuPages(List<CafeteriaMenuItem> items) => [
   for (final item in items)
     if (item.dishes.isEmpty)
       (item: item, dishes: const <String>[])
     else
-      for (var i = 0; i < item.dishes.length; i += 2)
-        (item: item, dishes: item.dishes.skip(i).take(2).toList()),
+      for (final dish in _mainDishes(item.dishes)) (item: item, dishes: [dish]),
 ];
+
+List<String> _mainDishes(List<String> dishes) {
+  final mains = dishes.where((d) => !isSideDish(d)).toList();
+  return mains.isEmpty ? dishes : mains;
+}
 
 class _CafeteriaMenuCardState extends State<CafeteriaMenuCard> {
   /// 식당 이름 옆 가격 칩(숨김). 다시 보이려면 true로 바꾼다.

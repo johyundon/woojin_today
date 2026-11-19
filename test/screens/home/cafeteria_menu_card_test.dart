@@ -1,6 +1,6 @@
-// 홈 학식 카드: 지금 시각의 끼니(아침·점심·저녁) 메뉴를 두 가지씩 묶어 3초마다 다음 묶음으로 넘기고,
-// 마지막 다음에는 처음으로 돌아와 계속 돈다. 식당이 하나여도 메뉴가 셋 이상이면
-// 넘어가고, 묶음이 하나뿐이면 넘기지 않는다.
+// 홈 학식 카드: 지금 시각의 끼니(아침·점심·저녁) 메뉴에서 음료·김치·밥 같은 곁들이를 빼고
+// 한 장에 하나씩 보여 주며 3초마다 다음 장으로 넘기고, 마지막 다음에는 처음으로 돌아온다.
+// 장이 하나뿐이면 넘기지 않는다.
 
 import 'package:daejin_app/screens/cafeteria/models/cafeteria_menu.dart';
 import 'package:daejin_app/screens/home/widgets/cafeteria_menu_card.dart';
@@ -56,42 +56,69 @@ void main() {
     price: 5000,
   );
 
-  test('식당마다 메뉴를 두 개씩 묶는다', () {
+  test('곁들이를 빼고 식당마다 메뉴를 한 장에 하나씩 둔다', () {
     final pages = menuPages(const [dorm, student]);
     expect(
       [for (final p in pages) p.dishes],
       [
-        ['시골된장찌개', '쌀밥'],
-        ['제육볶음', '김치'],
-        ['요구르트'],
-        ['김치찌개', '쌀밥'],
+        ['시골된장찌개'],
+        ['제육볶음'],
+        ['김치찌개'],
       ],
     );
     expect(pages.last.item.restaurant, '학생식당');
   });
 
+  test('실제 학식에 나온 음료·김치·피클·밥은 곁들이로 본다', () {
+    for (final side in [
+      '주스', '사과주스', '콜라', '초코우유', '바이요요플레사과', '요구르트', //
+      '배추김치', '깍두기', '단무지', '피클', '블루베리무피클', '치킨무',
+      '마늘쫑장아찌', '갓절임', '미니고추지', '오복채', '쌀밥', '옥수수수염차',
+    ]) {
+      expect(isSideDish(side), isTrue, reason: side);
+    }
+    for (final main in ['참치김치찌개', '김치전', '불향제육덮밥', '왕등심돈까스', '설렁탕', '김가루밥']) {
+      expect(isSideDish(main), isFalse, reason: main);
+    }
+  });
+
+  test('메뉴가 다 곁들이면 그대로 보여 준다', () {
+    const drinks = CafeteriaMenuItem(
+      restaurant: '매점',
+      dishes: ['주스', '우유'],
+      price: 1000,
+    );
+    expect(
+      [
+        for (final p in menuPages(const [drinks])) p.dishes,
+      ],
+      [
+        ['주스'],
+        ['우유'],
+      ],
+    );
+  });
+
   testWidgets('식당이 하나여도 3초마다 다음 메뉴로 넘어가고 끝나면 처음으로 돌아온다', (tester) async {
     await _pump(tester, const [dorm]);
     await tester.pumpAndSettle();
-    expect(find.text('시골된장찌개\n쌀밥'), findsOneWidget);
+    expect(find.text('시골된장찌개'), findsOneWidget);
 
     await _next(tester);
-    expect(find.text('제육볶음\n김치'), findsOneWidget);
+    expect(find.text('제육볶음'), findsOneWidget);
     await _next(tester);
-    expect(find.text('요구르트'), findsOneWidget);
-    await _next(tester);
-    expect(find.text('시골된장찌개\n쌀밥'), findsOneWidget);
+    expect(find.text('시골된장찌개'), findsOneWidget);
     expect(find.text('생활관식당'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('묶음이 하나뿐이면 넘기지 않는다', (tester) async {
+  testWidgets('장이 하나뿐이면 넘기지 않는다', (tester) async {
     await _pump(tester, const [student]);
     await tester.pumpAndSettle();
     await tester.pump(CafeteriaMenuCard.autoSlide * 2);
     await tester.pumpAndSettle();
-    expect(find.text('김치찌개\n쌀밥'), findsOneWidget);
+    expect(find.text('김치찌개'), findsOneWidget);
   });
 
   testWidgets('오후 3시가 지나면 "오늘 저녁"과 석식 메뉴를 보여 준다', (tester) async {
@@ -109,8 +136,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('오늘 저녁'), findsOneWidget);
-    expect(find.text('닭갈비\n쌀밥'), findsOneWidget);
-    expect(find.text('김치찌개\n쌀밥'), findsNothing);
+    expect(find.text('닭갈비'), findsOneWidget);
+    expect(find.text('김치찌개'), findsNothing);
   });
 
   test('시각별 끼니: 10시 전 아침, 15시 전 점심, 그 뒤 저녁', () {
