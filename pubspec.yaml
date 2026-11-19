@@ -87,6 +87,8 @@ dependencies:
   # 깨워 달라고 맡긴다. iOS는 실제 실행 시각을 OS가 정한다.
   workmanager: ^0.10.10
   geolocator: ^14.0.1
+  firebase_core: ^5.2.0
+  firebase_analytics: ^13.1.0
 
 dev_dependencies:
   flutter_test:

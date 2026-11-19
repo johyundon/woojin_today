@@ -3,6 +3,7 @@ import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
 import 'config/kakao_map_config.dart';
 import 'screens/splash_screen.dart';
+import 'services/analytics_service.dart';
 import 'services/notice_background.dart';
 import 'services/notice_watcher.dart';
 import 'services/notification_service.dart';
@@ -15,6 +16,7 @@ void main() async {
     appKey: kakaoMapJavaScriptKey,
     baseUrl: 'http://localhost',
   );
+  await AnalyticsService.instance.initialize();
   await NotificationService.instance.initialize();
   await NoticeBackground.initialize();
   NoticeWatcher().restoreBackground();
