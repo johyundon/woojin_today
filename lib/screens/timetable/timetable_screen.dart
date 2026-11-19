@@ -21,6 +21,7 @@ import 'ai_recommend/ai_recommend_result_screen.dart';
 import 'ai_recommend/ai_recommend_wizard_screen.dart';
 import 'course_filters.dart';
 import 'models/ai_recommend_answers.dart';
+import 'grid_layout.dart';
 import 'models/planned_course.dart';
 import 'models/saved_timetable.dart';
 import 'services/ai_recommend_service.dart';
@@ -315,6 +316,8 @@ class _TimetableScreenState extends State<TimetableScreen>
           viewportHeight: viewportHeight,
           showHourLines: !empty,
           onCourseRemove: _editMode ? _confirmRemoveCourse : null,
+          previewCourse: _gridPreviewCourse,
+          scrollController: _gridScroll,
         ),
         if (empty)
           Positioned.fill(child: Center(child: _emptyTimetablePrompt())),
@@ -396,6 +399,7 @@ class _TimetableScreenState extends State<TimetableScreen>
       if (!open) {
         _pinnedCourse = null;
         _expandedCourseKey = null;
+        _previewCourse = null;
       }
     });
     open ? _addPanelController.forward() : _addPanelController.reverse();
@@ -460,6 +464,7 @@ class _TimetableScreenState extends State<TimetableScreen>
     _searchFocusNode.dispose();
     _addPanelController.dispose();
     _resultsScroll.dispose();
+    _gridScroll.dispose();
     super.dispose();
   }
 
@@ -523,6 +528,53 @@ class _TimetableScreenState extends State<TimetableScreen>
   /// 누르면 그 과목이 시트 맨 위에 펼쳐진 채 나온다(팝업 대신, 2026-11-16).
   String? _expandedCourseKey;
   CourseCatalogItem? _pinnedCourse;
+
+  /// 목록에서 눌러 펼친 과목. 아직 담지 않았으면 격자에 들어갈 자리를 회색으로
+  /// 미리 보여 준다(사용자 요청, 2026-11-19).
+  CourseCatalogItem? _previewCourse;
+  final _gridScroll = ScrollController();
+
+  /// 격자에 그릴 미리보기 과목. 시트가 열려 있고, 그 과목이 지금 펼쳐져 있고,
+  /// 아직 담지 않았을 때만.
+  PlannedCourse? get _gridPreviewCourse {
+    final item = _previewCourse;
+    if (!_addPanelOpen || item == null) return null;
+    if (_expandedCourseKey != _courseKey(item) || _isAdded(item)) return null;
+    return PlannedCourse.fromCatalogItem(item);
+  }
+
+  /// 미리보기 블록이 격자 화면 밖(위·아래)에 있으면 첫 블록이 보이게 격자를
+  /// 스크롤한다.
+  void _revealPreviewOnGrid() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final preview = _gridPreviewCourse;
+      if (!mounted || preview == null || !_gridScroll.hasClients) return;
+      final layouts = buildBlockLayouts([preview]);
+      if (layouts.isEmpty) return;
+      final start = layouts.map((l) => l.startMinutes).reduce(math.min);
+      final end = layouts
+          .where((l) => l.startMinutes == start)
+          .map((l) => l.endMinutes)
+          .reduce(math.max);
+      final top = (start - gridStartHour * 60) / 60 * gridHourRowHeight;
+      final bottom = (end - gridStartHour * 60) / 60 * gridHourRowHeight;
+      final position = _gridScroll.position;
+      final viewTop = position.pixels;
+      final viewBottom = viewTop + position.viewportDimension;
+      double? target;
+      if (top < viewTop) {
+        target = top - 8;
+      } else if (bottom > viewBottom) {
+        target = bottom - position.viewportDimension + 8;
+      }
+      if (target == null) return;
+      _gridScroll.animateTo(
+        target.clamp(0, position.maxScrollExtent),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
+  }
   final _resultsScroll = ScrollController();
 
   String _courseKey(CourseCatalogItem item) =>
@@ -962,11 +1014,14 @@ class _TimetableScreenState extends State<TimetableScreen>
             alreadyAdded: _isAdded(item),
             highlighted: pinnedKey == key,
             onTap: () {
-              setState(
-                () =>
-                    _expandedCourseKey = _expandedCourseKey == key ? null : key,
-              );
-              if (_expandedCourseKey == key) _revealExpandedTile();
+              setState(() {
+                _expandedCourseKey = _expandedCourseKey == key ? null : key;
+                _previewCourse = _expandedCourseKey == key ? item : null;
+              });
+              if (_expandedCourseKey == key) {
+                _revealExpandedTile();
+                _revealPreviewOnGrid();
+              }
             },
             onAdd: () => _addCourse(item),
             onViewSyllabus: () => _openSyllabus(item),

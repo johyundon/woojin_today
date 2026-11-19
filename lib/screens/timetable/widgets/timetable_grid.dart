@@ -35,6 +35,8 @@ class TimetableGrid extends StatelessWidget {
     this.viewportHeight = 320,
     this.showHourLines = true,
     this.onCourseRemove,
+    this.previewCourse,
+    this.scrollController,
   });
 
   final List<PlannedCourse> courses;
@@ -57,6 +59,14 @@ class TimetableGrid extends StatelessWidget {
   /// 있으면 과목 블록 오른쪽 위에 딱 붙은 "×"를 그리고, 누르면 그 과목을
   /// 뺀다("시간표 만들기" 편집 화면, 2026-11-16). 누르는 범위는 44×44.
   final ValueChanged<PlannedCourse>? onCourseRemove;
+
+  /// "시간표 만들기" 목록에서 눌러 펼친(아직 담지 않은) 과목. 있으면 그 과목이
+  /// 들어갈 자리에 회색 반투명 블록을 겹쳐 그린다(미리보기, 사용자 요청
+  /// 2026-11-19). 누를 수 없고, 이미 있는 과목과 겹치면 겹친 그대로 보인다.
+  final PlannedCourse? previewCourse;
+
+  /// 격자 세로 스크롤. 미리보기 자리로 스크롤을 옮길 때 화면이 쓴다.
+  final ScrollController? scrollController;
 
   static const int _hourCount = gridEndHour - gridStartHour;
   static const double _gridHeight = _hourCount * gridHourRowHeight;
@@ -88,6 +98,7 @@ class TimetableGrid extends StatelessWidget {
         SizedBox(
           height: viewportHeight,
           child: SingleChildScrollView(
+            controller: scrollController,
             child: SizedBox(
               height: _gridHeight,
               child: LayoutBuilder(
@@ -118,6 +129,11 @@ class TimetableGrid extends StatelessWidget {
                           _positionedRemoveButton(layout, columnWidth),
                       if (pendingSlot != null)
                         _positionedPreview(pendingSlot!, columnWidth),
+                      if (previewCourse != null)
+                        for (final layout in buildBlockLayouts([
+                          previewCourse!,
+                        ]))
+                          _positionedCoursePreview(layout, columnWidth),
                     ],
                   );
                 },
@@ -238,6 +254,22 @@ class TimetableGrid extends StatelessWidget {
       width: columnWidth,
       height: height,
       child: const CourseBlockPreview(),
+    );
+  }
+
+  Widget _positionedCoursePreview(
+    CourseBlockLayout layout,
+    double columnWidth,
+  ) {
+    final columnIndex = gridColumnIndexOf(layout.day)!;
+    final top = _minutesToY(layout.startMinutes);
+    final height = _minutesToY(layout.endMinutes) - top;
+    return Positioned(
+      left: _hourLabelColumnWidth + columnIndex * columnWidth,
+      top: top,
+      width: columnWidth,
+      height: height,
+      child: IgnorePointer(child: CourseSlotPreview(layout: layout)),
     );
   }
 

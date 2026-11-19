@@ -95,3 +95,37 @@ class CourseBlockPreview extends StatelessWidget {
     );
   }
 }
+
+/// "시간표 만들기" 목록에서 고른 과목이 들어갈 자리를 보여 주는 회색 반투명
+/// 블록(사용자 요청 2026-11-19). 아래에 이미 있는 과목이 비쳐 보여서 시간이
+/// 겹치는지 바로 알 수 있다.
+class CourseSlotPreview extends StatelessWidget {
+  const CourseSlotPreview({super.key, required this.layout});
+
+  final CourseBlockLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: ValueKey('course-slot-preview-${layout.day.name}'),
+      margin: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF8E939B).withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        layout.course.courseName,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.36,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+}

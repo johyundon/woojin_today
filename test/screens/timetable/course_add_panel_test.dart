@@ -93,10 +93,16 @@ void main() {
     expect(find.text('담기'), findsOneWidget);
     expect(find.text('강의계획서'), findsOneWidget);
     expect(find.byType(Dialog), findsNothing); // 팝업은 뜨지 않는다.
+    // 펼친(아직 안 담은) 과목은 격자에 들어갈 자리가 회색으로 미리 보인다.
+    expect(find.byType(CourseSlotPreview), findsWidgets);
+    expect(find.byType(CourseBlock), findsNothing);
 
     await tester.tap(find.text('담기'));
     await tester.pumpAndSettle();
     expect(find.text('담음'), findsOneWidget); // 담은 과목은 다시 못 담는다.
+    // 담고 나면 미리보기 대신 진짜 블록이 그려진다.
+    expect(find.byType(CourseSlotPreview), findsNothing);
+    expect(find.byType(CourseBlock), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // 시간표 격자의 그 과목을 눌러도 팝업 대신 아래 시트에 펼쳐진다. 오른쪽 위
