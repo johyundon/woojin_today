@@ -83,7 +83,8 @@ void main() {
     expect(find.text('나'), findsNWidgets(2));
     expect(find.text('컴퓨터공학전공(3학년) 성적 분포'), findsOneWidget);
     expect(find.textContaining('4.34'), findsWidgets);
-    expect(find.text('학과 평균보다 1.11'), findsOneWidget);
+    expect(find.text('학과 평균 3.23'), findsOneWidget);
+    expect(find.textContaining('학과 평균보다'), findsNothing);
 
     // 실제 데이터가 없는 장학·과목별 석차 카드는 보이지 않는다.
     expect(find.text('장학'), findsNothing);

@@ -20,9 +20,6 @@ const _scholarshipCardLabel = Color(0xFFC2410C);
 const _cardValue = Color(0xFF2B2F3B);
 const _cardSub = Color(0xFF6B7280);
 
-/// 평균보다 높을 때 위 화살표 rgb(220, 58, 58).
-const _aboveAverage = Color(0xFFDC3A3A);
-
 /// 나란히 놓이는 "내 평점"(연보라) / "장학"(연노랑) 카드 두 장.
 ///
 /// 장학 기준(상위 20%)이 확인되지 않아 지금은 [showScholarship]을 꺼서 "내 평점"
@@ -39,7 +36,6 @@ class RankSummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final diff = data.myGpa - data.departmentAverageGpa;
     final eligible = RankHeroCard.topPercent(data) <= _scholarshipTopPercent;
 
     return IntrinsicHeight(
@@ -82,28 +78,18 @@ class RankSummaryCards extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
+                  // 예전엔 "▲ 학과 평균보다 1.11"처럼 차이를 보여줬는데, 평균 점수를
+                  // 바로 보여주는 편이 알아보기 쉬워 바꿨다.
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Row(
-                      children: [
-                        Icon(
-                          diff >= 0
-                              ? Icons.arrow_drop_up_rounded
-                              : Icons.arrow_drop_down_rounded,
-                          size: 15,
-                          color: diff >= 0 ? _aboveAverage : AppColors.blue,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '학과 평균보다 ${diff.abs().toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: AppColors.textBody,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      '학과 평균 ${data.departmentAverageGpa.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: AppColors.textBody,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
