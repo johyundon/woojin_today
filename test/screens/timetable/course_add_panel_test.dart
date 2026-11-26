@@ -121,7 +121,7 @@ void main() {
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
   });
 
-  testWidgets('겹치는 과목을 누르면 확인창이 뜨고, 확인이면 기존 과목을 빼고 담는다', (
+  testWidgets('겹치는 과목은 담기를 누를 때 확인창이 뜨고, 확인이면 기존 과목을 빼고 담는다', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(780, 1688);
@@ -150,19 +150,42 @@ void main() {
     await tester.tap(find.text('담기'));
     await tester.pumpAndSettle();
 
-    // 경제학원론(수 10:30-12:00)은 겹친다 — 누르면 확인창.
+    // 경제학원론(수 10:30-12:00)은 겹친다 — 줄을 누르면 묻지 않고 펼쳐지고,
+    // 들어갈 자리가 과목명 없는 회색으로 보인다.
     await search('경제학원론');
     await tester.tap(
       find.descendant(of: tile('경제학원론'), matching: find.text('경제학원론')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('시간이 겹치는 과목이 있어요'), findsOneWidget);
+    expect(find.text('시간이 겹치는 과목이 있어요'), findsNothing);
+    expect(find.text('담기'), findsOneWidget);
+    expect(
+      tester.widget<CourseSlotPreview>(find.byType(CourseSlotPreview)).conflict,
+      isTrue,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CourseSlotPreview),
+        matching: find.byType(Text),
+      ),
+      findsNothing,
+    );
 
-    // 취소: 아무것도 바뀌지 않고, 미리보기도 펼침도 없다.
+    // 담기를 누르면 확인창. 취소하면 아무것도 바뀌지 않는다.
+    await tester.tap(find.text('담기'));
+    await tester.pumpAndSettle();
+    expect(find.text('시간이 겹치는 과목이 있어요'), findsOneWidget);
+    // 확인창 뒤 격자에는 새 과목 자리가 과목명 없는 회색으로 보인다.
+    expect(
+      tester
+          .widgetList<CourseSlotPreview>(find.byType(CourseSlotPreview))
+          .every((p) => p.conflict),
+      isTrue,
+    );
+    expect(find.byType(CourseSlotPreview), findsWidgets);
     await tester.tap(find.byKey(const ValueKey('course-conflict-cancel')));
     await tester.pumpAndSettle();
-    expect(find.byType(CourseSlotPreview), findsNothing);
-    expect(find.text('담기'), findsNothing);
+    expect(find.text('담기'), findsOneWidget);
     expect(
       tester
           .widgetList<CourseBlock>(find.byType(CourseBlock))
@@ -172,9 +195,7 @@ void main() {
     );
 
     // 확인: 소프트웨어공학이 빠지고 경제학원론이 담긴다.
-    await tester.tap(
-      find.descendant(of: tile('경제학원론'), matching: find.text('경제학원론')),
-    );
+    await tester.tap(find.text('담기'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('course-conflict-confirm')));
     await tester.pumpAndSettle();

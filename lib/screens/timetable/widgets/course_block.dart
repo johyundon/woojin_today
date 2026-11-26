@@ -100,9 +100,18 @@ class CourseBlockPreview extends StatelessWidget {
 /// 블록(사용자 요청 2026-11-19). 아래에 이미 있는 과목이 비쳐 보여서 시간이
 /// 겹치는지 바로 알 수 있다.
 class CourseSlotPreview extends StatelessWidget {
-  const CourseSlotPreview({super.key, required this.layout});
+  const CourseSlotPreview({
+    super.key,
+    required this.layout,
+    this.conflict = false,
+  });
 
   final CourseBlockLayout layout;
+
+  /// 이미 담은 과목과 겹치면 true — 같은 회색으로 자리만 보여 주고 과목명은
+  /// 쓰지 않는다(아래 과목 글자와 섞여 지저분해지지 않게, 사용자 요청
+  /// 2026-11-26).
+  final bool conflict;
 
   @override
   Widget build(BuildContext context) {
@@ -114,18 +123,20 @@ class CourseSlotPreview extends StatelessWidget {
         color: const Color(0xFF8E939B).withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        layout.course.courseName,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.36,
-          height: 1.4,
-        ),
-      ),
+      child: conflict
+          ? null
+          : Text(
+              layout.course.courseName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.36,
+                height: 1.4,
+              ),
+            ),
     );
   }
 }

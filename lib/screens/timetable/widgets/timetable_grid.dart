@@ -36,6 +36,7 @@ class TimetableGrid extends StatelessWidget {
     this.showHourLines = true,
     this.onCourseRemove,
     this.previewCourse,
+    this.previewConflicts = false,
     this.scrollController,
   });
 
@@ -64,6 +65,10 @@ class TimetableGrid extends StatelessWidget {
   /// 들어갈 자리에 회색 반투명 블록을 겹쳐 그린다(미리보기, 사용자 요청
   /// 2026-11-19). 누를 수 없고, 이미 있는 과목과 겹치면 겹친 그대로 보인다.
   final PlannedCourse? previewCourse;
+
+  /// 미리보기 과목이 이미 담은 과목과 겹치는지. true면 과목명 없이 회색 자리만 그린다
+  /// ("담기"를 눌러 겹침 확인창이 떠 있는 동안).
+  final bool previewConflicts;
 
   /// 격자 세로 스크롤. 미리보기 자리로 스크롤을 옮길 때 화면이 쓴다.
   final ScrollController? scrollController;
@@ -269,7 +274,9 @@ class TimetableGrid extends StatelessWidget {
       top: top,
       width: columnWidth,
       height: height,
-      child: IgnorePointer(child: CourseSlotPreview(layout: layout)),
+      child: IgnorePointer(
+        child: CourseSlotPreview(layout: layout, conflict: previewConflicts),
+      ),
     );
   }
 

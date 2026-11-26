@@ -317,6 +317,7 @@ class _TimetableScreenState extends State<TimetableScreen>
           showHourLines: !empty,
           onCourseRemove: _editMode ? _confirmRemoveCourse : null,
           previewCourse: _gridPreviewCourse,
+          previewConflicts: _gridPreviewConflicts,
           scrollController: _gridScroll,
         ),
         if (empty)
@@ -544,17 +545,29 @@ class _TimetableScreenState extends State<TimetableScreen>
 
   /// 격자에 그릴 미리보기 과목. 시트가 열려 있고, 그 과목이 지금 펼쳐져 있고,
   /// 아직 담지 않았을 때만.
+  /// "담기"를 눌러 겹침 확인창이 떠 있는 동안의 과목. 이때만 겹쳐도 격자에
+  /// 자리를 그린다(과목명 없는 회색).
+  CourseCatalogItem? _conflictPreviewCourse;
+
+  /// 격자 미리보기가 이미 담은 과목과 겹치는지. 겹치면 과목명 없이 회색 자리만 그려
+  /// 겹치는 자리를 알린다(사용자 요청, 2026-11-26).
+  bool get _gridPreviewConflicts {
+    final item = _conflictPreviewCourse ?? _previewCourse;
+    return item != null && _conflictsWith(item).isNotEmpty;
+  }
+
   PlannedCourse? get _gridPreviewCourse {
+    final conflicting = _conflictPreviewCourse;
+    if (conflicting != null) return PlannedCourse.fromCatalogItem(conflicting);
     final item = _previewCourse;
     if (!_addPanelOpen || item == null) return null;
     if (_expandedCourseKey != _courseKey(item) || _isAdded(item)) return null;
     return PlannedCourse.fromCatalogItem(item);
   }
 
-  /// 목록의 과목 줄을 눌렀을 때. 펼치면서 그 과목이 이미 담은 과목과 시간이
-  /// 겹치면 알림창을 먼저 띄운다(사용자 요청, 2026-11-26): "확인"이면 겹치는
-  /// 기존 과목을 빼고 이 과목을 담고, "취소"면 아무것도 바꾸지 않는다.
-  Future<void> _onResultTileTap(CourseCatalogItem item) async {
+  /// 목록의 과목 줄을 눌렀을 때 펼치거나 접는다. 시간이 겹쳐도 여기서는 묻지
+  /// 않고, "담기"를 누를 때 알림창을 띄운다(사용자 요청, 2026-11-26).
+  void _onResultTileTap(CourseCatalogItem item) {
     final key = _courseKey(item);
     if (_expandedCourseKey == key) {
       setState(() {
@@ -562,10 +575,6 @@ class _TimetableScreenState extends State<TimetableScreen>
         _previewCourse = null;
       });
       return;
-    }
-    if (_conflictsWith(item).isNotEmpty) {
-      final added = await _addCourseResolvingConflicts(item);
-      if (!added || !mounted) return;
     }
     setState(() {
       _expandedCourseKey = key;
@@ -598,12 +607,18 @@ class _TimetableScreenState extends State<TimetableScreen>
     final conflicts = _conflictsWith(item);
     if (conflicts.isNotEmpty) {
       final names = conflicts.map((c) => c.courseName).join(', ');
+      // 확인창이 떠 있는 동안 격자에 새 과목 자리를 회색으로 겹쳐
+      // 보여 준다(사용자 요청, 2026-11-26).
+      setState(() => _conflictPreviewCourse = item);
+      _revealPreviewOnGrid();
       final ok = await showCourseConflictDialog(
         context,
         existingNames: names,
         newName: item.courseName,
       );
-      if (!ok || !mounted) return false;
+      if (!mounted) return false;
+      setState(() => _conflictPreviewCourse = null);
+      if (!ok) return false;
       setState(() {
         final keys = conflicts.map((c) => c.key).toSet();
         _confirmedCourses = _confirmedCourses
