@@ -121,6 +121,75 @@ void main() {
     expect(find.text('과목코드, 교수명, 과목명 검색'), findsNothing);
   });
 
+  testWidgets('겹치는 과목을 누르면 확인창이 뜨고, 확인이면 기존 과목을 빼고 담는다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeException();
+    await _tapAddCourse(tester);
+    await tester.pumpAndSettle();
+
+    Future<void> search(String q) async {
+      await tester.enterText(find.byType(TextField).first, q);
+      await tester.pumpAndSettle();
+    }
+
+    Finder tile(String name) => find.ancestor(
+      of: find.text(name),
+      matching: find.byType(CourseResultTile),
+    );
+
+    // 소프트웨어공학(월·수 10:30-12:00)을 담는다.
+    await search('소프트웨어공학');
+    await tester.tap(find.text('소프트웨어공학').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('담기'));
+    await tester.pumpAndSettle();
+
+    // 경제학원론(수 10:30-12:00)은 겹친다 — 누르면 확인창.
+    await search('경제학원론');
+    await tester.tap(
+      find.descendant(of: tile('경제학원론'), matching: find.text('경제학원론')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('시간이 겹치는 과목이 있어요'), findsOneWidget);
+
+    // 취소: 아무것도 바뀌지 않고, 미리보기도 펼침도 없다.
+    await tester.tap(find.byKey(const ValueKey('course-conflict-cancel')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CourseSlotPreview), findsNothing);
+    expect(find.text('담기'), findsNothing);
+    expect(
+      tester
+          .widgetList<CourseBlock>(find.byType(CourseBlock))
+          .map((b) => b.layout.course.courseName)
+          .toSet(),
+      {'소프트웨어공학'},
+    );
+
+    // 확인: 소프트웨어공학이 빠지고 경제학원론이 담긴다.
+    await tester.tap(
+      find.descendant(of: tile('경제학원론'), matching: find.text('경제학원론')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('course-conflict-confirm')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widgetList<CourseBlock>(find.byType(CourseBlock))
+          .map((b) => b.layout.course.courseName)
+          .toSet(),
+      {'경제학원론'},
+    );
+    expect(find.text('담음'), findsOneWidget);
+    expect(find.byType(CourseSlotPreview), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('시간표 만들기 화면: 상단·버튼이 바뀌고, 손잡이로 시트를 15·25·50·90%에 멈춘다', (
     tester,
   ) async {

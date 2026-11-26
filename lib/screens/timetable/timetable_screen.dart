@@ -543,6 +543,70 @@ class _TimetableScreenState extends State<TimetableScreen>
     return PlannedCourse.fromCatalogItem(item);
   }
 
+  /// 목록의 과목 줄을 눌렀을 때. 펼치면서 그 과목이 이미 담은 과목과 시간이
+  /// 겹치면 알림창을 먼저 띄운다(사용자 요청, 2026-11-26): "확인"이면 겹치는
+  /// 기존 과목을 빼고 이 과목을 담고, "취소"면 아무것도 바꾸지 않는다.
+  Future<void> _onResultTileTap(CourseCatalogItem item) async {
+    final key = _courseKey(item);
+    if (_expandedCourseKey == key) {
+      setState(() {
+        _expandedCourseKey = null;
+        _previewCourse = null;
+      });
+      return;
+    }
+    if (_conflictsWith(item).isNotEmpty) {
+      final added = await _addCourseResolvingConflicts(item);
+      if (!added || !mounted) return;
+    }
+    setState(() {
+      _expandedCourseKey = key;
+      _previewCourse = item;
+    });
+    _revealExpandedTile();
+    _revealPreviewOnGrid();
+  }
+
+  /// 이미 담은 과목 중 [item]과 시간이 겹치는 것(같은 과목의 다른 분반은 담을 때
+  /// 어차피 바뀌므로 뺀다).
+  List<PlannedCourse> _conflictsWith(CourseCatalogItem item) {
+    final slots = parseRawSchedule(item.rawSchedule);
+    return _confirmedCourses.where((c) {
+      if (c.courseCode == item.courseCode) return false;
+      return parseRawSchedule(c.rawSchedule).any(
+        (a) => slots.any(
+          (b) =>
+              a.day == b.day &&
+              a.startMinutes < b.endMinutes &&
+              b.startMinutes < a.endMinutes,
+        ),
+      );
+    }).toList();
+  }
+
+  /// 과목을 담는다. 시간이 겹치는 과목이 있으면 확인창을 띄우고, "확인"이면
+  /// 겹치는 기존 과목을 뺀 뒤 담는다. 담았으면 true.
+  Future<bool> _addCourseResolvingConflicts(CourseCatalogItem item) async {
+    final conflicts = _conflictsWith(item);
+    if (conflicts.isNotEmpty) {
+      final names = conflicts.map((c) => c.courseName).join(', ');
+      final ok = await showCourseConflictDialog(
+        context,
+        existingNames: names,
+        newName: item.courseName,
+      );
+      if (!ok || !mounted) return false;
+      setState(() {
+        final keys = conflicts.map((c) => c.key).toSet();
+        _confirmedCourses = _confirmedCourses
+            .where((c) => !keys.contains(c.key))
+            .toList();
+      });
+    }
+    _addCourse(item);
+    return true;
+  }
+
   /// 미리보기 블록이 격자 화면 밖(위·아래)에 있으면 첫 블록이 보이게 격자를
   /// 스크롤한다.
   void _revealPreviewOnGrid() {
@@ -1013,17 +1077,8 @@ class _TimetableScreenState extends State<TimetableScreen>
             expanded: expanded,
             alreadyAdded: _isAdded(item),
             highlighted: pinnedKey == key,
-            onTap: () {
-              setState(() {
-                _expandedCourseKey = _expandedCourseKey == key ? null : key;
-                _previewCourse = _expandedCourseKey == key ? item : null;
-              });
-              if (_expandedCourseKey == key) {
-                _revealExpandedTile();
-                _revealPreviewOnGrid();
-              }
-            },
-            onAdd: () => _addCourse(item),
+            onTap: () => _onResultTileTap(item),
+            onAdd: () => _addCourseResolvingConflicts(item),
             onViewSyllabus: () => _openSyllabus(item),
           );
         },

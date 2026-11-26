@@ -17,6 +17,25 @@ Future<bool> showCourseRemoveDialog(BuildContext context) {
   );
 }
 
+/// "시간표 만들기"에서 고른 과목이 이미 담은 과목과 시간이 겹칠 때 뜨는
+/// 확인창(사용자 요청, 2026-11-26). "확인"이면 true — 기존 과목을 빼고 새
+/// 과목을 담는다. "취소"나 바깥을 누르면 false.
+Future<bool> showCourseConflictDialog(
+  BuildContext context, {
+  required String existingNames,
+  required String newName,
+}) {
+  return showAppConfirmModal(
+    context,
+    title: '시간이 겹치는 과목이 있어요',
+    message: '$existingNames 과목을 빼고\n$newName 과목을 담을까요?',
+    cancelLabel: '취소',
+    confirmLabel: '확인',
+    cancelKey: const ValueKey('course-conflict-cancel'),
+    confirmKey: const ValueKey('course-conflict-confirm'),
+  );
+}
+
 /// 시안의 "AppConfirmModal": 연분홍 원 안의 빨간 "!", 제목, (있으면) 회색 설명,
 /// 아래 두 버튼(왼쪽 연한 버튼·오른쪽 빨간 버튼). 오른쪽을 누르면 true,
 /// 왼쪽을 누르거나 바깥을 눌러 닫으면 false.
