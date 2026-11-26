@@ -295,7 +295,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('course-remove-confirm')));
     await tester.pumpAndSettle();
     expect(remove, findsNothing);
-    expect(find.text('담기'), findsOneWidget); // 빠졌으니 다시 담을 수 있다.
+    // 지운 자리에 회색 미리보기가 남지 않도록 펼쳐 둔 줄도 접힌다.
+    expect(find.byType(CourseSlotPreview), findsNothing);
+    expect(find.text('담기'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

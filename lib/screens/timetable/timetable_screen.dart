@@ -486,7 +486,15 @@ class _TimetableScreenState extends State<TimetableScreen>
   /// 블록의 "×"를 누르면 "삭제하시겠습니까?"를 묻고, 삭제를 누를 때만 뺀다.
   Future<void> _confirmRemoveCourse(PlannedCourse course) async {
     final ok = await showCourseRemoveDialog(context);
-    if (ok && mounted) _removeCourse(course);
+    if (!ok || !mounted) return;
+    _removeCourse(course);
+    // 목록에서 펼쳐 둔 과목의 회색 미리보기가 빈자리에 남아 지운 과목이
+    // 남은 것처럼 보이지 않게, 과목을 빼면 펼침·미리보기도 접는다
+    // (사용자 요청, 2026-11-26).
+    setState(() {
+      _expandedCourseKey = null;
+      _previewCourse = null;
+    });
   }
 
   /// 시간표에 담긴 과목은 정원·담은 인원·학년이 없을 수 있어서(학교의 내
