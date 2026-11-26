@@ -9,6 +9,7 @@ import '../graduation/graduation_credit_screen.dart';
 import '../home/rank/department_rank_screen.dart';
 import '../mileage/mileage_screen.dart';
 import '../notice/notice_screen.dart';
+import '../timetable/widgets/timetable_notice_dialog.dart';
 import '../weather/weather_page.dart';
 import 'feature_usage_store.dart';
 
@@ -166,9 +167,19 @@ abstract final class AppFeatures {
     description: '친구와 파일 주고받기',
     icon: Icons.folder_shared_rounded,
     keywords: const ['파일', '공유', '자료'],
-    open: (context, links) =>
-        _push(context, FileShareScreen(userId2: links.userId2)),
+    open: (context, links) => _fileShareReady
+        ? _push(context, FileShareScreen(userId2: links.userId2))
+        : showTimetableNoticeDialog(
+            context,
+            icon: Icons.construction_rounded,
+            title: '준비 중인 기능이에요',
+            message: '파일공유는 곧 열릴 예정이에요.',
+          ),
   );
+
+  /// 파일공유 화면을 열지. 아직 준비 중이라 꺼 두고, 누르면 안내창만 띄운다
+  /// (사용자 요청 2026-11-26). 화면 코드는 지우지 않고 남겨 둔다.
+  static const bool _fileShareReady = false;
 
   static final advisor = AppFeature(
     label: '상담 예약',

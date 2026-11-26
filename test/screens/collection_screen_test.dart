@@ -53,4 +53,19 @@ void main() {
     // 캘린더는 카드에서 빠지고 하단 탭 글자로만 남는다.
     expect(find.text('캘린더'), findsOneWidget);
   });
+
+  testWidgets('파일공유는 준비 중이라 누르면 화면 대신 안내창이 뜬다', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: CollectionScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('파일공유'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('파일공유'));
+    await tester.pumpAndSettle();
+    expect(find.text('준비 중인 기능이에요'), findsOneWidget);
+    expect(find.byType(Dialog), findsOneWidget);
+  });
 }
