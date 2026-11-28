@@ -5,6 +5,7 @@ import '../../services/cafeteria_menu_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/pressable.dart';
+import '../../utils/wide_layout.dart';
 import 'cafeteria_colors.dart';
 import 'models/cafeteria_menu.dart';
 import 'widgets/cafeteria_date_picker_dialog.dart';
@@ -309,24 +310,27 @@ class _CafeteriaScreenState extends State<CafeteriaScreen> {
     CafeteriaMeal.dinner: '석식',
   };
 
-  /// 메뉴 카드를 두 장씩 한 줄로 놓는다(한 장만 남으면 왼쪽 반 칸). 한 줄의
-  /// 두 카드는 더 긴 쪽에 높이를 맞춘다.
+  /// 메뉴 카드를 두 장씩 한 줄로 놓는다(남는 칸은 비워 둔다). 넓은 화면(펼친
+  /// 듀오 등)에서는 네 장씩 놓는다(사용자 요청, 2026-11-28). 한 줄의 카드는
+  /// 가장 긴 쪽에 높이를 맞춘다.
   Widget _buildCards(List<CafeteriaMenuItem> items) {
+    final perRow = isWideLayout(context) ? 4 : 2;
     return Column(
       children: [
-        for (var i = 0; i < items.length; i += 2) ...[
+        for (var i = 0; i < items.length; i += perRow) ...[
           if (i > 0) const SizedBox(height: 10),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: SmallMenuCard(item: items[i])),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: i + 1 < items.length
-                      ? SmallMenuCard(item: items[i + 1])
-                      : const SizedBox.shrink(),
-                ),
+                for (var j = i; j < i + perRow; j++) ...[
+                  if (j > i) const SizedBox(width: 10),
+                  Expanded(
+                    child: j < items.length
+                        ? SmallMenuCard(item: items[j])
+                        : const SizedBox.shrink(),
+                  ),
+                ],
               ],
             ),
           ),

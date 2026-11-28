@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
+import '../utils/wide_layout.dart';
 import 'home/widgets/home_bottom_nav.dart';
 import 'home/widgets/home_notice_banner.dart';
 import 'home/widgets/home_top_icon_button.dart';
@@ -164,6 +165,28 @@ class CollectionScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()));
   }
 
+  /// "모든 메뉴" 흰 카드 하나(줄 사이 구분선 포함).
+  Widget _listCard(BuildContext context, List<_ListItem> items) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Column(
+        children: [
+          for (final (i, item) in items.indexed)
+            _ListRow(
+              item: item,
+              showDivider: i < items.length - 1,
+              onTap: _handler(context, item.onTap),
+            ),
+        ],
+      ),
+    );
+  }
+
   /// [onTap]이 null인(아직 구현되지 않은) 항목은 준비 중 화면으로 보낸다.
   VoidCallback _handler(
     BuildContext context,
@@ -252,28 +275,29 @@ class CollectionScreen extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 18),
                 ),
                 const SizedBox(height: 11),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 18),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 4,
+                // 넓은 화면(펼친 듀오 등)에서는 목록을 두 줄로 나눠 나란히 둔다
+                // (사용자 요청, 2026-11-28).
+                if (isWideLayout(context))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final (i, half) in [
+                          school.sublist(0, (school.length + 1) ~/ 2),
+                          school.sublist((school.length + 1) ~/ 2),
+                        ].indexed) ...[
+                          if (i > 0) const SizedBox(width: 16),
+                          Expanded(child: _listCard(context, half)),
+                        ],
+                      ],
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: _listCard(context, school),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: AppColors.cardShadow,
-                  ),
-                  child: Column(
-                    children: [
-                      for (final (i, item) in school.indexed)
-                        _ListRow(
-                          item: item,
-                          showDivider: i < school.length - 1,
-                          onTap: _handler(context, item.onTap),
-                        ),
-                    ],
-                  ),
-                ),
                 if (_showToolGrid) ...[
                   const SizedBox(height: 38),
                   const _SectionHeading(title: '캠퍼스 · 도구'),
@@ -412,6 +436,27 @@ class _FrequentCardsState extends State<_FrequentCards> {
   @override
   Widget build(BuildContext context) {
     final items = pickFrequent(widget.candidates, (i) => i.label, _counts);
+    // 넓은 화면에서는 가로로 밀지 않고 카드들이 폭을 나눠 꽉 채운다.
+    if (isWideLayout(context)) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, item) in items.indexed) ...[
+              if (i > 0) const SizedBox(width: 16),
+              Expanded(
+                child: _DailyCard(
+                  item: item,
+                  onTap: widget.onTapOf(item),
+                  width: double.infinity,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -452,17 +497,20 @@ class _DailyItem {
 /// "자주 찾는 메뉴" 카드 한 장(150x183). 색 띠 위에 흰 아이콘 상자가 걸쳐 있고,
 /// 아래 흰 카드에 이름·설명·버튼 모양이 있다. 카드 전체가 눌린다.
 class _DailyCard extends StatelessWidget {
-  const _DailyCard({required this.item, required this.onTap});
+  const _DailyCard({required this.item, required this.onTap, this.width = 150});
 
   final _DailyItem item;
   final VoidCallback onTap;
+
+  /// 카드 폭. 보통 150, 넓은 화면에서는 나눠 받은 폭을 꽉 채운다.
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     return Pressable(
       onTap: onTap,
       child: SizedBox(
-        width: 150,
+        width: width,
         height: 183,
         child: Stack(
           children: [
@@ -535,18 +583,23 @@ class _DailyCard extends StatelessWidget {
                 ),
               ),
             ),
+            // 카드 폭이 달라져도(넓은 화면) 아이콘 상자가 가운데에 오도록
+            // 좌우를 채우고 가운데 정렬한다. 폭 150일 때 왼쪽 49와 같다.
             Positioned(
               top: 14,
-              left: 49,
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: AppColors.cardShadow,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppColors.cardShadow,
+                  ),
+                  child: Icon(item.icon, color: item.iconColor, size: 28),
                 ),
-                child: Icon(item.icon, color: item.iconColor, size: 28),
               ),
             ),
           ],

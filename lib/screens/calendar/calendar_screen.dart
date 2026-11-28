@@ -9,6 +9,7 @@ import '../../services/academic_schedule_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/wide_layout.dart';
 import '../../utils/weekday_labels.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
@@ -952,6 +953,54 @@ class _CalendarScreenState extends State<CalendarScreen>
   }) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
+    // 넓은 화면(펼친 듀오 등)에서는 달력과 그날 일정 목록을 나란히 둔다. 펼친
+    // 화면은 가로로 넓고 세로가 짧아, 아래에 두면 목록이 거의 안 보인다(사용자
+    // 요청, 2026-11-28). 양쪽은 따로 스크롤된다.
+    if (isWideLayout(context)) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(16, 0, 8, bottomInset + 100),
+              child: GestureDetector(
+                key: const ValueKey('calendar-month-swipe'),
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragEnd: _onMonthSwipeEnd,
+                child: CalendarExpandedGrid(
+                  focusedMonth: _focusedMonth,
+                  events: _eventsInFocusedMonth,
+                  selectedDay: selectedDay,
+                  today: DateTime.now(),
+                  onDaySelected: _onDaySelected,
+                  onEventTap: _onScrollEventTap,
+                  fitWeeksToContent: true,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              key: _dayListKey,
+              margin: EdgeInsets.fromLTRB(8, 0, 16, bottomInset + 100),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: AppColors.cardShadow,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 22, 16, 22),
+                child: _dayListColumn(selectedDate, dayEvents),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         child: Column(
@@ -997,71 +1046,75 @@ class _CalendarScreenState extends State<CalendarScreen>
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (selectedDate != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '${selectedDate.month}월 ${selectedDate.day}일 '
-                            '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
-                            style: const TextStyle(
-                              color: AppColors.textStrong,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.45,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '일정 ${dayEvents.length}개',
-                            style: const TextStyle(
-                              color: AppColors.blue,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (dayEvents.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: Text(
-                            '이 날은 일정이 없어요',
-                            style: TextStyle(
-                              color: AppColors.textSub,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      for (var i = 0; i < dayEvents.length; i++) ...[
-                        if (i > 0) const SizedBox(height: 8),
-                        EventRow(
-                          event: dayEvents[i],
-                          // 종 버튼은 바로 켜고 끄지 않고 알림 설정 창을 연다
-                          // (사용자 결정, 2026-11-13).
-                          onReminderToggled: (_) =>
-                              _openReminderSettings(dayEvents[i]),
-                          onTap: () => _openEventDetail(dayEvents[i]),
-                        ),
-                      ],
-                  ],
-                ],
-              ),
+              child: _dayListColumn(selectedDate, dayEvents),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 고른 날의 제목("11월 28일 토요일 일정 1개")과 일정 목록.
+  Widget _dayListColumn(DateTime? selectedDate, List<CalendarEvent> dayEvents) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (selectedDate != null) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '${selectedDate.month}월 ${selectedDate.day}일 '
+                  '${weekdayLabelsSunFirst[selectedDate.weekday % 7]}요일',
+                  style: const TextStyle(
+                    color: AppColors.textStrong,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.45,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '일정 ${dayEvents.length}개',
+                  style: const TextStyle(
+                    color: AppColors.blue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (dayEvents.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: Text(
+                  '이 날은 일정이 없어요',
+                  style: TextStyle(
+                    color: AppColors.textSub,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+          else
+            for (var i = 0; i < dayEvents.length; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              EventRow(
+                event: dayEvents[i],
+                // 종 버튼은 바로 켜고 끄지 않고 알림 설정 창을 연다
+                // (사용자 결정, 2026-11-13).
+                onReminderToggled: (_) => _openReminderSettings(dayEvents[i]),
+                onTap: () => _openEventDetail(dayEvents[i]),
+              ),
+            ],
+        ],
+      ],
     );
   }
 

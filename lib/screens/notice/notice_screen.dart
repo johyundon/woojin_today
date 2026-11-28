@@ -7,6 +7,7 @@ import '../../services/notification_service.dart';
 import '../../services/service_factory.dart';
 import '../../services/session_cache.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/wide_layout.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/top_banner.dart';
 import '../calendar/widgets/ringing_bell.dart';
@@ -215,8 +216,26 @@ class _NoticeScreenState extends State<NoticeScreen> {
     ];
   }
 
+  /// 공지 카드 한 장.
+  Widget _noticeCard(NoticeItem notice, Map<String, String> matches) {
+    return NoticeListCard(
+      matchSnippet: matches[notice.key],
+      notice: notice,
+      bookmarked: _bookmarked.contains(notice.key),
+      unread: _isUnread(notice),
+      detailService: _service,
+      onBookmarkTap: () => setState(() {
+        if (!_bookmarked.remove(notice.key)) {
+          _bookmarked.add(notice.key);
+        }
+      }),
+      onOpened: () => _markRead(notice),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final perRow = isWideLayout(context) ? 2 : 1;
     final byTag = _filter == null
         ? _withoutDuplicates(_notices)
         : _notices.where((n) => n.tag == _filter).toList();
@@ -321,20 +340,32 @@ class _NoticeScreenState extends State<NoticeScreen> {
                                 count: notices.length,
                                 searchingBodies: _bodiesLoading,
                               ),
-                            for (final notice in notices) ...[
-                              NoticeListCard(
-                                matchSnippet: matches[notice.key],
-                                notice: notice,
-                                bookmarked: _bookmarked.contains(notice.key),
-                                unread: _isUnread(notice),
-                                detailService: _service,
-                                onBookmarkTap: () => setState(() {
-                                  if (!_bookmarked.remove(notice.key)) {
-                                    _bookmarked.add(notice.key);
-                                  }
-                                }),
-                                onOpened: () => _markRead(notice),
-                              ),
+                            // 넓은 화면(펼친 듀오 등)에서는 두 장씩 나란히
+                            // 놓는다(사용자 요청, 2026-11-28).
+                            for (
+                              var i = 0;
+                              i < notices.length;
+                              i += perRow
+                            ) ...[
+                              if (perRow == 1)
+                                _noticeCard(notices[i], matches)
+                              else
+                                IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      for (var j = i; j < i + perRow; j++) ...[
+                                        if (j > i) const SizedBox(width: 12),
+                                        Expanded(
+                                          child: j < notices.length
+                                              ? _noticeCard(notices[j], matches)
+                                              : const SizedBox.shrink(),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
                               const SizedBox(height: 12),
                             ],
                           ],

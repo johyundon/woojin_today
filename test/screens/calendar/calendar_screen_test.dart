@@ -169,6 +169,24 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
+  testWidgets('넓은 화면(펼친 듀오)에서는 그날 일정 목록이 달력 오른쪽에 나란히 보인다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(951, 669);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(home: CalendarScreen(scheduleService: _FakeSchedule())),
+    );
+    await tester.pumpAndSettle();
+
+    // "일정 N개" 제목이 달력 아래가 아니라 오른쪽 위에 있다.
+    final dayTitle = tester.getTopLeft(find.textContaining('일정 ').first);
+    expect(dayTitle.dx, greaterThan(951 * 0.55));
+    expect(dayTitle.dy, lessThan(669 / 2));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('현재 연/월 헤더, 요일 줄, 선택일 안내가 보인다', (tester) async {
     await _pump(tester);
     final now = DateTime.now();

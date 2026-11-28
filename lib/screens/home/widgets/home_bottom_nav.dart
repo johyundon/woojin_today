@@ -54,6 +54,10 @@ class HomeBottomNav extends StatelessWidget {
   ];
   static const _homeIndex = 2;
 
+  /// 버튼 다섯 개를 모아 둘 최대 폭. 아이폰 세로 화면에서는 바가 이보다 좁아
+  /// 아무것도 바뀌지 않는다.
+  static const double _maxButtonsWidth = 560;
+
   @override
   Widget build(BuildContext context) {
     // 디자인(390x844)에서 바 아랫변은 화면 맨 아래에서 26 위, 즉 홈 인디케이터
@@ -81,27 +85,34 @@ class HomeBottomNav extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            // 디자인에서 가운데 홈 칸이 양옆 칸보다 넓다(약 80 : 66).
-            for (final item in _items)
-              Expanded(
-                flex: item == null ? 80 : 66,
-                child: item == null
-                    ? _CenterButton(
-                        selected: selectedIndex == _homeIndex,
-                        onTap: () => onTap?.call(_homeIndex),
-                      )
-                    : _NavItem(
-                        asset: item.index == selectedIndex
-                            ? item.selectedAsset
-                            : item.asset,
-                        label: item.label,
-                        selected: item.index == selectedIndex,
-                        onTap: () => onTap?.call(item.index),
-                      ),
-              ),
-          ],
+        // 넓은 화면(펼친 듀오 등)에서는 바는 꽉 채우되, 버튼 사이가 너무
+        // 벌어지지 않게 버튼들을 가운데 [_maxButtonsWidth] 폭에 모은다.
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _maxButtonsWidth),
+            child: Row(
+              children: [
+                // 디자인에서 가운데 홈 칸이 양옆 칸보다 넓다(약 80 : 66).
+                for (final item in _items)
+                  Expanded(
+                    flex: item == null ? 80 : 66,
+                    child: item == null
+                        ? _CenterButton(
+                            selected: selectedIndex == _homeIndex,
+                            onTap: () => onTap?.call(_homeIndex),
+                          )
+                        : _NavItem(
+                            asset: item.index == selectedIndex
+                                ? item.selectedAsset
+                                : item.asset,
+                            label: item.label,
+                            selected: item.index == selectedIndex,
+                            onTap: () => onTap?.call(item.index),
+                          ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

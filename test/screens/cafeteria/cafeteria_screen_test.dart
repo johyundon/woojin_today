@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:daejin_app/screens/cafeteria/cafeteria_screen.dart';
+import 'package:daejin_app/screens/cafeteria/widgets/small_menu_card.dart';
 import 'package:daejin_app/screens/cafeteria/widgets/cafeteria_date_picker_dialog.dart';
 import 'package:daejin_app/services/fakes/fake_cafeteria_menu_service.dart';
 
@@ -214,6 +215,29 @@ void main() {
     await tester.ensureVisible(find.text('교직원식당').first);
     await tester.tap(find.text('교직원식당').first);
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('넓은 화면(펼친 듀오)에서는 메뉴 카드를 네 장씩 놓아 카드가 넓어지지 않는다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(951, 669);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CafeteriaScreen(
+          now: _today.add(const Duration(hours: 12)),
+          service: FakeCafeteriaMenuService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cards = find.byType(SmallMenuCard);
+    expect(cards, findsWidgets);
+    // 두 장씩이면 한 장이 약 430 폭, 네 장씩이면 약 210 폭이다.
+    expect(tester.getSize(cards.first).width, lessThan(951 / 3));
     expect(tester.takeException(), isNull);
   });
 }

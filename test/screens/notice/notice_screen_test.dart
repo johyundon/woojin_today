@@ -13,6 +13,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:daejin_app/screens/notice/models/notice_item.dart';
 import 'package:daejin_app/screens/notice/notice_detail_screen.dart';
 import 'package:daejin_app/screens/notice/notice_screen.dart';
+import 'package:daejin_app/screens/notice/widgets/notice_list_card.dart';
 import 'package:daejin_app/services/notice_service.dart';
 
 class _FakeNotices implements NoticeServiceBase {
@@ -156,6 +157,24 @@ void main() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
     SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('넓은 화면(펼친 듀오)에서는 공지 카드가 두 장씩 나란히 놓인다', (tester) async {
+    tester.view.physicalSize = const Size(951, 669);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(home: NoticeScreen(service: _FakeNotices())),
+    );
+    await tester.pumpAndSettle();
+
+    final cards = find.byType(NoticeListCard);
+    expect(cards, findsWidgets);
+    final first = tester.getTopLeft(cards.at(0));
+    final second = tester.getTopLeft(cards.at(1));
+    expect(second.dy, first.dy); // 같은 줄
+    expect(second.dx, greaterThan(first.dx + 300)); // 오른쪽 칸
+    expect(tester.takeException(), isNull);
   });
 
   group('검색', () {

@@ -9,6 +9,7 @@ import 'services/notice_watcher.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
 import 'theme/instant_page_transitions.dart';
+import 'widgets/phone_width_frame.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,10 @@ void main() async {
   NoticeWatcher().restoreBackground();
   runApp(const MyApp());
 }
+
+/// 넓은 화면에서 앱을 아이폰 폭으로 가운데에 세울지([PhoneWidthFrame]).
+/// 꽉 채우기로 바꾸면서 꺼 두었다(지우지 않고 남겨 둠).
+const bool _centerOnWideScreen = false;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -61,6 +66,10 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
+      // 아이폰 듀오를 펼친 넓은 화면에서 아이폰 폭으로 가운데에 보여 줄지.
+      // 지금은 꽉 채워 쓰도록 꺼 두었다(사용자 요청, 2026-11-28).
+      builder: (context, child) =>
+          _centerOnWideScreen ? PhoneWidthFrame(child: child!) : child!,
       home: const SplashScreen(),
     );
   }

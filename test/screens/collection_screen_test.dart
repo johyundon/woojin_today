@@ -68,4 +68,38 @@ void main() {
     expect(find.text('준비 중인 기능이에요'), findsOneWidget);
     expect(find.byType(Dialog), findsOneWidget);
   });
+
+  testWidgets('넓은 화면(펼친 듀오)에서는 메뉴 카드가 폭을 채우고 목록이 두 줄로 나뉜다', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(951, 669);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: CollectionScreen()));
+    await tester.pumpAndSettle();
+
+    // 자주 찾는 메뉴 카드 3장이 가로로 밀리지 않고 화면 폭을 나눠 쓴다.
+    final cards = find.text('바로가기');
+    expect(cards, findsNWidgets(3));
+    final lastRight = tester.getTopRight(cards.at(2)).dx;
+    expect(lastRight, greaterThan(951 * 0.7));
+
+    // 모든 메뉴 목록은 왼쪽·오른쪽 두 줄로 나뉜다(공지사항은 왼쪽, 상담 예약은 오른쪽).
+    final notice = tester.getTopLeft(find.text('공지사항')).dx;
+    final advisor = tester.getTopLeft(find.text('상담 예약').last).dx;
+    expect(advisor, greaterThan(notice + 300));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('아이폰 세로 화면에서는 목록이 한 줄 그대로다', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: CollectionScreen()));
+    await tester.pumpAndSettle();
+
+    final notice = tester.getTopLeft(find.text('공지사항')).dx;
+    final mileage = tester.getTopLeft(find.text('마일리지').last).dx;
+    expect(mileage, notice);
+  });
 }
